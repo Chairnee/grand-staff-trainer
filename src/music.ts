@@ -1,3 +1,5 @@
+import type { PromptSlot } from "./exercises/types";
+
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
@@ -194,6 +196,26 @@ export function getTonicsForScaleType(scaleType: ScaleType): Tonic[] {
   }
 
   return MINOR_TONICS;
+}
+
+export function getAccidentalSpellingModeForKeySignature(
+  keySignature: KeySignature | null,
+): AccidentalSpellingMode {
+  if (!keySignature) {
+    return "sharps";
+  }
+
+  const flatKeySignatures: KeySignature[] = [
+    "F",
+    "Bb",
+    "Eb",
+    "Ab",
+    "Db",
+    "Gb",
+    "Cb",
+  ];
+
+  return flatKeySignatures.includes(keySignature) ? "flats" : "sharps";
 }
 
 export function createKeyboardNotePool(
@@ -412,6 +434,26 @@ export function midiNoteNumberToKey(
   }
 
   return `${noteName}/${octave}`;
+}
+
+export function getHeldOverlayKey(
+  prompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+) {
+  const promptKeys = [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])];
+  const matchingPromptKey = promptKeys.find(
+    (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
+  );
+
+  if (matchingPromptKey) {
+    return matchingPromptKey;
+  }
+
+  return midiNoteNumberToKey(
+    heldNoteNumber,
+    getAccidentalSpellingModeForKeySignature(displayedKeySignature),
+  );
 }
 
 function getNaturalSemitoneForNoteName(noteName: string) {

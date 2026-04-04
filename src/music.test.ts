@@ -4,6 +4,7 @@ import {
   type GenerationSettings,
   getAscendingScaleKeys,
   getDerivedKeySignature,
+  getHeldOverlayKey,
   getRenderedAccidentalForKey,
   getScaleNoteNames,
   getScaleStartingOctave,
@@ -91,6 +92,47 @@ describe("getRenderedAccidentalForKey", () => {
 
   it("shows a natural sign when the key signature implies a flat", () => {
     expect(getRenderedAccidentalForKey("b/3", "Ab")).toBe("n");
+  });
+});
+
+describe("getHeldOverlayKey", () => {
+  it("reuses the prompt spelling when the held pitch matches the prompt", () => {
+    expect(
+      getHeldOverlayKey(
+        {
+          duration: "q",
+          trebleKeys: ["ab/4"],
+        },
+        68,
+        "Ab",
+      ),
+    ).toBe("ab/4");
+  });
+
+  it("uses flat fallback spelling in flat key signatures", () => {
+    expect(
+      getHeldOverlayKey(
+        {
+          duration: "q",
+          trebleKeys: ["a/4"],
+        },
+        70,
+        "F",
+      ),
+    ).toBe("bb/4");
+  });
+
+  it("uses sharp fallback spelling in sharp key signatures", () => {
+    expect(
+      getHeldOverlayKey(
+        {
+          duration: "q",
+          trebleKeys: ["a/4"],
+        },
+        70,
+        "G",
+      ),
+    ).toBe("a#/4");
   });
 });
 

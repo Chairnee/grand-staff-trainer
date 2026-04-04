@@ -2,6 +2,7 @@ import "./styles.css";
 import {
   Accidental,
   Formatter,
+  ModifierContext,
   Renderer,
   Stave,
   StaveConnector,
@@ -23,6 +24,7 @@ import {
   type GenerationSettings,
   getClefForKey,
   getDerivedKeySignature,
+  getHeldOverlayKey,
   getRenderedAccidentalForKey,
   getTonicsForScaleType,
   type KeySignature,
@@ -974,6 +976,10 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   const trebleNotes: StaveNote[] = [];
   const bassNotes: StaveNote[] = [];
+  let currentTrebleTickable: StaveNote | null = null;
+  let currentBassTickable: StaveNote | null = null;
+  let currentHeldOverlayNote: StaveNote | null = null;
+  let currentHeldOverlayClef: "treble" | "bass" | null = null;
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
     const displayedPrompt = getDisplayedPromptSlot(prompt, appState);
@@ -1003,6 +1009,30 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         fillStyle: "#a6401f",
         strokeStyle: "#a6401f",
       });
+
+      currentTrebleTickable = trebleNote;
+      currentBassTickable = bassNote;
+
+      const firstHeldNoteNumber = [...appState.midi.heldNotes].sort(
+        (left, right) => left - right,
+      )[0];
+
+      if (typeof firstHeldNoteNumber === "number") {
+        const heldKey = getHeldOverlayKey(
+          displayedPrompt,
+          firstHeldNoteNumber,
+          displayedKeySignature,
+        );
+        const heldClef = getClefForKey(heldKey);
+
+        currentHeldOverlayClef = heldClef;
+        currentHeldOverlayNote = createHeldInputOverlayNote(
+          heldClef,
+          heldKey,
+          displayedPrompt.duration,
+          displayedKeySignature,
+        );
+      }
     }
 
     trebleNotes.push(trebleNote);
@@ -1026,6 +1056,32 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
+
+  if (
+    currentHeldOverlayNote &&
+    currentHeldOverlayClef === "treble" &&
+    currentTrebleTickable
+  ) {
+    drawHeldOverlayNote(
+      currentHeldOverlayNote,
+      currentTrebleTickable,
+      trebleStave,
+      context,
+    );
+  }
+
+  if (
+    currentHeldOverlayNote &&
+    currentHeldOverlayClef === "bass" &&
+    currentBassTickable
+  ) {
+    drawHeldOverlayNote(
+      currentHeldOverlayNote,
+      currentBassTickable,
+      bassStave,
+      context,
+    );
+  }
 }
 
 function getPromptQueueKeys(promptQueue: PromptSlot[]) {
@@ -1098,6 +1154,48 @@ function getPromptMidiNotes(prompt: PromptSlot) {
   return [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])].map(
     keyToMidiNoteNumber,
   );
+}
+
+function createHeldInputOverlayNote(
+  clef: "treble" | "bass",
+  key: string,
+  duration: string,
+  displayedKeySignature: KeySignature | null,
+) {
+  const note = createPromptStaveNote(
+    clef,
+    [key],
+    duration,
+    displayedKeySignature,
+  );
+
+  note.setStyle({
+    fillStyle: "#4c75a3",
+    strokeStyle: "#4c75a3",
+  });
+  note.setStemStyle({
+    fillStyle: "transparent",
+    strokeStyle: "transparent",
+  });
+  note.renderOptions.drawStem = false;
+
+  return note;
+}
+
+function drawHeldOverlayNote(
+  note: StaveNote,
+  anchorTickable: StaveNote,
+  stave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+) {
+  const modifierContext = new ModifierContext();
+
+  note.addToModifierContext(modifierContext);
+  modifierContext.preFormat();
+  note.setTickContext(anchorTickable.getTickContext());
+  note.setStave(stave);
+  note.preFormat();
+  note.setContext(context).draw();
 }
 
 function formatPromptSlot(prompt: PromptSlot | null) {
