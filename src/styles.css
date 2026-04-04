@@ -143,18 +143,16 @@ body {
   box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
 }
 
-.notation.attempt-correct {
-  animation: attempt-correct-flash 360ms ease;
-}
-
-.notation.attempt-incorrect {
-  animation: attempt-incorrect-flash 360ms ease;
-}
-
 .notation svg {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+.current-prompt-wiggle {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: current-prompt-wiggle 130ms ease;
 }
 
 .keyboard-display {
@@ -337,43 +335,21 @@ body {
   flex: 0 0 auto;
 }
 
-@keyframes attempt-correct-flash {
+@keyframes current-prompt-wiggle {
   0% {
-    border-color: rgba(70, 52, 28, 0.12);
-    background: #fffdf7;
-    box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
+    transform: translateX(0);
   }
 
-  35% {
-    border-color: rgba(63, 133, 80, 0.45);
-    background: #f2fbf0;
-    box-shadow: 0 18px 40px rgba(63, 133, 80, 0.18);
+  20% {
+    transform: translateX(-3px);
+  }
+
+  50% {
+    transform: translateX(2px);
   }
 
   100% {
-    border-color: rgba(70, 52, 28, 0.12);
-    background: #fffdf7;
-    box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
-  }
-}
-
-@keyframes attempt-incorrect-flash {
-  0% {
-    border-color: rgba(70, 52, 28, 0.12);
-    background: #fffdf7;
-    box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
-  }
-
-  35% {
-    border-color: rgba(174, 74, 54, 0.45);
-    background: #fff1ee;
-    box-shadow: 0 18px 40px rgba(174, 74, 54, 0.18);
-  }
-
-  100% {
-    border-color: rgba(70, 52, 28, 0.12);
-    background: #fffdf7;
-    box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
+    transform: translateX(0);
   }
 }
 

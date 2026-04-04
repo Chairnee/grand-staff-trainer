@@ -417,7 +417,6 @@ function renderApp() {
   renderToolbar();
   renderSettingsDrawer();
   renderMidiDebug();
-  updateAttemptFeedback();
   renderGrandStaff(notationElement, state);
   renderKeyboard();
 }
@@ -623,20 +622,6 @@ function renderRangeSelect(
     "aria-label",
     `${labelPrefix}: ${formatKeyLabel(selectedKey)}`,
   );
-}
-
-function updateAttemptFeedback() {
-  if (
-    !state.lastAttemptResult ||
-    state.attemptFeedbackCount === renderedAttemptFeedbackCount
-  ) {
-    return;
-  }
-
-  renderedAttemptFeedbackCount = state.attemptFeedbackCount;
-  notationElement.classList.remove("attempt-correct", "attempt-incorrect");
-  void notationElement.offsetWidth;
-  notationElement.classList.add(`attempt-${state.lastAttemptResult}`);
 }
 
 function handlePromptAttempt() {
@@ -978,6 +963,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const bassNotes: StaveNote[] = [];
   let currentTrebleTickable: StaveNote | null = null;
   let currentBassTickable: StaveNote | null = null;
+  let currentTreblePromptNote: StaveNote | null = null;
+  let currentBassPromptNote: StaveNote | null = null;
   const currentTrebleHeldOverlayNotes: StaveNote[] = [];
   const currentBassHeldOverlayNotes: StaveNote[] = [];
 
@@ -1012,6 +999,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
       currentTrebleTickable = trebleNote;
       currentBassTickable = bassNote;
+      currentTreblePromptNote = displayedPrompt.trebleKeys ? trebleNote : null;
+      currentBassPromptNote = displayedPrompt.bassKeys ? bassNote : null;
 
       for (const heldNoteNumber of [...appState.midi.heldNotes].sort(
         (left, right) => left - right,
@@ -1080,6 +1069,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       );
     }
   }
+
+  applyWrongAttemptFeedback([currentTreblePromptNote, currentBassPromptNote]);
 }
 
 function getPromptQueueKeys(promptQueue: PromptSlot[]) {
@@ -1194,6 +1185,34 @@ function drawHeldOverlayNote(
   note.setStave(stave);
   note.preFormat();
   note.setContext(context).draw();
+}
+
+function applyWrongAttemptFeedback(notes: Array<StaveNote | null>) {
+  const shouldAnimateWrongAttempt =
+    state.lastAttemptResult === "incorrect" &&
+    state.attemptFeedbackCount !== renderedAttemptFeedbackCount;
+
+  if (!shouldAnimateWrongAttempt) {
+    if (state.attemptFeedbackCount !== renderedAttemptFeedbackCount) {
+      renderedAttemptFeedbackCount = state.attemptFeedbackCount;
+    }
+
+    return;
+  }
+
+  for (const note of notes) {
+    const noteElement = note?.getSVGElement();
+
+    if (!noteElement) {
+      continue;
+    }
+
+    noteElement.classList.remove("current-prompt-wiggle");
+    void noteElement.getBoundingClientRect();
+    noteElement.classList.add("current-prompt-wiggle");
+  }
+
+  renderedAttemptFeedbackCount = state.attemptFeedbackCount;
 }
 
 function formatPromptSlot(prompt: PromptSlot | null) {
