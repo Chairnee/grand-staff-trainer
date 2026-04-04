@@ -41,6 +41,9 @@ const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
+const STAGE_WIDTH = 1280;
+const STAGE_HEIGHT = 720;
+const STAGE_PADDING = 32;
 const DEFAULT_RENDER_HEIGHT = 340;
 const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
 const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
@@ -78,121 +81,123 @@ if (!app) {
 }
 
 app.innerHTML = `
-  <main class="layout">
-    <header class="toolbar">
-      <div class="toolbar-actions">
-        <button id="settings-toggle" class="toolbar-button" type="button">
-          Settings
-        </button>
-        <button id="debug-toggle" class="toolbar-button" type="button">
-          Debug
-        </button>
-      </div>
-      <label class="midi-picker">
-        <span>MIDI Input</span>
-        <select id="midi-input-select"></select>
-      </label>
-      <div id="midi-status" class="status-pill"></div>
-    </header>
+  <div class="stage-shell">
+    <main class="layout">
+      <header class="toolbar">
+        <div class="toolbar-actions">
+          <button id="settings-toggle" class="toolbar-button" type="button">
+            Settings
+          </button>
+          <button id="debug-toggle" class="toolbar-button" type="button">
+            Debug
+          </button>
+        </div>
+        <label class="midi-picker">
+          <span>MIDI Input</span>
+          <select id="midi-input-select"></select>
+        </label>
+        <div id="midi-status" class="status-pill"></div>
+      </header>
 
-    <section class="practice-area">
-      <div id="midi-debug" class="midi-debug" hidden></div>
-      <div id="notation" class="notation"></div>
-      <div id="keyboard-display" class="keyboard-display" hidden></div>
+      <section class="practice-area">
+        <div id="midi-debug" class="midi-debug" hidden></div>
+        <div id="notation" class="notation"></div>
+        <div id="keyboard-display" class="keyboard-display" hidden></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="settings-backdrop" class="settings-backdrop" hidden></div>
+
+  <aside
+    id="settings-drawer"
+    class="settings-drawer"
+    aria-hidden="true"
+    aria-label="Settings"
+  >
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button id="settings-close" class="toolbar-button" type="button">
+        Close
+      </button>
+    </div>
+
+    <section class="settings-section">
+      <h3>Generation</h3>
+      <label class="settings-field">
+        <span>Practice mode</span>
+        <select id="practice-mode-select">
+          <option value="random-notes">Random notes</option>
+          <option value="scales">Scales</option>
+        </select>
+      </label>
+      <label id="scale-hands-field" class="settings-field" hidden>
+        <span>Hands</span>
+        <select id="scale-hands-select">
+          <option value="treble">Treble only</option>
+          <option value="bass">Bass only</option>
+          <option value="together">Together</option>
+        </select>
+      </label>
+      <label id="scale-octaves-field" class="settings-field" hidden>
+        <span>Octaves</span>
+        <select id="scale-octaves-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
+      </label>
+      <label id="range-start-field" class="settings-field">
+        <span>Lowest note</span>
+        <select id="range-start-select"></select>
+      </label>
+      <label id="range-end-field" class="settings-field">
+        <span>Highest note</span>
+        <select id="range-end-select"></select>
+      </label>
+      <label class="settings-field">
+        <span>Tonic</span>
+        <select id="tonic-select"></select>
+      </label>
+      <label class="settings-field">
+        <span>Scale type</span>
+        <select id="scale-type-select">
+          <option value="major">Major</option>
+          <option value="natural-minor">Natural minor</option>
+          <option value="harmonic-minor">Harmonic minor</option>
+          <option value="melodic-minor">Melodic minor</option>
+        </select>
+      </label>
+      <label id="note-source-field" class="settings-field">
+        <span>Note source</span>
+        <select id="note-source-select">
+          <option value="chromatic">Chromatic</option>
+          <option value="in-scale">In scale</option>
+        </select>
+      </label>
+      <label
+        id="accidental-spelling-field"
+        class="settings-field"
+      >
+        <span>Accidental spelling</span>
+        <select id="accidental-spelling-select">
+          <option value="sharps">Sharps</option>
+          <option value="flats">Flats</option>
+        </select>
+      </label>
     </section>
 
-    <div id="settings-backdrop" class="settings-backdrop" hidden></div>
-
-    <aside
-      id="settings-drawer"
-      class="settings-drawer"
-      aria-hidden="true"
-      aria-label="Settings"
-    >
-      <div class="settings-header">
-        <h2>Settings</h2>
-        <button id="settings-close" class="toolbar-button" type="button">
-          Close
-        </button>
-      </div>
-
-      <section class="settings-section">
-        <h3>Generation</h3>
-        <label class="settings-field">
-          <span>Practice mode</span>
-          <select id="practice-mode-select">
-            <option value="random-notes">Random notes</option>
-            <option value="scales">Scales</option>
-          </select>
-        </label>
-        <label id="scale-hands-field" class="settings-field" hidden>
-          <span>Hands</span>
-          <select id="scale-hands-select">
-            <option value="treble">Treble only</option>
-            <option value="bass">Bass only</option>
-            <option value="together">Together</option>
-          </select>
-        </label>
-        <label id="scale-octaves-field" class="settings-field" hidden>
-          <span>Octaves</span>
-          <select id="scale-octaves-select">
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
-        </label>
-        <label id="range-start-field" class="settings-field">
-          <span>Lowest note</span>
-          <select id="range-start-select"></select>
-        </label>
-        <label id="range-end-field" class="settings-field">
-          <span>Highest note</span>
-          <select id="range-end-select"></select>
-        </label>
-        <label class="settings-field">
-          <span>Tonic</span>
-          <select id="tonic-select"></select>
-        </label>
-        <label class="settings-field">
-          <span>Scale type</span>
-          <select id="scale-type-select">
-            <option value="major">Major</option>
-            <option value="natural-minor">Natural minor</option>
-            <option value="harmonic-minor">Harmonic minor</option>
-            <option value="melodic-minor">Melodic minor</option>
-          </select>
-        </label>
-        <label id="note-source-field" class="settings-field">
-          <span>Note source</span>
-          <select id="note-source-select">
-            <option value="chromatic">Chromatic</option>
-            <option value="in-scale">In scale</option>
-          </select>
-        </label>
-        <label
-          id="accidental-spelling-field"
-          class="settings-field"
-        >
-          <span>Accidental spelling</span>
-          <select id="accidental-spelling-select">
-            <option value="sharps">Sharps</option>
-            <option value="flats">Flats</option>
-          </select>
-        </label>
-      </section>
-
-      <section class="settings-section">
-        <h3>Display</h3>
-        <label class="settings-toggle">
-          <input id="settings-keyboard-toggle" type="checkbox" />
-          <span>Show keyboard</span>
-        </label>
-        <label class="settings-toggle">
-          <input id="settings-debug-toggle" type="checkbox" />
-          <span>Show debug panel</span>
-        </label>
-      </section>
-    </aside>
-  </main>
+    <section class="settings-section">
+      <h3>Display</h3>
+      <label class="settings-toggle">
+        <input id="settings-keyboard-toggle" type="checkbox" />
+        <span>Show keyboard</span>
+      </label>
+      <label class="settings-toggle">
+        <input id="settings-debug-toggle" type="checkbox" />
+        <span>Show debug panel</span>
+      </label>
+    </section>
+  </aside>
 `;
 
 const notation = document.querySelector<HTMLDivElement>("#notation");
@@ -384,6 +389,7 @@ accidentalSpellingSelectElement.addEventListener(
 );
 tonicSelectElement.addEventListener("change", handleTonicChange);
 scaleTypeSelectElement.addEventListener("change", handleScaleTypeChange);
+window.addEventListener("resize", handleWindowResize);
 
 if (state.promptQueue.length === 0) {
   throw new Error("Prompt queue is empty.");
@@ -392,6 +398,11 @@ if (state.promptQueue.length === 0) {
 renderApp();
 
 function renderApp() {
+  document.documentElement.style.setProperty(
+    "--stage-scale",
+    getStageScale().toFixed(3),
+  );
+
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
   notationElement.dataset.midiHeldKeys = state.midi.heldKeys.join(",");
@@ -407,6 +418,10 @@ function renderApp() {
   updateAttemptFeedback();
   renderGrandStaff(notationElement, state);
   renderKeyboard();
+}
+
+function handleWindowResize() {
+  renderApp();
 }
 
 function handleMidiStateChange(midiState: MidiState) {
@@ -548,6 +563,16 @@ function renderKeyboard() {
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
   });
+}
+
+function getStageScale() {
+  const availableWidth = window.innerWidth - STAGE_PADDING * 2;
+  const availableHeight = window.innerHeight - STAGE_PADDING * 2;
+
+  return Math.max(
+    0.5,
+    Math.min(availableWidth / STAGE_WIDTH, availableHeight / STAGE_HEIGHT),
+  );
 }
 
 function renderRangeOptions() {
