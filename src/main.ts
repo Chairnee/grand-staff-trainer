@@ -978,8 +978,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const bassNotes: StaveNote[] = [];
   let currentTrebleTickable: StaveNote | null = null;
   let currentBassTickable: StaveNote | null = null;
-  let currentHeldOverlayNote: StaveNote | null = null;
-  let currentHeldOverlayClef: "treble" | "bass" | null = null;
+  const currentTrebleHeldOverlayNotes: StaveNote[] = [];
+  const currentBassHeldOverlayNotes: StaveNote[] = [];
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
     const displayedPrompt = getDisplayedPromptSlot(prompt, appState);
@@ -1013,25 +1013,27 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       currentTrebleTickable = trebleNote;
       currentBassTickable = bassNote;
 
-      const firstHeldNoteNumber = [...appState.midi.heldNotes].sort(
+      for (const heldNoteNumber of [...appState.midi.heldNotes].sort(
         (left, right) => left - right,
-      )[0];
-
-      if (typeof firstHeldNoteNumber === "number") {
+      )) {
         const heldKey = getHeldOverlayKey(
           displayedPrompt,
-          firstHeldNoteNumber,
+          heldNoteNumber,
           displayedKeySignature,
         );
         const heldClef = getClefForKey(heldKey);
-
-        currentHeldOverlayClef = heldClef;
-        currentHeldOverlayNote = createHeldInputOverlayNote(
+        const heldOverlayNote = createHeldInputOverlayNote(
           heldClef,
           heldKey,
           displayedPrompt.duration,
           displayedKeySignature,
         );
+
+        if (heldClef === "treble") {
+          currentTrebleHeldOverlayNotes.push(heldOverlayNote);
+        } else {
+          currentBassHeldOverlayNotes.push(heldOverlayNote);
+        }
       }
     }
 
@@ -1057,30 +1059,26 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
 
-  if (
-    currentHeldOverlayNote &&
-    currentHeldOverlayClef === "treble" &&
-    currentTrebleTickable
-  ) {
-    drawHeldOverlayNote(
-      currentHeldOverlayNote,
-      currentTrebleTickable,
-      trebleStave,
-      context,
-    );
+  if (currentTrebleTickable) {
+    for (const currentTrebleHeldOverlayNote of currentTrebleHeldOverlayNotes) {
+      drawHeldOverlayNote(
+        currentTrebleHeldOverlayNote,
+        currentTrebleTickable,
+        trebleStave,
+        context,
+      );
+    }
   }
 
-  if (
-    currentHeldOverlayNote &&
-    currentHeldOverlayClef === "bass" &&
-    currentBassTickable
-  ) {
-    drawHeldOverlayNote(
-      currentHeldOverlayNote,
-      currentBassTickable,
-      bassStave,
-      context,
-    );
+  if (currentBassTickable) {
+    for (const currentBassHeldOverlayNote of currentBassHeldOverlayNotes) {
+      drawHeldOverlayNote(
+        currentBassHeldOverlayNote,
+        currentBassTickable,
+        bassStave,
+        context,
+      );
+    }
   }
 }
 
