@@ -40,6 +40,11 @@ const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
+const DEFAULT_RENDER_HEIGHT = 340;
+const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
+const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
+const MIDI_OVERFLOW_PIXELS = 4;
+const STAVE_SIDE_MARGIN = 56;
 const GENERATED_NOTE_POOL = createKeyboardNotePool(
   KEYBOARD_START_MIDI_NOTE,
   KEYBOARD_END_MIDI_NOTE,
@@ -841,22 +846,31 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   container.replaceChildren();
 
   const promptKeys = getPromptQueueKeys(appState.promptQueue);
-  const topMidiNoteNumber = getHighestMidiNoteNumber(promptKeys) ?? 79;
-  const bottomMidiNoteNumber = getLowestMidiNoteNumber(promptKeys) ?? 43;
+  const topMidiNoteNumber =
+    getHighestMidiNoteNumber(promptKeys) ?? DEFAULT_TOP_VISIBLE_MIDI_NOTE;
+  const bottomMidiNoteNumber =
+    getLowestMidiNoteNumber(promptKeys) ?? DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
   const renderer = new Renderer(container, Renderer.Backends.SVG);
-  const width = Math.max(520, Math.min(container.clientWidth, 760));
-  const topOverflow = Math.max(0, topMidiNoteNumber - 79) * 6;
-  const bottomOverflow = Math.max(0, 43 - bottomMidiNoteNumber) * 6;
-  const staveTopY = 50 + topOverflow;
-  const staveGap = 90;
+  const width = Math.max(640, container.clientWidth - 8);
+  const topOverflow =
+    Math.max(0, topMidiNoteNumber - DEFAULT_TOP_VISIBLE_MIDI_NOTE) *
+    MIDI_OVERFLOW_PIXELS;
+  const bottomOverflow =
+    Math.max(0, DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE - bottomMidiNoteNumber) *
+    MIDI_OVERFLOW_PIXELS;
+  const staveTopY = 62 + topOverflow;
+  const staveGap = 76;
   const bassStaveY = staveTopY + staveGap;
-  const height = bassStaveY + 90 + bottomOverflow;
+  const height = Math.max(
+    DEFAULT_RENDER_HEIGHT,
+    bassStaveY + 92 + bottomOverflow,
+  );
 
   renderer.resize(width, height);
 
   const context = renderer.getContext();
-  const staveX = 110;
-  const staveWidth = width - 150;
+  const staveX = STAVE_SIDE_MARGIN;
+  const staveWidth = width - STAVE_SIDE_MARGIN * 2;
   const trebleStave = new Stave(staveX, staveTopY, staveWidth);
   const bassStave = new Stave(staveX, bassStaveY, staveWidth);
   const displayedKeySignature = getDisplayedKeySignature(appState);

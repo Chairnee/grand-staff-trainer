@@ -22,7 +22,7 @@ body {
 }
 
 .toolbar {
-  width: min(100%, 900px);
+  width: min(100%, 1040px);
   margin: 0 auto 16px;
   padding: 12px 14px;
   display: flex;
@@ -64,8 +64,11 @@ body {
 }
 
 .practice-area {
-  width: min(100%, 900px);
+  width: min(100%, 1040px);
   margin: 0 auto;
+  display: flex;
+  gap: 14px;
+  flex-direction: column;
 }
 
 .midi-picker {
@@ -86,7 +89,6 @@ body {
 }
 
 .midi-debug {
-  margin: 0 0 12px;
   padding: 12px 14px;
   white-space: pre-wrap;
   border: 1px solid rgba(70, 52, 28, 0.12);
@@ -103,9 +105,12 @@ body {
 }
 
 .notation {
-  min-height: 320px;
+  min-height: clamp(420px, 58vh, 620px);
   overflow-x: auto;
-  padding: 20px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: 16px;
   background: #fffdf7;
@@ -122,6 +127,8 @@ body {
 
 .notation svg {
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .settings-backdrop {
