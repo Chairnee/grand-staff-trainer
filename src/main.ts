@@ -8,7 +8,31 @@ import {
   StaveNote,
   Voice,
 } from "vexflow";
+import {
+  createExercisePromptQueue,
+  fillExercisePromptQueue,
+} from "./exercises";
+import type { PromptSlot } from "./exercises/types";
 import { connectMidi, type MidiState } from "./midi";
+import {
+  type AccidentalSpellingMode,
+  compareKeysByMidiNumber,
+  createKeyboardNotePool,
+  formatKeyLabel,
+  type GenerationSettings,
+  getClefForKey,
+  getDerivedKeySignature,
+  getRenderedAccidentalForKey,
+  getTonicsForScaleType,
+  type KeySignature,
+  keyToMidiNoteNumber,
+  type NoteSourceMode,
+  type PracticeMode,
+  type ScaleHands,
+  type ScaleOctaves,
+  type ScaleType,
+  type Tonic,
+} from "./music";
 
 const ATTEMPT_WINDOW_MS = 40;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
@@ -16,127 +40,18 @@ const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
-const GENERATED_NOTE_POOL = createKeyboardNotePool();
+const GENERATED_NOTE_POOL = createKeyboardNotePool(
+  KEYBOARD_START_MIDI_NOTE,
+  KEYBOARD_END_MIDI_NOTE,
+);
 const DEFAULT_RANGE_START = "c/2";
 const DEFAULT_RANGE_END = "c/6";
-const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
-const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
-
-type PromptSlot = {
-  duration: string;
-  trebleKeys?: string[];
-  bassKeys?: string[];
-};
 
 type PromptAttempt = {
   midiNotes: number[];
 };
 
 type AttemptResult = "correct" | "incorrect" | null;
-type PracticeMode = "random-notes" | "scales";
-type ScaleHands = "treble" | "bass" | "together";
-type ScaleOctaves = 1 | 2;
-type NoteSourceMode = "chromatic" | "in-scale";
-type AccidentalSpellingMode = "sharps" | "flats";
-type KeySignature =
-  | "C"
-  | "G"
-  | "D"
-  | "A"
-  | "E"
-  | "B"
-  | "F#"
-  | "C#"
-  | "F"
-  | "Bb"
-  | "Eb"
-  | "Ab"
-  | "Db"
-  | "Gb"
-  | "Cb";
-type ScaleType = "major" | "natural-minor" | "harmonic-minor" | "melodic-minor";
-type MajorTonic =
-  | "C"
-  | "G"
-  | "D"
-  | "A"
-  | "E"
-  | "B"
-  | "F#"
-  | "C#"
-  | "F"
-  | "Bb"
-  | "Eb"
-  | "Ab"
-  | "Db"
-  | "Gb"
-  | "Cb";
-type MinorTonic =
-  | "A"
-  | "E"
-  | "B"
-  | "F#"
-  | "C#"
-  | "G#"
-  | "D#"
-  | "A#"
-  | "D"
-  | "G"
-  | "C"
-  | "F"
-  | "Bb"
-  | "Eb"
-  | "Ab";
-type Tonic = MajorTonic | MinorTonic;
-
-type GenerationSettings = {
-  practiceMode: PracticeMode;
-  scaleHands: ScaleHands;
-  scaleOctaves: ScaleOctaves;
-  rangeStart: string;
-  rangeEnd: string;
-  noteSourceMode: NoteSourceMode;
-  accidentalSpellingMode: AccidentalSpellingMode;
-  tonic: Tonic;
-  scaleType: ScaleType;
-};
-
-const MAJOR_KEY_SIGNATURE_BY_TONIC: Record<MajorTonic, KeySignature> = {
-  C: "C",
-  G: "G",
-  D: "D",
-  A: "A",
-  E: "E",
-  B: "B",
-  "F#": "F#",
-  "C#": "C#",
-  F: "F",
-  Bb: "Bb",
-  Eb: "Eb",
-  Ab: "Ab",
-  Db: "Db",
-  Gb: "Gb",
-  Cb: "Cb",
-};
-const MINOR_KEY_SIGNATURE_BY_TONIC: Record<MinorTonic, KeySignature> = {
-  A: "C",
-  E: "G",
-  B: "D",
-  "F#": "A",
-  "C#": "E",
-  "G#": "B",
-  "D#": "F#",
-  "A#": "C#",
-  D: "F",
-  G: "Bb",
-  C: "Eb",
-  F: "Ab",
-  Bb: "Db",
-  Eb: "Gb",
-  Ab: "Cb",
-};
-const MAJOR_TONICS = Object.keys(MAJOR_KEY_SIGNATURE_BY_TONIC) as MajorTonic[];
-const MINOR_TONICS = Object.keys(MINOR_KEY_SIGNATURE_BY_TONIC) as MinorTonic[];
 
 type AppState = {
   promptQueue: PromptSlot[];
@@ -1099,10 +1014,6 @@ function getPromptMidiNotes(prompt: PromptSlot) {
   );
 }
 
-function compareKeysByMidiNumber(left: string, right: string) {
-  return keyToMidiNoteNumber(left) - keyToMidiNoteNumber(right);
-}
-
 function formatPromptSlot(prompt: PromptSlot | null) {
   if (!prompt) {
     return "none";
@@ -1121,174 +1032,15 @@ function formatPromptSlot(prompt: PromptSlot | null) {
   return parts.join(" | ") || "none";
 }
 
-function keyToMidiNoteNumber(key: string) {
-  const [noteName, octaveText] = key.split("/");
-
-  if (!noteName || !octaveText) {
-    throw new Error(`Invalid key format: ${key}`);
-  }
-
-  const naturalSemitone = getNaturalSemitoneForNoteName(noteName);
-  const accidentalOffset = getAccidentalOffsetForNoteName(noteName);
-  const octave = Number.parseInt(octaveText, 10);
-
-  if (Number.isNaN(octave)) {
-    throw new Error(`Invalid octave in key: ${key}`);
-  }
-
-  return (octave + 1) * 12 + naturalSemitone + accidentalOffset;
-}
-
-function getNaturalSemitoneForNoteName(noteName: string) {
-  const baseNote = noteName.charAt(0).toLowerCase();
-  const semitonesByName: Record<string, number> = {
-    c: 0,
-    d: 2,
-    e: 4,
-    f: 5,
-    g: 7,
-    a: 9,
-    b: 11,
-  };
-
-  const semitone = semitonesByName[baseNote];
-
-  if (semitone === undefined) {
-    throw new Error(`Unsupported note name: ${noteName}`);
-  }
-
-  return semitone;
-}
-
-function getAccidentalOffsetForNoteName(noteName: string) {
-  const accidentalText = noteName.slice(1);
-  let accidentalOffset = 0;
-
-  for (const character of accidentalText) {
-    if (character === "#") {
-      accidentalOffset += 1;
-      continue;
-    }
-
-    if (character === "b") {
-      accidentalOffset -= 1;
-      continue;
-    }
-
-    throw new Error(`Unsupported accidental in note name: ${noteName}`);
-  }
-
-  return accidentalOffset;
-}
-
-function getRenderedAccidentalForKey(
-  key: string,
-  keySignature: KeySignature | null,
-) {
-  const [noteName] = key.split("/");
-
-  if (!noteName) {
-    return null;
-  }
-
-  const actualAccidental = noteName.slice(1);
-
-  if (!keySignature) {
-    return actualAccidental || null;
-  }
-
-  const impliedAccidentals = getKeySignatureAccidentals(keySignature);
-  const impliedAccidental =
-    impliedAccidentals[noteName.charAt(0).toLowerCase()] ?? "";
-
-  if (actualAccidental === impliedAccidental) {
-    return null;
-  }
-
-  if (!actualAccidental && impliedAccidental) {
-    return "n";
-  }
-
-  return actualAccidental || null;
-}
-
-function getKeySignatureAccidentals(keySignature: KeySignature) {
-  const accidentals: Record<string, string> = {};
-  const sharpKeySignatureCount: Partial<Record<KeySignature, number>> = {
-    G: 1,
-    D: 2,
-    A: 3,
-    E: 4,
-    B: 5,
-    "F#": 6,
-    "C#": 7,
-  };
-  const flatKeySignatureCount: Partial<Record<KeySignature, number>> = {
-    F: 1,
-    Bb: 2,
-    Eb: 3,
-    Ab: 4,
-    Db: 5,
-    Gb: 6,
-    Cb: 7,
-  };
-  const sharpCount = sharpKeySignatureCount[keySignature] ?? 0;
-  const flatCount = flatKeySignatureCount[keySignature] ?? 0;
-
-  for (const noteName of SHARP_KEY_SIGNATURE_ORDER.slice(0, sharpCount)) {
-    accidentals[noteName] = "#";
-  }
-
-  for (const noteName of FLAT_KEY_SIGNATURE_ORDER.slice(0, flatCount)) {
-    accidentals[noteName] = "b";
-  }
-
-  return accidentals;
-}
-
-function getDerivedKeySignature(generationSettings: GenerationSettings) {
-  if (generationSettings.scaleType === "major") {
-    return MAJOR_KEY_SIGNATURE_BY_TONIC[generationSettings.tonic as MajorTonic];
-  }
-
-  return MINOR_KEY_SIGNATURE_BY_TONIC[generationSettings.tonic as MinorTonic];
-}
-
-function getTonicsForScaleType(scaleType: ScaleType): Tonic[] {
-  if (scaleType === "major") {
-    return MAJOR_TONICS;
-  }
-
-  return MINOR_TONICS;
-}
-
-function createKeyboardNotePool() {
-  const notePool: string[] = [];
-
-  for (
-    let midiNoteNumber = KEYBOARD_START_MIDI_NOTE;
-    midiNoteNumber <= KEYBOARD_END_MIDI_NOTE;
-    midiNoteNumber += 1
-  ) {
-    notePool.push(midiNoteNumberToKey(midiNoteNumber, "sharps"));
-  }
-
-  return notePool;
-}
-
 function createPromptQueue(
   length: number,
   generationSettings: GenerationSettings,
 ) {
-  if (generationSettings.practiceMode === "scales") {
-    return createScalePracticeQueue(generationSettings);
-  }
-
-  const promptQueue: PromptSlot[] = [];
-
-  fillQueueToLength(promptQueue, length, generationSettings);
-
-  return promptQueue;
+  return createExercisePromptQueue(
+    length,
+    generationSettings,
+    GENERATED_NOTE_POOL,
+  );
 }
 
 function fillQueueToLength(
@@ -1296,387 +1048,12 @@ function fillQueueToLength(
   length: number,
   generationSettings: GenerationSettings,
 ) {
-  if (generationSettings.practiceMode === "scales") {
-    return;
-  }
-
-  while (promptQueue.length < length) {
-    promptQueue.push(
-      generatePrompt(promptQueue.at(-1) ?? null, generationSettings),
-    );
-  }
-}
-
-function generatePrompt(
-  previousPrompt: PromptSlot | null,
-  generationSettings: GenerationSettings,
-): PromptSlot {
-  const generatedNotePool = getAllowedGeneratedNotes(generationSettings);
-  const previousKey =
-    previousPrompt?.trebleKeys?.[0] ?? previousPrompt?.bassKeys?.[0] ?? null;
-  const availableKeys = generatedNotePool.filter((key) => key !== previousKey);
-  const key = pickRandomItem(
-    availableKeys.length > 0 ? availableKeys : generatedNotePool,
+  fillExercisePromptQueue(
+    promptQueue,
+    length,
+    generationSettings,
+    GENERATED_NOTE_POOL,
   );
-
-  if (getClefForKey(key) === "treble") {
-    return {
-      duration: "q",
-      trebleKeys: [key],
-    };
-  }
-
-  return {
-    duration: "q",
-    bassKeys: [key],
-  };
-}
-
-function createScalePracticeQueue(generationSettings: GenerationSettings) {
-  const trebleStartingOctave = getScaleStartingOctave(generationSettings.tonic);
-  const trebleAscendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
-    generationSettings.scaleType,
-    trebleStartingOctave,
-    generationSettings.scaleOctaves,
-  );
-  const bassAscendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
-    generationSettings.scaleType,
-    trebleStartingOctave - 1,
-    generationSettings.scaleOctaves,
-  );
-  const ascendingPrompts = createScalePromptsForHands(
-    trebleAscendingKeys,
-    bassAscendingKeys,
-    generationSettings.scaleHands,
-  );
-  const descendingPrompts = createScalePromptsForHands(
-    [...trebleAscendingKeys].slice(0, -1).reverse(),
-    [...bassAscendingKeys].slice(0, -1).reverse(),
-    generationSettings.scaleHands,
-  );
-
-  return [...ascendingPrompts, ...descendingPrompts.slice(0, -1)];
-}
-
-function getScaleStartingOctave(tonic: Tonic) {
-  return isTrebleScaleStartWithinUpperLimit(tonic.toLowerCase()) ? 4 : 3;
-}
-
-function isTrebleScaleStartWithinUpperLimit(noteName: string) {
-  const baseLetter = noteName.charAt(0).toLowerCase();
-  const accidentalOffset = getAccidentalOffsetForNoteName(noteName);
-  const allowedBaseLetters = ["c", "d", "e"];
-
-  if (allowedBaseLetters.includes(baseLetter)) {
-    return true;
-  }
-
-  if (baseLetter === "f") {
-    return accidentalOffset <= 1;
-  }
-
-  if (["g", "a", "b"].includes(baseLetter)) {
-    return false;
-  }
-
-  throw new Error(`Unsupported tonic note name: ${noteName}`);
-}
-
-function getAscendingScaleKeys(
-  tonic: Tonic,
-  scaleType: ScaleType,
-  startingOctave: number,
-  scaleOctaves: ScaleOctaves,
-) {
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
-  const ascendingNoteNames = Array.from({ length: scaleOctaves }).flatMap(
-    () => {
-      return scaleNoteNames;
-    },
-  );
-  ascendingNoteNames.push(tonic.toLowerCase());
-  const ascendingKeys: string[] = [];
-  let currentOctave = startingOctave;
-  let previousMidiNoteNumber = -Infinity;
-
-  for (const noteName of ascendingNoteNames) {
-    let key = `${noteName}/${currentOctave}`;
-    let midiNoteNumber = keyToMidiNoteNumber(key);
-
-    while (midiNoteNumber <= previousMidiNoteNumber) {
-      currentOctave += 1;
-      key = `${noteName}/${currentOctave}`;
-      midiNoteNumber = keyToMidiNoteNumber(key);
-    }
-
-    ascendingKeys.push(key);
-    previousMidiNoteNumber = midiNoteNumber;
-  }
-
-  return ascendingKeys;
-}
-
-function createScalePromptsForHands(
-  trebleKeys: string[],
-  bassKeys: string[],
-  scaleHands: ScaleHands,
-) {
-  if (scaleHands === "treble") {
-    return trebleKeys.map((key) => ({
-      duration: "q",
-      trebleKeys: [key],
-    }));
-  }
-
-  if (scaleHands === "bass") {
-    return bassKeys.map((key) => ({
-      duration: "q",
-      bassKeys: [key],
-    }));
-  }
-
-  return trebleKeys.map((trebleKey, index) => {
-    const bassKey = bassKeys[index];
-
-    if (!bassKey) {
-      throw new Error("Could not find matching bass scale note.");
-    }
-
-    return {
-      duration: "q",
-      trebleKeys: [trebleKey],
-      bassKeys: [bassKey],
-    };
-  });
-}
-
-function getClefForKey(key: string): "treble" | "bass" {
-  return keyToMidiNoteNumber(key) < 60 ? "bass" : "treble";
-}
-
-function getAllowedGeneratedNotes(generationSettings: GenerationSettings) {
-  if (generationSettings.noteSourceMode === "in-scale") {
-    return getNotesInScale(
-      generationSettings.rangeStart,
-      generationSettings.rangeEnd,
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
-  }
-
-  const notePoolInRange = getGeneratedNotePool(
-    generationSettings.rangeStart,
-    generationSettings.rangeEnd,
-    generationSettings.accidentalSpellingMode,
-  );
-
-  return notePoolInRange;
-}
-
-function getNotesInScale(
-  rangeStart: string,
-  rangeEnd: string,
-  tonic: Tonic,
-  scaleType: ScaleType,
-) {
-  const startMidiNoteNumber = keyToMidiNoteNumber(rangeStart);
-  const endMidiNoteNumber = keyToMidiNoteNumber(rangeEnd);
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
-  const notesInKey: Array<{ key: string; midiNoteNumber: number }> = [];
-
-  for (
-    let octave = getOctaveForKey(rangeStart) - 1;
-    octave <= getOctaveForKey(rangeEnd) + 1;
-    octave += 1
-  ) {
-    for (const noteName of scaleNoteNames) {
-      const key = `${noteName}/${octave}`;
-      const midiNoteNumber = keyToMidiNoteNumber(key);
-
-      if (
-        midiNoteNumber < startMidiNoteNumber ||
-        midiNoteNumber > endMidiNoteNumber
-      ) {
-        continue;
-      }
-
-      notesInKey.push({
-        key,
-        midiNoteNumber,
-      });
-    }
-  }
-
-  notesInKey.sort((left, right) => left.midiNoteNumber - right.midiNoteNumber);
-
-  return notesInKey.map((note) => note.key);
-}
-
-function getScaleNoteNames(tonic: Tonic, scaleType: ScaleType) {
-  const tonicNoteName = tonic.toLowerCase();
-  const tonicMidiNoteNumber = keyToMidiNoteNumber(`${tonicNoteName}/4`);
-  const letterSequence = getScaleLetterSequence(tonicNoteName.charAt(0));
-  const semitoneOffsetsByScaleType: Record<ScaleType, number[]> = {
-    major: [0, 2, 4, 5, 7, 9, 11],
-    "natural-minor": [0, 2, 3, 5, 7, 8, 10],
-    "harmonic-minor": [0, 2, 3, 5, 7, 8, 11],
-    "melodic-minor": [0, 2, 3, 5, 7, 9, 11],
-  };
-
-  return semitoneOffsetsByScaleType[scaleType].map((semitoneOffset, index) => {
-    const targetPitchClass = (tonicMidiNoteNumber + semitoneOffset) % 12;
-    const letterName = letterSequence[index];
-
-    if (!letterName) {
-      throw new Error("Could not determine scale letter.");
-    }
-
-    return getSpelledNoteName(letterName, targetPitchClass);
-  });
-}
-
-function getScaleLetterSequence(startLetter: string) {
-  const noteLetters = ["c", "d", "e", "f", "g", "a", "b"];
-  const startIndex = noteLetters.indexOf(startLetter.toLowerCase());
-
-  if (startIndex === -1) {
-    throw new Error(`Unsupported tonic letter: ${startLetter}`);
-  }
-
-  return Array.from({ length: 7 }, (_, index) => {
-    return noteLetters[(startIndex + index) % noteLetters.length];
-  });
-}
-
-function getSpelledNoteName(letterName: string, targetPitchClass: number) {
-  const naturalPitchClass = getNaturalSemitoneForNoteName(letterName);
-
-  for (const accidentalOffset of [-2, -1, 0, 1, 2]) {
-    if ((naturalPitchClass + accidentalOffset + 12) % 12 !== targetPitchClass) {
-      continue;
-    }
-
-    return `${letterName}${getAccidentalText(accidentalOffset)}`;
-  }
-
-  throw new Error(
-    `Could not spell note for ${letterName} at ${targetPitchClass}.`,
-  );
-}
-
-function getAccidentalText(accidentalOffset: number) {
-  if (accidentalOffset > 0) {
-    return "#".repeat(accidentalOffset);
-  }
-
-  if (accidentalOffset < 0) {
-    return "b".repeat(Math.abs(accidentalOffset));
-  }
-
-  return "";
-}
-
-function getGeneratedNotePool(
-  rangeStart: string,
-  rangeEnd: string,
-  accidentalSpellingMode: AccidentalSpellingMode,
-) {
-  const startIndex = GENERATED_NOTE_POOL.indexOf(rangeStart);
-  const endIndex = GENERATED_NOTE_POOL.indexOf(rangeEnd);
-
-  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-    throw new Error("Invalid generated note range.");
-  }
-
-  return GENERATED_NOTE_POOL.slice(startIndex, endIndex + 1).map((key) =>
-    midiNoteNumberToKey(keyToMidiNoteNumber(key), accidentalSpellingMode),
-  );
-}
-
-function pickRandomItem<Item>(items: Item[]) {
-  const randomIndex = Math.floor(Math.random() * items.length);
-  const item = items[randomIndex];
-
-  if (item === undefined) {
-    throw new Error("Cannot pick a random item from an empty list.");
-  }
-
-  return item;
-}
-
-function getOctaveForKey(key: string) {
-  const [, octaveText] = key.split("/");
-
-  if (!octaveText) {
-    throw new Error(`Invalid key format: ${key}`);
-  }
-
-  const octave = Number.parseInt(octaveText, 10);
-
-  if (Number.isNaN(octave)) {
-    throw new Error(`Invalid octave in key: ${key}`);
-  }
-
-  return octave;
-}
-
-function formatKeyLabel(key: string) {
-  const [noteName, octaveText] = key.split("/");
-
-  if (!noteName || !octaveText) {
-    return key;
-  }
-
-  const firstCharacter = noteName.charAt(0).toUpperCase();
-  const accidental = noteName.slice(1);
-
-  return `${firstCharacter}${accidental}${octaveText}`;
-}
-
-function midiNoteNumberToKey(
-  noteNumber: number,
-  accidentalSpellingMode: AccidentalSpellingMode,
-) {
-  const sharpNoteNames = [
-    "c",
-    "c#",
-    "d",
-    "d#",
-    "e",
-    "f",
-    "f#",
-    "g",
-    "g#",
-    "a",
-    "a#",
-    "b",
-  ];
-  const flatNoteNames = [
-    "c",
-    "db",
-    "d",
-    "eb",
-    "e",
-    "f",
-    "gb",
-    "g",
-    "ab",
-    "a",
-    "bb",
-    "b",
-  ];
-  const noteNames =
-    accidentalSpellingMode === "flats" ? flatNoteNames : sharpNoteNames;
-  const noteName = noteNames[noteNumber % 12];
-  const octave = Math.floor(noteNumber / 12) - 1;
-
-  if (!noteName) {
-    throw new Error(`Invalid MIDI note number: ${noteNumber}`);
-  }
-
-  return `${noteName}/${octave}`;
 }
 
 function loadPreferredMidiDeviceId() {

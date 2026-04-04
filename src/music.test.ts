@@ -1,0 +1,116 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  type GenerationSettings,
+  getAscendingScaleKeys,
+  getDerivedKeySignature,
+  getRenderedAccidentalForKey,
+  getScaleNoteNames,
+  getScaleStartingOctave,
+  keyToMidiNoteNumber,
+} from "./music";
+
+function createGenerationSettings(
+  overrides: Partial<GenerationSettings> = {},
+): GenerationSettings {
+  return {
+    practiceMode: "random-notes",
+    scaleHands: "treble",
+    scaleOctaves: 1,
+    rangeStart: "c/2",
+    rangeEnd: "c/6",
+    noteSourceMode: "in-scale",
+    accidentalSpellingMode: "sharps",
+    tonic: "C",
+    scaleType: "major",
+    ...overrides,
+  };
+}
+
+describe("keyToMidiNoteNumber", () => {
+  it("converts plain and accidental note names to MIDI numbers", () => {
+    expect(keyToMidiNoteNumber("c/4")).toBe(60);
+    expect(keyToMidiNoteNumber("bb/3")).toBe(58);
+    expect(keyToMidiNoteNumber("cb/4")).toBe(59);
+    expect(keyToMidiNoteNumber("e#/4")).toBe(65);
+  });
+});
+
+describe("getDerivedKeySignature", () => {
+  it("derives major and minor key signatures from tonic and scale type", () => {
+    expect(
+      getDerivedKeySignature(
+        createGenerationSettings({
+          tonic: "G",
+          scaleType: "major",
+        }),
+      ),
+    ).toBe("G");
+
+    expect(
+      getDerivedKeySignature(
+        createGenerationSettings({
+          tonic: "E",
+          scaleType: "natural-minor",
+        }),
+      ),
+    ).toBe("G");
+  });
+});
+
+describe("getScaleNoteNames", () => {
+  it("spells F sharp major with the expected sharps", () => {
+    expect(getScaleNoteNames("F#", "major")).toEqual([
+      "f#",
+      "g#",
+      "a#",
+      "b",
+      "c#",
+      "d#",
+      "e#",
+    ]);
+  });
+
+  it("spells B flat harmonic minor with the raised seventh", () => {
+    expect(getScaleNoteNames("Bb", "harmonic-minor")).toEqual([
+      "bb",
+      "c",
+      "db",
+      "eb",
+      "f",
+      "gb",
+      "a",
+    ]);
+  });
+});
+
+describe("getRenderedAccidentalForKey", () => {
+  it("suppresses accidentals implied by the key signature", () => {
+    expect(getRenderedAccidentalForKey("bb/3", "Ab")).toBeNull();
+  });
+
+  it("shows a natural sign when the key signature implies a flat", () => {
+    expect(getRenderedAccidentalForKey("b/3", "Ab")).toBe("n");
+  });
+});
+
+describe("scale positioning helpers", () => {
+  it("uses the expected treble starting octave rule", () => {
+    expect(getScaleStartingOctave("F#")).toBe(4);
+    expect(getScaleStartingOctave("Gb")).toBe(3);
+    expect(getScaleStartingOctave("B")).toBe(3);
+  });
+
+  it("builds ascending keys without dropping backward across octaves", () => {
+    expect(getAscendingScaleKeys("Ab", "major", 3, 1)).toEqual([
+      "ab/3",
+      "bb/3",
+      "c/4",
+      "db/4",
+      "eb/4",
+      "f/4",
+      "g/4",
+      "ab/4",
+    ]);
+  });
+});
