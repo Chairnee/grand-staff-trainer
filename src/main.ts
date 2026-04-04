@@ -8,6 +8,7 @@ import {
   StaveNote,
   Voice,
 } from "vexflow";
+import { renderKeyboardDisplay } from "./display/keyboard";
 import {
   createExercisePromptQueue,
   fillExercisePromptQueue,
@@ -66,6 +67,7 @@ type AppState = {
   generationSettings: GenerationSettings;
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
+  isKeyboardVisible: boolean;
   midi: MidiState;
 };
 
@@ -96,6 +98,7 @@ app.innerHTML = `
     <section class="practice-area">
       <div id="midi-debug" class="midi-debug" hidden></div>
       <div id="notation" class="notation"></div>
+      <div id="keyboard-display" class="keyboard-display" hidden></div>
     </section>
 
     <div id="settings-backdrop" class="settings-backdrop" hidden></div>
@@ -180,6 +183,10 @@ app.innerHTML = `
       <section class="settings-section">
         <h3>Display</h3>
         <label class="settings-toggle">
+          <input id="settings-keyboard-toggle" type="checkbox" />
+          <span>Show keyboard</span>
+        </label>
+        <label class="settings-toggle">
           <input id="settings-debug-toggle" type="checkbox" />
           <span>Show debug panel</span>
         </label>
@@ -189,6 +196,8 @@ app.innerHTML = `
 `;
 
 const notation = document.querySelector<HTMLDivElement>("#notation");
+const keyboardDisplay =
+  document.querySelector<HTMLDivElement>("#keyboard-display");
 const midiInputSelect =
   document.querySelector<HTMLSelectElement>("#midi-input-select");
 const midiDebug = document.querySelector<HTMLDivElement>("#midi-debug");
@@ -243,9 +252,13 @@ const scaleTypeSelect =
 const settingsDebugToggle = document.querySelector<HTMLInputElement>(
   "#settings-debug-toggle",
 );
+const settingsKeyboardToggle = document.querySelector<HTMLInputElement>(
+  "#settings-keyboard-toggle",
+);
 
 if (
   !notation ||
+  !keyboardDisplay ||
   !midiInputSelect ||
   !midiDebug ||
   !settingsToggle ||
@@ -269,12 +282,14 @@ if (
   !accidentalSpellingField ||
   !tonicSelect ||
   !scaleTypeSelect ||
-  !settingsDebugToggle
+  !settingsDebugToggle ||
+  !settingsKeyboardToggle
 ) {
   throw new Error("Could not find app elements.");
 }
 
 const notationElement = notation;
+const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
 const midiDebugElement = midiDebug;
 const settingsToggleElement = settingsToggle;
@@ -299,6 +314,7 @@ const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
 const settingsDebugToggleElement = settingsDebugToggle;
+const settingsKeyboardToggleElement = settingsKeyboardToggle;
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
@@ -328,6 +344,7 @@ const state: AppState = {
   },
   isSettingsOpen: false,
   isDebugVisible: initialStoredSettings.isDebugVisible,
+  isKeyboardVisible: initialStoredSettings.isKeyboardVisible,
   midi: {
     status: "idle",
     deviceId: null,
@@ -351,6 +368,10 @@ settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
 debugToggleElement.addEventListener("click", toggleDebugPanel);
 settingsDebugToggleElement.addEventListener("change", handleDebugToggleChange);
+settingsKeyboardToggleElement.addEventListener(
+  "change",
+  handleKeyboardToggleChange,
+);
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
 scaleOctavesSelectElement.addEventListener("change", handleScaleOctavesChange);
@@ -385,6 +406,7 @@ function renderApp() {
   renderMidiDebug();
   updateAttemptFeedback();
   renderGrandStaff(notationElement, state);
+  renderKeyboard();
 }
 
 function handleMidiStateChange(midiState: MidiState) {
@@ -445,6 +467,7 @@ function renderSettingsDrawer() {
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
   settingsDebugToggleElement.checked = state.isDebugVisible;
+  settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
   scaleHandsSelectElement.value = state.generationSettings.scaleHands;
   scaleOctavesSelectElement.value =
@@ -507,6 +530,24 @@ function renderMidiDebug() {
   ];
 
   midiDebugElement.textContent = lines.join("\n");
+}
+
+function renderKeyboard() {
+  keyboardDisplayElement.hidden = !state.isKeyboardVisible;
+
+  if (!state.isKeyboardVisible) {
+    keyboardDisplayElement.replaceChildren();
+    return;
+  }
+
+  const currentPrompt = state.promptQueue[state.currentPromptIndex];
+
+  renderKeyboardDisplay(keyboardDisplayElement, {
+    activeNotes: currentPrompt ? getPromptMidiNotes(currentPrompt) : [],
+    heldNotes: state.midi.heldNotes,
+    startMidiNote: KEYBOARD_START_MIDI_NOTE,
+    endMidiNote: KEYBOARD_END_MIDI_NOTE,
+  });
 }
 
 function renderRangeOptions() {
@@ -595,6 +636,12 @@ function closeSettingsDrawer() {
 
 function toggleDebugPanel() {
   state.isDebugVisible = !state.isDebugVisible;
+  saveStoredSettings();
+  renderApp();
+}
+
+function handleKeyboardToggleChange() {
+  state.isKeyboardVisible = settingsKeyboardToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
@@ -1096,6 +1143,7 @@ function loadStoredSettings() {
           ...initialGenerationSettings,
         },
         isDebugVisible: false,
+        isKeyboardVisible: false,
       };
     }
 
@@ -1111,6 +1159,10 @@ function loadStoredSettings() {
         typeof parsedSettings?.isDebugVisible === "boolean"
           ? parsedSettings.isDebugVisible
           : false,
+      isKeyboardVisible:
+        typeof parsedSettings?.isKeyboardVisible === "boolean"
+          ? parsedSettings.isKeyboardVisible
+          : false,
     };
   } catch {
     return {
@@ -1118,6 +1170,7 @@ function loadStoredSettings() {
         ...initialGenerationSettings,
       },
       isDebugVisible: false,
+      isKeyboardVisible: false,
     };
   }
 }
@@ -1129,6 +1182,7 @@ function saveStoredSettings() {
       JSON.stringify({
         generationSettings: state.generationSettings,
         isDebugVisible: state.isDebugVisible,
+        isKeyboardVisible: state.isKeyboardVisible,
       }),
     );
   } catch {

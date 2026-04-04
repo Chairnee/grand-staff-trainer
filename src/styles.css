@@ -131,6 +131,98 @@ body {
   height: auto;
 }
 
+.keyboard-display {
+  padding: 14px 16px 18px;
+  overflow-x: auto;
+  border: 1px solid rgba(70, 52, 28, 0.12);
+  border-radius: 16px;
+  background: #fffdf7;
+  box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
+}
+
+.keyboard-display[hidden] {
+  display: none;
+}
+
+.keyboard {
+  --keyboard-white-key-width: 18px;
+  --keyboard-white-key-height: 120px;
+  --keyboard-black-key-width: 11px;
+  --keyboard-black-key-height: 72px;
+  position: relative;
+  width: calc(52 * var(--keyboard-white-key-width));
+  height: var(--keyboard-white-key-height);
+  margin: 0 auto;
+}
+
+.keyboard-white-keys {
+  display: flex;
+  height: 100%;
+}
+
+.keyboard-black-keys {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.keyboard-key {
+  position: relative;
+  border: 1px solid rgba(70, 52, 28, 0.18);
+  border-radius: 0 0 4px 4px;
+  transition:
+    background-color 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.keyboard-key-white {
+  width: var(--keyboard-white-key-width);
+  height: var(--keyboard-white-key-height);
+  background: linear-gradient(180deg, #fffef9 0%, #f4ead8 100%);
+}
+
+.keyboard-key-black {
+  position: absolute;
+  width: var(--keyboard-black-key-width);
+  height: var(--keyboard-black-key-height);
+  background: linear-gradient(180deg, #49382a 0%, #2c2119 100%);
+  border-color: rgba(31, 29, 27, 0.4);
+  box-shadow: 0 4px 10px rgba(31, 29, 27, 0.18);
+  z-index: 1;
+}
+
+.keyboard-key.is-active.keyboard-key-white {
+  background: linear-gradient(180deg, #f7cdb2 0%, #df8d58 100%);
+  border-color: rgba(166, 64, 31, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 253, 247, 0.3);
+}
+
+.keyboard-key.is-active.keyboard-key-black {
+  background: linear-gradient(180deg, #d77f53 0%, #a6401f 100%);
+  border-color: rgba(166, 64, 31, 0.75);
+  box-shadow: 0 4px 10px rgba(166, 64, 31, 0.24);
+}
+
+.keyboard-key.is-held:not(.is-active).keyboard-key-white {
+  background: linear-gradient(180deg, #f0f7ff 0%, #c6daee 100%);
+  border-color: rgba(76, 117, 163, 0.4);
+}
+
+.keyboard-key.is-held:not(.is-active).keyboard-key-black {
+  background: linear-gradient(180deg, #6b7f98 0%, #45556c 100%);
+  border-color: rgba(76, 117, 163, 0.5);
+}
+
+.keyboard-key-label {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  color: rgba(91, 73, 49, 0.7);
+  font-size: 0.72rem;
+}
+
 .settings-backdrop {
   position: fixed;
   inset: 0;
@@ -263,6 +355,13 @@ body {
   .midi-debug {
     margin-bottom: 10px;
     font-size: 0.85rem;
+  }
+
+  .keyboard {
+    --keyboard-white-key-width: 14px;
+    --keyboard-white-key-height: 102px;
+    --keyboard-black-key-width: 9px;
+    --keyboard-black-key-height: 60px;
   }
 
   .midi-picker {
