@@ -80,6 +80,27 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("names a sus2 chord in root position", () => {
+    expect(analyzeHeldInput([60, 62, 67])).toEqual({
+      primaryLabel: "C sus2",
+      secondaryLabel: "C4 - D4 - G4",
+    });
+  });
+
+  it("names a sus4 chord in root position", () => {
+    expect(analyzeHeldInput([60, 65, 67])).toEqual({
+      primaryLabel: "C sus4",
+      secondaryLabel: "C4 - F4 - G4",
+    });
+  });
+
+  it("prefers the bass-root suspended reading when the voicing is ambiguous", () => {
+    expect(analyzeHeldInput([65, 67, 72])).toEqual({
+      primaryLabel: "F sus2",
+      secondaryLabel: "F4 - G4 - C5",
+    });
+  });
+
   it("uses practical naming for enharmonic triad spellings", () => {
     expect(analyzeHeldInput([60, 63, 67])).toEqual({
       primaryLabel: "C minor triad",
@@ -98,6 +119,20 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([61, 65, 68])).toEqual({
       primaryLabel: "Db major triad",
       secondaryLabel: "Db/C#4 - F4 - Ab/G#4",
+    });
+  });
+
+  it("names a power chord with octave doubling", () => {
+    expect(analyzeHeldInput([60, 67, 72])).toEqual({
+      primaryLabel: "C5",
+      secondaryLabel: "C4 - G4 - C5",
+    });
+  });
+
+  it("finds the harmonic root for inverted power-chord voicings", () => {
+    expect(analyzeHeldInput([55, 60, 67])).toEqual({
+      primaryLabel: "C5",
+      secondaryLabel: "G3 - C4 - G4",
     });
   });
 

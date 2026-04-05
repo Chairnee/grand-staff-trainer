@@ -9,13 +9,23 @@ type HeldInputNote = {
   pitchClass: number;
 };
 
-type TriadQuality = "major" | "minor" | "diminished" | "augmented";
+type TriadQuality =
+  | "major"
+  | "minor"
+  | "diminished"
+  | "augmented"
+  | "sus2"
+  | "sus4";
 type TriadInversion = "root position" | "first inversion" | "second inversion";
 
 type TriadAnalysis = {
   rootKey: string;
   quality: TriadQuality;
   inversion: TriadInversion;
+};
+
+type PowerChordAnalysis = {
+  rootKey: string;
 };
 
 export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
@@ -71,7 +81,18 @@ export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
         secondaryLabel: formatHeldInputLabels(inputNotes),
       };
     }
+  }
 
+  const powerChordAnalysis = analyzePowerChord(inputNotes);
+
+  if (powerChordAnalysis) {
+    return {
+      primaryLabel: formatPowerChordLabel(powerChordAnalysis),
+      secondaryLabel: formatHeldInputLabels(inputNotes),
+    };
+  }
+
+  if (inputNotes.length === 3) {
     return {
       primaryLabel: "Unknown triad",
       secondaryLabel: formatHeldInputLabels(inputNotes),
@@ -194,12 +215,20 @@ function analyzeTriad(inputNotes: HeldInputNote[]): TriadAnalysis | null {
 function getTriadQualityByIntervals(intervals: number[]) {
   const [firstInterval, secondInterval] = intervals;
 
+  if (firstInterval === 2 && secondInterval === 7) {
+    return "sus2";
+  }
+
   if (firstInterval === 4 && secondInterval === 7) {
     return "major";
   }
 
   if (firstInterval === 3 && secondInterval === 7) {
     return "minor";
+  }
+
+  if (firstInterval === 5 && secondInterval === 7) {
+    return "sus4";
   }
 
   if (firstInterval === 3 && secondInterval === 6) {
@@ -245,6 +274,14 @@ function getTriadInversion(
 }
 
 function getTriadThirdOffset(triadQuality: TriadQuality) {
+  if (triadQuality === "sus2") {
+    return 2;
+  }
+
+  if (triadQuality === "sus4") {
+    return 5;
+  }
+
   return triadQuality === "major" || triadQuality === "augmented" ? 4 : 3;
 }
 
@@ -267,7 +304,49 @@ function formatTriadLabel(triadAnalysis: TriadAnalysis) {
       ? ""
       : `, ${triadAnalysis.inversion}`;
 
+  if (triadAnalysis.quality === "sus2" || triadAnalysis.quality === "sus4") {
+    return `${rootLabel} ${triadAnalysis.quality}${inversionSuffix}`;
+  }
+
   return `${rootLabel} ${triadAnalysis.quality} triad${inversionSuffix}`;
+}
+
+function analyzePowerChord(
+  inputNotes: HeldInputNote[],
+): PowerChordAnalysis | null {
+  const distinctPitchClasses = [
+    ...new Set(inputNotes.map((note) => note.pitchClass)),
+  ];
+
+  if (distinctPitchClasses.length !== 2) {
+    return null;
+  }
+
+  const [firstPitchClass, secondPitchClass] = distinctPitchClasses;
+
+  if (firstPitchClass === undefined || secondPitchClass === undefined) {
+    return null;
+  }
+
+  if (getPitchClassDistance(firstPitchClass, secondPitchClass) === 7) {
+    return {
+      rootKey: getPreferredPracticalTriadRootKey(firstPitchClass),
+    };
+  }
+
+  if (getPitchClassDistance(secondPitchClass, firstPitchClass) === 7) {
+    return {
+      rootKey: getPreferredPracticalTriadRootKey(secondPitchClass),
+    };
+  }
+
+  return null;
+}
+
+function formatPowerChordLabel(powerChordAnalysis: PowerChordAnalysis) {
+  const rootLabel = formatPitchLabel(powerChordAnalysis.rootKey);
+
+  return `${rootLabel}5`;
 }
 
 function formatIntervalName(rootPitchClass: number, intervalLabel: string) {
