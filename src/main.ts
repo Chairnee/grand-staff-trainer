@@ -106,13 +106,14 @@ app.innerHTML = `
       </header>
 
       <section class="practice-area">
-        <div id="midi-debug" class="midi-debug" hidden></div>
         <div id="input-name-display" class="input-name-display" hidden></div>
         <div id="notation" class="notation"></div>
         <div id="keyboard-display" class="keyboard-display" hidden></div>
       </section>
     </main>
   </div>
+
+  <div id="midi-debug" class="midi-debug" hidden></div>
 
   <div id="settings-backdrop" class="settings-backdrop" hidden></div>
 
