@@ -9,12 +9,14 @@ import {
   StaveNote,
   Voice,
 } from "vexflow";
+import { renderInputNameDisplay } from "./display/inputName";
 import { renderKeyboardDisplay } from "./display/keyboard";
 import {
   createExercisePromptQueue,
   fillExercisePromptQueue,
 } from "./exercises";
 import type { PromptSlot } from "./exercises/types";
+import { analyzeHeldInput } from "./inputAnalysis";
 import { connectMidi, type MidiState } from "./midi";
 import {
   type AccidentalSpellingMode,
@@ -72,6 +74,7 @@ type AppState = {
   generationSettings: GenerationSettings;
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
+  isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   midi: MidiState;
 };
@@ -103,6 +106,7 @@ app.innerHTML = `
 
       <section class="practice-area">
         <div id="midi-debug" class="midi-debug" hidden></div>
+        <div id="input-name-display" class="input-name-display" hidden></div>
         <div id="notation" class="notation"></div>
         <div id="keyboard-display" class="keyboard-display" hidden></div>
       </section>
@@ -191,6 +195,10 @@ app.innerHTML = `
     <section class="settings-section">
       <h3>Display</h3>
       <label class="settings-toggle">
+        <input id="settings-input-name-toggle" type="checkbox" />
+        <span>Show input name</span>
+      </label>
+      <label class="settings-toggle">
         <input id="settings-keyboard-toggle" type="checkbox" />
         <span>Show keyboard</span>
       </label>
@@ -203,6 +211,9 @@ app.innerHTML = `
 `;
 
 const notation = document.querySelector<HTMLDivElement>("#notation");
+const inputNameDisplay = document.querySelector<HTMLDivElement>(
+  "#input-name-display",
+);
 const keyboardDisplay =
   document.querySelector<HTMLDivElement>("#keyboard-display");
 const midiInputSelect =
@@ -262,9 +273,13 @@ const settingsDebugToggle = document.querySelector<HTMLInputElement>(
 const settingsKeyboardToggle = document.querySelector<HTMLInputElement>(
   "#settings-keyboard-toggle",
 );
+const settingsInputNameToggle = document.querySelector<HTMLInputElement>(
+  "#settings-input-name-toggle",
+);
 
 if (
   !notation ||
+  !inputNameDisplay ||
   !keyboardDisplay ||
   !midiInputSelect ||
   !midiDebug ||
@@ -290,12 +305,14 @@ if (
   !tonicSelect ||
   !scaleTypeSelect ||
   !settingsDebugToggle ||
-  !settingsKeyboardToggle
+  !settingsKeyboardToggle ||
+  !settingsInputNameToggle
 ) {
   throw new Error("Could not find app elements.");
 }
 
 const notationElement = notation;
+const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
 const midiDebugElement = midiDebug;
@@ -322,6 +339,7 @@ const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
 const settingsDebugToggleElement = settingsDebugToggle;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
+const settingsInputNameToggleElement = settingsInputNameToggle;
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
@@ -351,6 +369,7 @@ const state: AppState = {
   },
   isSettingsOpen: false,
   isDebugVisible: initialStoredSettings.isDebugVisible,
+  isInputNameVisible: initialStoredSettings.isInputNameVisible,
   isKeyboardVisible: initialStoredSettings.isKeyboardVisible,
   midi: {
     status: "idle",
@@ -375,6 +394,10 @@ settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
 debugToggleElement.addEventListener("click", toggleDebugPanel);
 settingsDebugToggleElement.addEventListener("change", handleDebugToggleChange);
+settingsInputNameToggleElement.addEventListener(
+  "change",
+  handleInputNameToggleChange,
+);
 settingsKeyboardToggleElement.addEventListener(
   "change",
   handleKeyboardToggleChange,
@@ -417,6 +440,7 @@ function renderApp() {
   renderToolbar();
   renderSettingsDrawer();
   renderMidiDebug();
+  renderInputName();
   renderGrandStaff(notationElement, state);
   renderKeyboard();
 }
@@ -483,6 +507,7 @@ function renderSettingsDrawer() {
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
   settingsDebugToggleElement.checked = state.isDebugVisible;
+  settingsInputNameToggleElement.checked = state.isInputNameVisible;
   settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
   scaleHandsSelectElement.value = state.generationSettings.scaleHands;
@@ -564,6 +589,19 @@ function renderKeyboard() {
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
   });
+}
+
+function renderInputName() {
+  inputNameDisplayElement.hidden = !state.isInputNameVisible;
+
+  if (!state.isInputNameVisible) {
+    inputNameDisplayElement.replaceChildren();
+    return;
+  }
+
+  const analysis = analyzeHeldInput(state.midi.heldNotes);
+
+  renderInputNameDisplay(inputNameDisplayElement, analysis);
 }
 
 function getStageScale() {
@@ -654,6 +692,12 @@ function toggleDebugPanel() {
 
 function handleKeyboardToggleChange() {
   state.isKeyboardVisible = settingsKeyboardToggleElement.checked;
+  saveStoredSettings();
+  renderApp();
+}
+
+function handleInputNameToggleChange() {
+  state.isInputNameVisible = settingsInputNameToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
@@ -1273,7 +1317,12 @@ function savePreferredMidiDeviceId(deviceId: string) {
   }
 }
 
-function loadStoredSettings() {
+function loadStoredSettings(): {
+  generationSettings: GenerationSettings;
+  isDebugVisible: boolean;
+  isInputNameVisible: boolean;
+  isKeyboardVisible: boolean;
+} {
   try {
     const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
 
@@ -1283,6 +1332,7 @@ function loadStoredSettings() {
           ...initialGenerationSettings,
         },
         isDebugVisible: false,
+        isInputNameVisible: false,
         isKeyboardVisible: false,
       };
     }
@@ -1299,6 +1349,10 @@ function loadStoredSettings() {
         typeof parsedSettings?.isDebugVisible === "boolean"
           ? parsedSettings.isDebugVisible
           : false,
+      isInputNameVisible:
+        typeof parsedSettings?.isInputNameVisible === "boolean"
+          ? parsedSettings.isInputNameVisible
+          : false,
       isKeyboardVisible:
         typeof parsedSettings?.isKeyboardVisible === "boolean"
           ? parsedSettings.isKeyboardVisible
@@ -1310,6 +1364,7 @@ function loadStoredSettings() {
         ...initialGenerationSettings,
       },
       isDebugVisible: false,
+      isInputNameVisible: false,
       isKeyboardVisible: false,
     };
   }
@@ -1322,6 +1377,7 @@ function saveStoredSettings() {
       JSON.stringify({
         generationSettings: state.generationSettings,
         isDebugVisible: state.isDebugVisible,
+        isInputNameVisible: state.isInputNameVisible,
         isKeyboardVisible: state.isKeyboardVisible,
       }),
     );
