@@ -74,6 +74,7 @@ type AppState = {
   generationSettings: GenerationSettings;
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
+  isExerciseVisible: boolean;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   midi: MidiState;
@@ -122,13 +123,33 @@ app.innerHTML = `
     aria-label="Settings"
   >
     <div class="settings-header">
-      <h2>Settings</h2>
+      <h2>Display Settings</h2>
       <button id="settings-close" class="toolbar-button" type="button">
         Close
       </button>
     </div>
 
     <section class="settings-section">
+      <label class="settings-toggle">
+        <input id="settings-exercise-toggle" type="checkbox" />
+        <span>Show exercise options</span>
+      </label>
+      <label class="settings-toggle">
+        <input id="settings-input-name-toggle" type="checkbox" />
+        <span>Show input name</span>
+      </label>
+      <label class="settings-toggle">
+        <input id="settings-keyboard-toggle" type="checkbox" />
+        <span>Show keyboard</span>
+      </label>
+      <label class="settings-toggle">
+        <input id="settings-debug-toggle" type="checkbox" />
+        <span>Show debug panel</span>
+      </label>
+    </section>
+
+    <section class="settings-section">
+      <h3 id="exercise-settings-heading">Exercise Settings</h3>
       <label class="settings-field">
         <span>Practice mode</span>
         <select id="practice-mode-select">
@@ -190,25 +211,10 @@ app.innerHTML = `
         </select>
       </label>
     </section>
-
-    <section class="settings-section">
-      <h3>Display</h3>
-      <label class="settings-toggle">
-        <input id="settings-input-name-toggle" type="checkbox" />
-        <span>Show input name</span>
-      </label>
-      <label class="settings-toggle">
-        <input id="settings-keyboard-toggle" type="checkbox" />
-        <span>Show keyboard</span>
-      </label>
-      <label class="settings-toggle">
-        <input id="settings-debug-toggle" type="checkbox" />
-        <span>Show debug panel</span>
-      </label>
-    </section>
   </aside>
 `;
 
+const practiceArea = document.querySelector<HTMLElement>(".practice-area");
 const notation = document.querySelector<HTMLDivElement>("#notation");
 const inputNameDisplay = document.querySelector<HTMLDivElement>(
   "#input-name-display",
@@ -269,6 +275,12 @@ const scaleTypeSelect =
 const settingsDebugToggle = document.querySelector<HTMLInputElement>(
   "#settings-debug-toggle",
 );
+const settingsExerciseToggle = document.querySelector<HTMLInputElement>(
+  "#settings-exercise-toggle",
+);
+const exerciseSettingsHeading = document.querySelector<HTMLHeadingElement>(
+  "#exercise-settings-heading",
+);
 const settingsKeyboardToggle = document.querySelector<HTMLInputElement>(
   "#settings-keyboard-toggle",
 );
@@ -277,6 +289,7 @@ const settingsInputNameToggle = document.querySelector<HTMLInputElement>(
 );
 
 if (
+  !practiceArea ||
   !notation ||
   !inputNameDisplay ||
   !keyboardDisplay ||
@@ -304,12 +317,15 @@ if (
   !tonicSelect ||
   !scaleTypeSelect ||
   !settingsDebugToggle ||
+  !settingsExerciseToggle ||
+  !exerciseSettingsHeading ||
   !settingsKeyboardToggle ||
   !settingsInputNameToggle
 ) {
   throw new Error("Could not find app elements.");
 }
 
+const practiceAreaElement = practiceArea;
 const notationElement = notation;
 const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
@@ -337,6 +353,8 @@ const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
 const settingsDebugToggleElement = settingsDebugToggle;
+const settingsExerciseToggleElement = settingsExerciseToggle;
+const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
 const settingsInputNameToggleElement = settingsInputNameToggle;
 let renderedAttemptFeedbackCount = 0;
@@ -368,6 +386,7 @@ const state: AppState = {
   },
   isSettingsOpen: false,
   isDebugVisible: initialStoredSettings.isDebugVisible,
+  isExerciseVisible: initialStoredSettings.isExerciseVisible,
   isInputNameVisible: initialStoredSettings.isInputNameVisible,
   isKeyboardVisible: initialStoredSettings.isKeyboardVisible,
   midi: {
@@ -393,6 +412,10 @@ settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
 debugToggleElement.addEventListener("click", toggleDebugPanel);
 settingsDebugToggleElement.addEventListener("change", handleDebugToggleChange);
+settingsExerciseToggleElement.addEventListener(
+  "change",
+  handleExerciseToggleChange,
+);
 settingsInputNameToggleElement.addEventListener(
   "change",
   handleInputNameToggleChange,
@@ -435,12 +458,18 @@ function renderApp() {
     `Device: ${state.midi.deviceName ?? "none"}`,
     `Held: ${state.midi.heldKeys.join(", ") || "none"}`,
   ].join("\n");
+  practiceAreaElement.dataset.exerciseVisible = String(state.isExerciseVisible);
+  practiceAreaElement.dataset.keyboardVisible = String(state.isKeyboardVisible);
+  practiceAreaElement.dataset.inputNameVisible = String(
+    state.isInputNameVisible,
+  );
+  practiceAreaElement.dataset.debugVisible = String(state.isDebugVisible);
   renderMidiInputOptions();
   renderToolbar();
   renderSettingsDrawer();
   renderMidiDebug();
   renderInputName();
-  renderGrandStaff(notationElement, state);
+  renderNotation();
   renderKeyboard();
 }
 
@@ -506,6 +535,7 @@ function renderSettingsDrawer() {
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
   settingsDebugToggleElement.checked = state.isDebugVisible;
+  settingsExerciseToggleElement.checked = state.isExerciseVisible;
   settingsInputNameToggleElement.checked = state.isInputNameVisible;
   settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
@@ -518,15 +548,26 @@ function renderSettingsDrawer() {
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
   const isRandomNotesMode =
     state.generationSettings.practiceMode === "random-notes";
+  const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
-    scaleModeNote.hidden = isRandomNotesMode;
+    scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
   }
-  scaleHandsFieldElement.hidden = isRandomNotesMode;
-  scaleOctavesFieldElement.hidden = isRandomNotesMode;
-  rangeStartFieldElement.hidden = !isRandomNotesMode;
-  rangeEndFieldElement.hidden = !isRandomNotesMode;
-  noteSourceFieldElement.hidden = !isRandomNotesMode;
+  exerciseSettingsHeadingElement.hidden = !areExerciseSettingsVisible;
+  practiceModeSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
+  scaleHandsFieldElement.hidden =
+    !areExerciseSettingsVisible || isRandomNotesMode;
+  scaleOctavesFieldElement.hidden =
+    !areExerciseSettingsVisible || isRandomNotesMode;
+  rangeStartFieldElement.hidden =
+    !areExerciseSettingsVisible || !isRandomNotesMode;
+  rangeEndFieldElement.hidden =
+    !areExerciseSettingsVisible || !isRandomNotesMode;
+  tonicSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
+  scaleTypeSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
+  noteSourceFieldElement.hidden =
+    !areExerciseSettingsVisible || !isRandomNotesMode;
   accidentalSpellingFieldElement.hidden =
+    !areExerciseSettingsVisible ||
     !isRandomNotesMode ||
     state.generationSettings.noteSourceMode !== "chromatic";
   renderTonicOptions();
@@ -572,6 +613,17 @@ function renderMidiDebug() {
   midiDebugElement.textContent = lines.join("\n");
 }
 
+function renderNotation() {
+  notationElement.hidden = !state.isExerciseVisible;
+
+  if (!state.isExerciseVisible) {
+    notationElement.replaceChildren();
+    return;
+  }
+
+  renderGrandStaff(notationElement, state);
+}
+
 function renderKeyboard() {
   keyboardDisplayElement.hidden = !state.isKeyboardVisible;
 
@@ -583,7 +635,10 @@ function renderKeyboard() {
   const currentPrompt = state.promptQueue[state.currentPromptIndex];
 
   renderKeyboardDisplay(keyboardDisplayElement, {
-    activeNotes: currentPrompt ? getPromptMidiNotes(currentPrompt) : [],
+    activeNotes:
+      state.isExerciseVisible && currentPrompt
+        ? getPromptMidiNotes(currentPrompt)
+        : [],
     heldNotes: state.midi.heldNotes,
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
@@ -691,6 +746,12 @@ function toggleDebugPanel() {
 
 function handleKeyboardToggleChange() {
   state.isKeyboardVisible = settingsKeyboardToggleElement.checked;
+  saveStoredSettings();
+  renderApp();
+}
+
+function handleExerciseToggleChange() {
+  state.isExerciseVisible = settingsExerciseToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
@@ -1319,6 +1380,7 @@ function savePreferredMidiDeviceId(deviceId: string) {
 function loadStoredSettings(): {
   generationSettings: GenerationSettings;
   isDebugVisible: boolean;
+  isExerciseVisible: boolean;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
 } {
@@ -1331,6 +1393,7 @@ function loadStoredSettings(): {
           ...initialGenerationSettings,
         },
         isDebugVisible: false,
+        isExerciseVisible: true,
         isInputNameVisible: false,
         isKeyboardVisible: false,
       };
@@ -1348,6 +1411,10 @@ function loadStoredSettings(): {
         typeof parsedSettings?.isDebugVisible === "boolean"
           ? parsedSettings.isDebugVisible
           : false,
+      isExerciseVisible:
+        typeof parsedSettings?.isExerciseVisible === "boolean"
+          ? parsedSettings.isExerciseVisible
+          : true,
       isInputNameVisible:
         typeof parsedSettings?.isInputNameVisible === "boolean"
           ? parsedSettings.isInputNameVisible
@@ -1363,6 +1430,7 @@ function loadStoredSettings(): {
         ...initialGenerationSettings,
       },
       isDebugVisible: false,
+      isExerciseVisible: true,
       isInputNameVisible: false,
       isKeyboardVisible: false,
     };
@@ -1376,6 +1444,7 @@ function saveStoredSettings() {
       JSON.stringify({
         generationSettings: state.generationSettings,
         isDebugVisible: state.isDebugVisible,
+        isExerciseVisible: state.isExerciseVisible,
         isInputNameVisible: state.isInputNameVisible,
         isKeyboardVisible: state.isKeyboardVisible,
       }),
