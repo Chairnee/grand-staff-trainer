@@ -124,7 +124,7 @@ app.innerHTML = `
       <section class="practice-area">
         <div id="input-name-display" class="input-name-display" hidden></div>
         <div id="notation" class="notation">
-          <div id="scale-rendering-note" class="scale-rendering-note" hidden></div>
+          <div id="exercise-notice" class="exercise-notice" hidden></div>
           <div id="notation-canvas" class="notation-canvas"></div>
         </div>
         <div id="keyboard-display" class="keyboard-display" hidden></div>
@@ -236,9 +236,8 @@ app.innerHTML = `
 
 const practiceArea = document.querySelector<HTMLElement>(".practice-area");
 const notation = document.querySelector<HTMLDivElement>("#notation");
-const scaleRenderingNote = document.querySelector<HTMLDivElement>(
-  "#scale-rendering-note",
-);
+const exerciseNotice =
+  document.querySelector<HTMLDivElement>("#exercise-notice");
 const notationCanvas =
   document.querySelector<HTMLDivElement>("#notation-canvas");
 const inputNameDisplay = document.querySelector<HTMLDivElement>(
@@ -316,7 +315,7 @@ const settingsInputNameToggle = document.querySelector<HTMLInputElement>(
 if (
   !practiceArea ||
   !notation ||
-  !scaleRenderingNote ||
+  !exerciseNotice ||
   !notationCanvas ||
   !inputNameDisplay ||
   !keyboardDisplay ||
@@ -354,7 +353,7 @@ if (
 
 const practiceAreaElement = practiceArea;
 const notationElement = notation;
-const scaleRenderingNoteElement = scaleRenderingNote;
+const exerciseNoticeElement = exerciseNotice;
 const notationCanvasElement = notationCanvas;
 const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
@@ -518,7 +517,7 @@ function renderApp() {
   renderToolbar();
   renderSettingsDrawer();
   renderMidiDebug();
-  renderScaleRenderingNote();
+  renderExerciseNotice();
   renderInputName();
   renderNotation();
   renderKeyboard();
@@ -664,20 +663,20 @@ function renderMidiDebug() {
   midiDebugElement.textContent = lines.join("\n");
 }
 
-function renderScaleRenderingNote() {
+function renderExerciseNotice() {
   const shouldShowScaleRenderingNote =
     state.isExerciseVisible &&
     (state.generationSettings.practiceMode === "scales" ||
       state.generationSettings.noteSourceMode === "in-scale");
-  const scaleRenderingNote = shouldShowScaleRenderingNote
+  const exerciseNotice = shouldShowScaleRenderingNote
     ? getScaleRenderingNotice(state.generationSettings)
     : null;
 
-  notationElement.dataset.renderingNoteVisible = String(
-    Boolean(scaleRenderingNote),
+  notationElement.dataset.exerciseNoticeVisible = String(
+    Boolean(exerciseNotice),
   );
-  scaleRenderingNoteElement.hidden = !scaleRenderingNote;
-  scaleRenderingNoteElement.textContent = scaleRenderingNote ?? "";
+  exerciseNoticeElement.hidden = !exerciseNotice;
+  exerciseNoticeElement.textContent = exerciseNotice ?? "";
 }
 
 function renderNotation() {

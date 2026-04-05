@@ -159,7 +159,7 @@ body {
   display: none;
 }
 
-.scale-rendering-note {
+.exercise-notice {
   padding: 10px 12px;
   border: 1px solid rgba(166, 64, 31, 0.18);
   border-radius: 12px;
@@ -169,7 +169,7 @@ body {
   box-shadow: 0 10px 24px rgba(70, 52, 28, 0.05);
 }
 
-.scale-rendering-note[hidden] {
+.exercise-notice[hidden] {
   display: none;
 }
 
