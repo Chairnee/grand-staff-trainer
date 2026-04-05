@@ -20,6 +20,7 @@ import { analyzeHeldInput } from "./inputAnalysis";
 import { connectMidi, type MidiState } from "./midi";
 import {
   type AccidentalSpellingMode,
+  getAllTonics,
   compareKeysByMidiNumber,
   createKeyboardNotePool,
   formatKeyLabel,
@@ -28,7 +29,8 @@ import {
   getDerivedKeySignature,
   getHeldOverlayKey,
   getRenderedAccidentalForKey,
-  getTonicsForScaleType,
+  getSupportedScaleTypeForTonic,
+  isScaleTypeSupportedForTonic,
   type KeySignature,
   keyToMidiNoteNumber,
   type NoteSourceMode,
@@ -547,6 +549,13 @@ function renderSettingsDrawer() {
   accidentalSpellingSelectElement.value =
     state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
+  for (const optionElement of scaleTypeSelectElement.options) {
+    const scaleType = optionElement.value as ScaleType;
+    optionElement.disabled = !isScaleTypeSupportedForTonic(
+      state.generationSettings.tonic,
+      scaleType,
+    );
+  }
   const isRandomNotesMode =
     state.generationSettings.practiceMode === "random-notes";
   const areExerciseSettingsVisible = state.isExerciseVisible;
@@ -685,9 +694,7 @@ function renderRangeOptions() {
 function renderTonicOptions() {
   tonicSelectElement.replaceChildren();
 
-  for (const tonic of getTonicsForScaleType(
-    state.generationSettings.scaleType,
-  )) {
+  for (const tonic of getAllTonics()) {
     const option = document.createElement("option");
     option.value = tonic;
     option.textContent = tonic;
@@ -822,6 +829,10 @@ function handleAccidentalSpellingChange() {
 
 function handleTonicChange() {
   state.generationSettings.tonic = tonicSelectElement.value as Tonic;
+  state.generationSettings.scaleType = getSupportedScaleTypeForTonic(
+    state.generationSettings.tonic,
+    state.generationSettings.scaleType,
+  );
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -1389,10 +1400,16 @@ function loadStoredSettings(): {
     const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
 
     if (!storedSettings) {
+      const generationSettings = {
+        ...initialGenerationSettings,
+      };
+      generationSettings.scaleType = getSupportedScaleTypeForTonic(
+        generationSettings.tonic,
+        generationSettings.scaleType,
+      );
+
       return {
-        generationSettings: {
-          ...initialGenerationSettings,
-        },
+        generationSettings,
         isDebugVisible: false,
         isExerciseVisible: false,
         isInputNameVisible: false,
@@ -1402,12 +1419,17 @@ function loadStoredSettings(): {
 
     const parsedSettings = JSON.parse(storedSettings);
     const storedGenerationSettings = parsedSettings?.generationSettings;
+    const generationSettings = {
+      ...initialGenerationSettings,
+      ...storedGenerationSettings,
+    };
+    generationSettings.scaleType = getSupportedScaleTypeForTonic(
+      generationSettings.tonic,
+      generationSettings.scaleType,
+    );
 
     return {
-      generationSettings: {
-        ...initialGenerationSettings,
-        ...storedGenerationSettings,
-      },
+      generationSettings,
       isDebugVisible:
         typeof parsedSettings?.isDebugVisible === "boolean"
           ? parsedSettings.isDebugVisible
@@ -1426,10 +1448,16 @@ function loadStoredSettings(): {
           : false,
     };
   } catch {
+    const generationSettings = {
+      ...initialGenerationSettings,
+    };
+    generationSettings.scaleType = getSupportedScaleTypeForTonic(
+      generationSettings.tonic,
+      generationSettings.scaleType,
+    );
+
     return {
-      generationSettings: {
-        ...initialGenerationSettings,
-      },
+      generationSettings,
       isDebugVisible: false,
       isExerciseVisible: false,
       isInputNameVisible: false,

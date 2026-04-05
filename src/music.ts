@@ -111,6 +111,40 @@ const MINOR_KEY_SIGNATURE_BY_TONIC: Record<MinorTonic, KeySignature> = {
 };
 const MAJOR_TONICS = Object.keys(MAJOR_KEY_SIGNATURE_BY_TONIC) as MajorTonic[];
 const MINOR_TONICS = Object.keys(MINOR_KEY_SIGNATURE_BY_TONIC) as MinorTonic[];
+const ALL_TONICS: Tonic[] = [
+  "C",
+  "G",
+  "D",
+  "A",
+  "E",
+  "B",
+  "F#",
+  "C#",
+  "G#",
+  "D#",
+  "A#",
+  "F",
+  "Bb",
+  "Eb",
+  "Ab",
+  "Db",
+  "Gb",
+  "Cb",
+];
+const ENHARMONIC_MAJOR_TONIC_BY_MINOR_TONIC: Partial<
+  Record<MinorTonic, MajorTonic>
+> = {
+  "G#": "Ab",
+  "D#": "Eb",
+  "A#": "Bb",
+};
+const ENHARMONIC_MINOR_TONIC_BY_MAJOR_TONIC: Partial<
+  Record<MajorTonic, MinorTonic>
+> = {
+  Db: "C#",
+  Gb: "F#",
+  Cb: "B",
+};
 
 export function keyToMidiNoteNumber(key: string) {
   const [noteName, octaveText] = key.split("/");
@@ -183,11 +217,16 @@ export function getRenderedAccidentalForKey(
 }
 
 export function getDerivedKeySignature(generationSettings: GenerationSettings) {
+  const supportedTonic = getSupportedTonicForScaleType(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+  );
+
   if (generationSettings.scaleType === "major") {
-    return MAJOR_KEY_SIGNATURE_BY_TONIC[generationSettings.tonic as MajorTonic];
+    return MAJOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MajorTonic];
   }
 
-  return MINOR_KEY_SIGNATURE_BY_TONIC[generationSettings.tonic as MinorTonic];
+  return MINOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MinorTonic];
 }
 
 export function getTonicsForScaleType(scaleType: ScaleType): Tonic[] {
@@ -196,6 +235,62 @@ export function getTonicsForScaleType(scaleType: ScaleType): Tonic[] {
   }
 
   return MINOR_TONICS;
+}
+
+export function getAllTonics(): Tonic[] {
+  return ALL_TONICS;
+}
+
+export function isTonicSupportedForScaleType(
+  tonic: Tonic,
+  scaleType: ScaleType,
+) {
+  if (scaleType === "major") {
+    return MAJOR_TONICS.includes(tonic as MajorTonic);
+  }
+
+  return MINOR_TONICS.includes(tonic as MinorTonic);
+}
+
+export function getSupportedTonicForScaleType(
+  tonic: Tonic,
+  scaleType: ScaleType,
+): Tonic {
+  if (scaleType === "major") {
+    if (MAJOR_TONICS.includes(tonic as MajorTonic)) {
+      return tonic;
+    }
+
+    return ENHARMONIC_MAJOR_TONIC_BY_MINOR_TONIC[tonic as MinorTonic] ?? "C";
+  }
+
+  if (MINOR_TONICS.includes(tonic as MinorTonic)) {
+    return tonic;
+  }
+
+  return ENHARMONIC_MINOR_TONIC_BY_MAJOR_TONIC[tonic as MajorTonic] ?? "A";
+}
+
+export function isScaleTypeSupportedForTonic(
+  tonic: Tonic,
+  scaleType: ScaleType,
+) {
+  if (scaleType === "major") {
+    return true;
+  }
+
+  return MINOR_TONICS.includes(tonic as MinorTonic);
+}
+
+export function getSupportedScaleTypeForTonic(
+  tonic: Tonic,
+  scaleType: ScaleType,
+): ScaleType {
+  if (isScaleTypeSupportedForTonic(tonic, scaleType)) {
+    return scaleType;
+  }
+
+  return "major";
 }
 
 export function getAccidentalSpellingModeForKeySignature(
