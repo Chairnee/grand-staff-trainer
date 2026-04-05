@@ -143,7 +143,8 @@ body {
 
 .input-name-heading,
 .input-name-primary,
-.input-name-secondary {
+.input-name-secondary,
+.input-name-alternate {
   margin: 0;
 }
 
@@ -165,6 +166,13 @@ body {
   margin-top: 2px;
   color: #6d5a40;
   font-size: 0.9rem;
+}
+
+.input-name-alternate {
+  margin-top: 4px;
+  color: #857155;
+  font-size: 0.82rem;
+  font-style: italic;
 }
 
 .notation {

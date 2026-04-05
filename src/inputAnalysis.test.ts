@@ -77,6 +77,7 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([64, 67, 72])).toEqual({
       primaryLabel: "C major triad, first inversion",
       secondaryLabel: "E4 - G4 - C5",
+      alternateLabel: "C/E",
     });
   });
 
@@ -84,6 +85,7 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([60, 62, 67])).toEqual({
       primaryLabel: "C sus2",
       secondaryLabel: "C4 - D4 - G4",
+      alternateLabel: "G sus4/C",
     });
   });
 
@@ -91,6 +93,7 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([60, 65, 67])).toEqual({
       primaryLabel: "C sus4",
       secondaryLabel: "C4 - F4 - G4",
+      alternateLabel: "F sus2/C",
     });
   });
 
@@ -98,6 +101,7 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([65, 67, 72])).toEqual({
       primaryLabel: "F sus2",
       secondaryLabel: "F4 - G4 - C5",
+      alternateLabel: "C sus4/F",
     });
   });
 
@@ -122,6 +126,95 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("names a major seventh chord", () => {
+    expect(analyzeHeldInput([60, 64, 67, 71])).toEqual({
+      primaryLabel: "Cmaj7",
+      secondaryLabel: "C4 - E4 - G4 - B4",
+    });
+  });
+
+  it("prefers a 6 chord when its root matches the bass", () => {
+    expect(analyzeHeldInput([60, 64, 67, 69])).toEqual({
+      primaryLabel: "C6",
+      secondaryLabel: "C4 - E4 - G4 - A4",
+      alternateLabel: "Am7/C",
+    });
+  });
+
+  it("prefers a seventh chord when its root matches the bass", () => {
+    expect(analyzeHeldInput([57, 60, 64, 67])).toEqual({
+      primaryLabel: "Am7",
+      secondaryLabel: "A3 - C4 - E4 - G4",
+      alternateLabel: "C6/A",
+    });
+  });
+
+  it("names a dominant seventh chord", () => {
+    expect(analyzeHeldInput([60, 64, 67, 70])).toEqual({
+      primaryLabel: "C7",
+      secondaryLabel: "C4 - E4 - G4 - Bb/A#4",
+    });
+  });
+
+  it("names a minor major seventh chord", () => {
+    expect(analyzeHeldInput([60, 63, 67, 71])).toEqual({
+      primaryLabel: "Cm(maj7)",
+      secondaryLabel: "C4 - Eb/D#4 - G4 - B4",
+    });
+  });
+
+  it("names an augmented major seventh chord", () => {
+    expect(analyzeHeldInput([60, 64, 68, 71])).toEqual({
+      primaryLabel: "Cmaj7#5",
+      secondaryLabel: "C4 - E4 - Ab/G#4 - B4",
+    });
+  });
+
+  it("names an augmented dominant seventh chord", () => {
+    expect(analyzeHeldInput([60, 64, 68, 70])).toEqual({
+      primaryLabel: "C7#5",
+      secondaryLabel: "C4 - E4 - Ab/G#4 - Bb/A#4",
+    });
+  });
+
+  it("names a minor seventh chord", () => {
+    expect(analyzeHeldInput([60, 63, 67, 70])).toEqual({
+      primaryLabel: "Cm7",
+      secondaryLabel: "C4 - Eb/D#4 - G4 - Bb/A#4",
+      alternateLabel: "Eb6/C",
+    });
+  });
+
+  it("names a half-diminished seventh chord", () => {
+    expect(analyzeHeldInput([60, 63, 66, 70])).toEqual({
+      primaryLabel: "Cm7b5",
+      secondaryLabel: "C4 - Eb/D#4 - Gb/F#4 - Bb/A#4",
+      alternateLabel: "Ebm6/C",
+    });
+  });
+
+  it("prefers a minor 6 chord when its root matches the bass", () => {
+    expect(analyzeHeldInput([60, 63, 67, 69])).toEqual({
+      primaryLabel: "Cm6",
+      secondaryLabel: "C4 - Eb/D#4 - G4 - A4",
+      alternateLabel: "Am7b5/C",
+    });
+  });
+
+  it("names a diminished seventh chord", () => {
+    expect(analyzeHeldInput([60, 63, 66, 69])).toEqual({
+      primaryLabel: "Cdim7",
+      secondaryLabel: "C4 - Eb/D#4 - Gb/F#4 - A4",
+    });
+  });
+
+  it("names a dominant seventh chord in first inversion", () => {
+    expect(analyzeHeldInput([64, 67, 70, 72])).toEqual({
+      primaryLabel: "C7, first inversion",
+      secondaryLabel: "E4 - G4 - Bb/A#4 - C5",
+    });
+  });
+
   it("names a power chord with octave doubling", () => {
     expect(analyzeHeldInput([60, 67, 72])).toEqual({
       primaryLabel: "C5",
@@ -136,8 +229,15 @@ describe("analyzeHeldInput", () => {
     });
   });
 
-  it("shows a simple placeholder for four or more held notes", () => {
-    expect(analyzeHeldInput([60, 64, 67, 71])).toEqual({
+  it("shows a simple placeholder for unknown 4-note sets", () => {
+    expect(analyzeHeldInput([60, 61, 64, 67])).toEqual({
+      primaryLabel: "Unknown seventh chord",
+      secondaryLabel: "C4 - Db/C#4 - E4 - G4",
+    });
+  });
+
+  it("shows a simple placeholder for unsupported 5-note sets", () => {
+    expect(analyzeHeldInput([60, 62, 64, 67, 71])).toEqual({
       primaryLabel: "Multiple notes",
       secondaryLabel: "Chord naming coming soon.",
     });

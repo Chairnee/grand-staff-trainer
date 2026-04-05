@@ -24,4 +24,13 @@ export function renderInputNameDisplay(
   secondaryLabel.className = "input-name-secondary";
   secondaryLabel.textContent = analysis.secondaryLabel;
   container.append(secondaryLabel);
+
+  if (!analysis.alternateLabel) {
+    return;
+  }
+
+  const alternateLabel = document.createElement("p");
+  alternateLabel.className = "input-name-alternate";
+  alternateLabel.textContent = `Also heard as: ${analysis.alternateLabel}`;
+  container.append(alternateLabel);
 }
