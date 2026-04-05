@@ -129,7 +129,6 @@ app.innerHTML = `
     </div>
 
     <section class="settings-section">
-      <h3>Generation</h3>
       <label class="settings-field">
         <span>Practice mode</span>
         <select id="practice-mode-select">
