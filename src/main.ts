@@ -1393,7 +1393,7 @@ function loadStoredSettings(): {
           ...initialGenerationSettings,
         },
         isDebugVisible: false,
-        isExerciseVisible: true,
+        isExerciseVisible: false,
         isInputNameVisible: false,
         isKeyboardVisible: false,
       };
@@ -1430,7 +1430,7 @@ function loadStoredSettings(): {
         ...initialGenerationSettings,
       },
       isDebugVisible: false,
-      isExerciseVisible: true,
+      isExerciseVisible: false,
       isInputNameVisible: false,
       isKeyboardVisible: false,
     };
