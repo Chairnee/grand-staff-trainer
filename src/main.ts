@@ -20,11 +20,11 @@ import { analyzeHeldInput } from "./inputAnalysis";
 import { connectMidi, type MidiState } from "./midi";
 import {
   type AccidentalSpellingMode,
-  getAllTonics,
   compareKeysByMidiNumber,
   createKeyboardNotePool,
   formatKeyLabel,
   type GenerationSettings,
+  getAllTonics,
   getClefForKey,
   getDerivedKeySignature,
   getHeldOverlayKey,
@@ -360,6 +360,18 @@ const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
 const settingsInputNameToggleElement = settingsInputNameToggle;
+const practiceModeField = practiceModeSelectElement.parentElement;
+const tonicField = tonicSelectElement.parentElement;
+const scaleTypeField = scaleTypeSelectElement.parentElement;
+
+if (!practiceModeField || !tonicField || !scaleTypeField) {
+  throw new Error("Could not find settings field elements.");
+}
+
+const practiceModeFieldElement = practiceModeField;
+const tonicFieldElement = tonicField;
+const scaleTypeFieldElement = scaleTypeField;
+
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
@@ -563,7 +575,7 @@ function renderSettingsDrawer() {
     scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
   }
   exerciseSettingsHeadingElement.hidden = !areExerciseSettingsVisible;
-  practiceModeSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
+  practiceModeFieldElement.hidden = !areExerciseSettingsVisible;
   scaleHandsFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode;
   scaleOctavesFieldElement.hidden =
@@ -572,8 +584,8 @@ function renderSettingsDrawer() {
     !areExerciseSettingsVisible || !isRandomNotesMode;
   rangeEndFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
-  tonicSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
-  scaleTypeSelectElement.parentElement!.hidden = !areExerciseSettingsVisible;
+  tonicFieldElement.hidden = !areExerciseSettingsVisible;
+  scaleTypeFieldElement.hidden = !areExerciseSettingsVisible;
   noteSourceFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   accidentalSpellingFieldElement.hidden =
