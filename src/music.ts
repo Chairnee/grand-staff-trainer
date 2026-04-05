@@ -367,13 +367,14 @@ export function getAscendingScaleKeys(
   startingOctave: number,
   scaleOctaves: ScaleOctaves,
 ) {
+  const renderedTonic = getSupportedTonicForScaleType(tonic, scaleType);
   const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
   const ascendingNoteNames = Array.from({ length: scaleOctaves }).flatMap(
     () => {
       return scaleNoteNames;
     },
   );
-  ascendingNoteNames.push(tonic.toLowerCase());
+  ascendingNoteNames.push(renderedTonic.toLowerCase());
   const ascendingKeys: string[] = [];
   let currentOctave = startingOctave;
   let previousMidiNoteNumber = -Infinity;

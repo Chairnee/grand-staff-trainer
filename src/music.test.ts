@@ -181,6 +181,30 @@ describe("scale positioning helpers", () => {
       "ab/4",
     ]);
   });
+
+  it("keeps practical enharmonic spellings through the repeated top note", () => {
+    expect(getAscendingScaleKeys("Gb", "natural-minor", 4, 1)).toEqual([
+      "f#/4",
+      "g#/4",
+      "a/4",
+      "b/4",
+      "c#/5",
+      "d/5",
+      "e/5",
+      "f#/5",
+    ]);
+
+    expect(getAscendingScaleKeys("G#", "major", 3, 1)).toEqual([
+      "ab/3",
+      "bb/3",
+      "c/4",
+      "db/4",
+      "eb/4",
+      "f/4",
+      "g/4",
+      "ab/4",
+    ]);
+  });
 });
 
 describe("getScaleRenderingNotice", () => {
