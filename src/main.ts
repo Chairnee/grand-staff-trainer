@@ -361,9 +361,9 @@ let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
-  practiceMode: "random-notes",
-  scaleHands: "treble",
-  scaleOctaves: 1,
+  practiceMode: "scales",
+  scaleHands: "together",
+  scaleOctaves: 2,
   rangeStart: DEFAULT_RANGE_START,
   rangeEnd: DEFAULT_RANGE_END,
   noteSourceMode: "in-scale",
