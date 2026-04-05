@@ -7,6 +7,7 @@ import {
   getHeldOverlayKey,
   getRenderedAccidentalForKey,
   getScaleNoteNames,
+  getScaleRenderingNotice,
   getScaleStartingOctave,
   keyToMidiNoteNumber,
 } from "./music";
@@ -83,6 +84,30 @@ describe("getScaleNoteNames", () => {
       "a",
     ]);
   });
+
+  it("renders rare flat-minor spellings as practical sharp minors", () => {
+    expect(getScaleNoteNames("Gb", "natural-minor")).toEqual([
+      "f#",
+      "g#",
+      "a",
+      "b",
+      "c#",
+      "d",
+      "e",
+    ]);
+  });
+
+  it("renders rare sharp-major spellings as practical flat majors", () => {
+    expect(getScaleNoteNames("G#", "major")).toEqual([
+      "ab",
+      "bb",
+      "c",
+      "db",
+      "eb",
+      "f",
+      "g",
+    ]);
+  });
 });
 
 describe("getRenderedAccidentalForKey", () => {
@@ -141,6 +166,7 @@ describe("scale positioning helpers", () => {
     expect(getScaleStartingOctave("F#")).toBe(4);
     expect(getScaleStartingOctave("Gb")).toBe(3);
     expect(getScaleStartingOctave("B")).toBe(3);
+    expect(getScaleStartingOctave("Gb", "natural-minor")).toBe(4);
   });
 
   it("builds ascending keys without dropping backward across octaves", () => {
@@ -154,5 +180,31 @@ describe("scale positioning helpers", () => {
       "g/4",
       "ab/4",
     ]);
+  });
+});
+
+describe("getScaleRenderingNotice", () => {
+  it("explains when a rare spelling is rendered enharmonically", () => {
+    expect(
+      getScaleRenderingNotice(
+        createGenerationSettings({
+          tonic: "Gb",
+          scaleType: "natural-minor",
+        }),
+      ),
+    ).toBe(
+      "Gb natural minor is being rendered as F# natural minor for readability.",
+    );
+  });
+
+  it("returns null when no practical substitution is needed", () => {
+    expect(
+      getScaleRenderingNotice(
+        createGenerationSettings({
+          tonic: "Ab",
+          scaleType: "major",
+        }),
+      ),
+    ).toBeNull();
   });
 });

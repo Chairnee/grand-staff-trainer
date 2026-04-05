@@ -28,9 +28,9 @@ import {
   getClefForKey,
   getDerivedKeySignature,
   getHeldOverlayKey,
+  getPracticalTonic,
   getRenderedAccidentalForKey,
-  getSupportedScaleTypeForTonic,
-  isScaleTypeSupportedForTonic,
+  getScaleRenderingNotice,
   type KeySignature,
   keyToMidiNoteNumber,
   type NoteSourceMode,
@@ -49,12 +49,26 @@ const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
-const STAGE_PADDING = 32;
+const STAGE_HORIZONTAL_PADDING = 0;
+const STAGE_VERTICAL_PADDING = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
 const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
+const SCALE_TOP_VISIBLE_MIDI_NOTE = 90;
+const SCALE_BOTTOM_VISIBLE_MIDI_NOTE = 44;
 const MIDI_OVERFLOW_PIXELS = 4;
+const STAVE_GAP = 76;
+const STAVE_CONNECTOR_THICKNESS = 3;
 const STAVE_SIDE_MARGIN = 56;
+const STAVE_REFERENCE = new Stave(0, 0, 0);
+const STAVE_BRACE_TOP_OFFSET = STAVE_REFERENCE.getYForLine(0);
+const STAVE_BRACE_BOTTOM_OFFSET =
+  STAVE_GAP +
+  STAVE_REFERENCE.getYForLine(STAVE_REFERENCE.getNumLines() - 1) +
+  STAVE_CONNECTOR_THICKNESS;
+const STAVE_BRACE_CENTER_OFFSET =
+  (STAVE_BRACE_TOP_OFFSET + STAVE_BRACE_BOTTOM_OFFSET) / 2;
+const STAVE_VERTICAL_OPTICAL_OFFSET = 1;
 const GENERATED_NOTE_POOL = createKeyboardNotePool(
   KEYBOARD_START_MIDI_NOTE,
   KEYBOARD_END_MIDI_NOTE,
@@ -109,7 +123,10 @@ app.innerHTML = `
 
       <section class="practice-area">
         <div id="input-name-display" class="input-name-display" hidden></div>
-        <div id="notation" class="notation"></div>
+        <div id="notation" class="notation">
+          <div id="scale-rendering-note" class="scale-rendering-note" hidden></div>
+          <div id="notation-canvas" class="notation-canvas"></div>
+        </div>
         <div id="keyboard-display" class="keyboard-display" hidden></div>
       </section>
     </main>
@@ -219,6 +236,11 @@ app.innerHTML = `
 
 const practiceArea = document.querySelector<HTMLElement>(".practice-area");
 const notation = document.querySelector<HTMLDivElement>("#notation");
+const scaleRenderingNote = document.querySelector<HTMLDivElement>(
+  "#scale-rendering-note",
+);
+const notationCanvas =
+  document.querySelector<HTMLDivElement>("#notation-canvas");
 const inputNameDisplay = document.querySelector<HTMLDivElement>(
   "#input-name-display",
 );
@@ -294,6 +316,8 @@ const settingsInputNameToggle = document.querySelector<HTMLInputElement>(
 if (
   !practiceArea ||
   !notation ||
+  !scaleRenderingNote ||
+  !notationCanvas ||
   !inputNameDisplay ||
   !keyboardDisplay ||
   !midiInputSelect ||
@@ -330,6 +354,8 @@ if (
 
 const practiceAreaElement = practiceArea;
 const notationElement = notation;
+const scaleRenderingNoteElement = scaleRenderingNote;
+const notationCanvasElement = notationCanvas;
 const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
@@ -460,9 +486,18 @@ if (state.promptQueue.length === 0) {
 renderApp();
 
 function renderApp() {
+  const stageScale = getStageScale();
   document.documentElement.style.setProperty(
     "--stage-scale",
-    getStageScale().toFixed(3),
+    stageScale.toFixed(3),
+  );
+  document.documentElement.style.setProperty(
+    "--stage-shell-padding-inline",
+    `${(STAGE_HORIZONTAL_PADDING * stageScale).toFixed(2)}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--stage-shell-padding-block",
+    `${(STAGE_VERTICAL_PADDING * stageScale).toFixed(2)}px`,
   );
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
@@ -483,6 +518,7 @@ function renderApp() {
   renderToolbar();
   renderSettingsDrawer();
   renderMidiDebug();
+  renderScaleRenderingNote();
   renderInputName();
   renderNotation();
   renderKeyboard();
@@ -561,13 +597,6 @@ function renderSettingsDrawer() {
   accidentalSpellingSelectElement.value =
     state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
-  for (const optionElement of scaleTypeSelectElement.options) {
-    const scaleType = optionElement.value as ScaleType;
-    optionElement.disabled = !isScaleTypeSupportedForTonic(
-      state.generationSettings.tonic,
-      scaleType,
-    );
-  }
   const isRandomNotesMode =
     state.generationSettings.practiceMode === "random-notes";
   const areExerciseSettingsVisible = state.isExerciseVisible;
@@ -635,15 +664,31 @@ function renderMidiDebug() {
   midiDebugElement.textContent = lines.join("\n");
 }
 
+function renderScaleRenderingNote() {
+  const shouldShowScaleRenderingNote =
+    state.isExerciseVisible &&
+    (state.generationSettings.practiceMode === "scales" ||
+      state.generationSettings.noteSourceMode === "in-scale");
+  const scaleRenderingNote = shouldShowScaleRenderingNote
+    ? getScaleRenderingNotice(state.generationSettings)
+    : null;
+
+  notationElement.dataset.renderingNoteVisible = String(
+    Boolean(scaleRenderingNote),
+  );
+  scaleRenderingNoteElement.hidden = !scaleRenderingNote;
+  scaleRenderingNoteElement.textContent = scaleRenderingNote ?? "";
+}
+
 function renderNotation() {
   notationElement.hidden = !state.isExerciseVisible;
 
   if (!state.isExerciseVisible) {
-    notationElement.replaceChildren();
+    notationCanvasElement.replaceChildren();
     return;
   }
 
-  renderGrandStaff(notationElement, state);
+  renderGrandStaff(notationCanvasElement, state);
 }
 
 function renderKeyboard() {
@@ -681,12 +726,15 @@ function renderInputName() {
 }
 
 function getStageScale() {
-  const availableWidth = window.innerWidth - STAGE_PADDING * 2;
-  const availableHeight = window.innerHeight - STAGE_PADDING * 2;
+  const totalLogicalWidth = STAGE_WIDTH + STAGE_HORIZONTAL_PADDING * 2;
+  const totalLogicalHeight = STAGE_HEIGHT + STAGE_VERTICAL_PADDING * 2;
 
   return Math.max(
     0.5,
-    Math.min(availableWidth / STAGE_WIDTH, availableHeight / STAGE_HEIGHT),
+    Math.min(
+      window.innerWidth / totalLogicalWidth,
+      window.innerHeight / totalLogicalHeight,
+    ),
   );
 }
 
@@ -841,10 +889,6 @@ function handleAccidentalSpellingChange() {
 
 function handleTonicChange() {
   state.generationSettings.tonic = tonicSelectElement.value as Tonic;
-  state.generationSettings.scaleType = getSupportedScaleTypeForTonic(
-    state.generationSettings.tonic,
-    state.generationSettings.scaleType,
-  );
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -1033,25 +1077,43 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   container.replaceChildren();
 
   const promptKeys = getPromptQueueKeys(appState.promptQueue);
+  const defaultTopVisibleMidiNote =
+    appState.generationSettings.practiceMode === "scales"
+      ? SCALE_TOP_VISIBLE_MIDI_NOTE
+      : DEFAULT_TOP_VISIBLE_MIDI_NOTE;
+  const defaultBottomVisibleMidiNote =
+    appState.generationSettings.practiceMode === "scales"
+      ? SCALE_BOTTOM_VISIBLE_MIDI_NOTE
+      : DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
   const topMidiNoteNumber =
-    getHighestMidiNoteNumber(promptKeys) ?? DEFAULT_TOP_VISIBLE_MIDI_NOTE;
+    getHighestMidiNoteNumber(promptKeys) ?? defaultTopVisibleMidiNote;
   const bottomMidiNoteNumber =
-    getLowestMidiNoteNumber(promptKeys) ?? DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
+    getLowestMidiNoteNumber(promptKeys) ?? defaultBottomVisibleMidiNote;
   const renderer = new Renderer(container, Renderer.Backends.SVG);
   const width = Math.max(640, container.clientWidth - 8);
   const topOverflow =
-    Math.max(0, topMidiNoteNumber - DEFAULT_TOP_VISIBLE_MIDI_NOTE) *
+    Math.max(0, topMidiNoteNumber - defaultTopVisibleMidiNote) *
     MIDI_OVERFLOW_PIXELS;
   const bottomOverflow =
-    Math.max(0, DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE - bottomMidiNoteNumber) *
+    Math.max(0, defaultBottomVisibleMidiNote - bottomMidiNoteNumber) *
     MIDI_OVERFLOW_PIXELS;
-  const staveTopY = 62 + topOverflow;
-  const staveGap = 76;
-  const bassStaveY = staveTopY + staveGap;
-  const height = Math.max(
-    DEFAULT_RENDER_HEIGHT,
-    bassStaveY + 92 + bottomOverflow,
+  const systemHeight = STAVE_GAP + 92;
+  const contentHeight = systemHeight + topOverflow + bottomOverflow;
+  const availableHeight =
+    container.clientHeight > 0 ? container.clientHeight : DEFAULT_RENDER_HEIGHT;
+  const height = Math.max(availableHeight, contentHeight);
+  const centeredBraceTopY =
+    height / 2 - STAVE_BRACE_CENTER_OFFSET + STAVE_VERTICAL_OPTICAL_OFFSET;
+  const minStaveTopY = topOverflow;
+  const maxStaveTopY = Math.max(
+    minStaveTopY,
+    height - (systemHeight + bottomOverflow),
   );
+  const staveTopY = Math.min(
+    maxStaveTopY,
+    Math.max(minStaveTopY, centeredBraceTopY),
+  );
+  const bassStaveY = staveTopY + STAVE_GAP;
 
   renderer.resize(width, height);
 
@@ -1415,10 +1477,7 @@ function loadStoredSettings(): {
       const generationSettings = {
         ...initialGenerationSettings,
       };
-      generationSettings.scaleType = getSupportedScaleTypeForTonic(
-        generationSettings.tonic,
-        generationSettings.scaleType,
-      );
+      generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
 
       return {
         generationSettings,
@@ -1435,10 +1494,7 @@ function loadStoredSettings(): {
       ...initialGenerationSettings,
       ...storedGenerationSettings,
     };
-    generationSettings.scaleType = getSupportedScaleTypeForTonic(
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
+    generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
 
     return {
       generationSettings,
@@ -1463,10 +1519,7 @@ function loadStoredSettings(): {
     const generationSettings = {
       ...initialGenerationSettings,
     };
-    generationSettings.scaleType = getSupportedScaleTypeForTonic(
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
+    generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
 
     return {
       generationSettings,

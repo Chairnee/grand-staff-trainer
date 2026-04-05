@@ -9,7 +9,10 @@ import type { PromptSlot } from "./types";
 export function createScalePracticeQueue(
   generationSettings: GenerationSettings,
 ) {
-  const trebleStartingOctave = getScaleStartingOctave(generationSettings.tonic);
+  const trebleStartingOctave = getScaleStartingOctave(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+  );
   const trebleAscendingKeys = getAscendingScaleKeys(
     generationSettings.tonic,
     generationSettings.scaleType,

@@ -1,5 +1,7 @@
 :root {
   --stage-scale: 1;
+  --stage-shell-padding-inline: 24px;
+  --stage-shell-padding-block: 12px;
   color-scheme: light;
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.5;
@@ -24,6 +26,7 @@ body {
 .stage-shell {
   position: fixed;
   inset: 0;
+  padding: var(--stage-shell-padding-block) var(--stage-shell-padding-inline);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,9 +37,8 @@ body {
 .layout {
   width: 1280px;
   height: 720px;
-  padding: 20px 24px 24px;
   display: flex;
-  gap: 16px;
+  gap: 4px;
   flex-direction: column;
   position: relative;
   transform: scale(var(--stage-scale));
@@ -95,7 +97,7 @@ body {
   margin: 0;
   display: flex;
   flex: 1 1 auto;
-  gap: 12px;
+  gap: 4px;
   flex-direction: column;
   min-height: 0;
 }
@@ -157,6 +159,20 @@ body {
   display: none;
 }
 
+.scale-rendering-note {
+  padding: 10px 12px;
+  border: 1px solid rgba(166, 64, 31, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 244, 234, 0.92);
+  color: #7c4a28;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 24px rgba(70, 52, 28, 0.05);
+}
+
+.scale-rendering-note[hidden] {
+  display: none;
+}
+
 .input-name-display {
   padding: 12px 14px;
   border: 1px solid rgba(70, 52, 28, 0.12);
@@ -204,13 +220,12 @@ body {
 }
 
 .notation {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: auto;
   padding: 16px 18px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: 16px;
   background: #fffdf7;
@@ -221,7 +236,18 @@ body {
   display: none;
 }
 
-.notation svg {
+.notation-canvas {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notation-canvas svg {
   display: block;
   max-width: 100%;
   height: auto;
@@ -235,7 +261,7 @@ body {
 
 .keyboard-display {
   flex: 0 0 auto;
-  padding: 14px 16px 18px;
+  padding: 14px 16px 14px;
   overflow-x: auto;
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: 16px;

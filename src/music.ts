@@ -75,6 +75,12 @@ export type GenerationSettings = {
   scaleType: ScaleType;
 };
 
+type ScaleRenderingOverride = {
+  selectedTonic: Tonic;
+  renderedTonic: Tonic;
+  scaleType: ScaleType;
+};
+
 const MAJOR_KEY_SIGNATURE_BY_TONIC: Record<MajorTonic, KeySignature> = {
   C: "C",
   G: "G",
@@ -120,17 +126,19 @@ const ALL_TONICS: Tonic[] = [
   "B",
   "F#",
   "C#",
-  "G#",
-  "D#",
-  "A#",
   "F",
   "Bb",
   "Eb",
   "Ab",
   "Db",
   "Gb",
-  "Cb",
 ];
+const PRACTICAL_TONIC_BY_TONIC: Partial<Record<Tonic, Tonic>> = {
+  Cb: "B",
+  "G#": "Ab",
+  "D#": "Eb",
+  "A#": "Bb",
+};
 const ENHARMONIC_MAJOR_TONIC_BY_MINOR_TONIC: Partial<
   Record<MinorTonic, MajorTonic>
 > = {
@@ -241,6 +249,10 @@ export function getAllTonics(): Tonic[] {
   return ALL_TONICS;
 }
 
+export function getPracticalTonic(tonic: Tonic): Tonic {
+  return PRACTICAL_TONIC_BY_TONIC[tonic] ?? tonic;
+}
+
 export function isTonicSupportedForScaleType(
   tonic: Tonic,
   scaleType: ScaleType,
@@ -271,26 +283,23 @@ export function getSupportedTonicForScaleType(
   return ENHARMONIC_MINOR_TONIC_BY_MAJOR_TONIC[tonic as MajorTonic] ?? "A";
 }
 
-export function isScaleTypeSupportedForTonic(
-  tonic: Tonic,
-  scaleType: ScaleType,
-) {
-  if (scaleType === "major") {
-    return true;
+export function getScaleRenderingOverride(
+  generationSettings: GenerationSettings,
+): ScaleRenderingOverride | null {
+  const renderedTonic = getSupportedTonicForScaleType(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+  );
+
+  if (renderedTonic === generationSettings.tonic) {
+    return null;
   }
 
-  return MINOR_TONICS.includes(tonic as MinorTonic);
-}
-
-export function getSupportedScaleTypeForTonic(
-  tonic: Tonic,
-  scaleType: ScaleType,
-): ScaleType {
-  if (isScaleTypeSupportedForTonic(tonic, scaleType)) {
-    return scaleType;
-  }
-
-  return "major";
+  return {
+    selectedTonic: generationSettings.tonic,
+    renderedTonic,
+    scaleType: generationSettings.scaleType,
+  };
 }
 
 export function getAccidentalSpellingModeForKeySignature(
@@ -330,8 +339,26 @@ export function createKeyboardNotePool(
   return notePool;
 }
 
-export function getScaleStartingOctave(tonic: Tonic) {
-  return isTrebleScaleStartWithinUpperLimit(tonic.toLowerCase()) ? 4 : 3;
+export function getScaleRenderingNotice(
+  generationSettings: GenerationSettings,
+) {
+  const renderingOverride = getScaleRenderingOverride(generationSettings);
+
+  if (!renderingOverride) {
+    return null;
+  }
+
+  return `${renderingOverride.selectedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} is being rendered as ${renderingOverride.renderedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} for readability.`;
+}
+
+export function getScaleStartingOctave(tonic: Tonic, scaleType?: ScaleType) {
+  const renderedTonic = scaleType
+    ? getSupportedTonicForScaleType(tonic, scaleType)
+    : tonic;
+
+  return isTrebleScaleStartWithinUpperLimit(renderedTonic.toLowerCase())
+    ? 4
+    : 3;
 }
 
 export function getAscendingScaleKeys(
@@ -416,7 +443,10 @@ export function getNotesInScale(
 }
 
 export function getScaleNoteNames(tonic: Tonic, scaleType: ScaleType) {
-  const tonicNoteName = tonic.toLowerCase();
+  const tonicNoteName = getSupportedTonicForScaleType(
+    tonic,
+    scaleType,
+  ).toLowerCase();
   const tonicMidiNoteNumber = keyToMidiNoteNumber(`${tonicNoteName}/4`);
   const letterSequence = getScaleLetterSequence(tonicNoteName.charAt(0));
   const semitoneOffsetsByScaleType: Record<ScaleType, number[]> = {
@@ -665,4 +695,12 @@ function getAccidentalText(accidentalOffset: number) {
   }
 
   return "";
+}
+
+function formatScaleTypeLabel(scaleType: ScaleType) {
+  if (scaleType === "major") {
+    return "major";
+  }
+
+  return scaleType.replaceAll("-", " ");
 }
