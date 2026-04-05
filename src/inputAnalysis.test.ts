@@ -73,6 +73,13 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("names a major triad with a doubled root", () => {
+    expect(analyzeHeldInput([60, 64, 67, 72])).toEqual({
+      primaryLabel: "C major triad",
+      secondaryLabel: "C4 - E4 - G4 - C5",
+    });
+  });
+
   it("names a major triad in first inversion", () => {
     expect(analyzeHeldInput([64, 67, 72])).toEqual({
       primaryLabel: "C major triad, first inversion",
@@ -130,6 +137,13 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([60, 64, 67, 71])).toEqual({
       primaryLabel: "Cmaj7",
       secondaryLabel: "C4 - E4 - G4 - B4",
+    });
+  });
+
+  it("names a dominant seventh chord with a doubled root", () => {
+    expect(analyzeHeldInput([60, 64, 67, 70, 72])).toEqual({
+      primaryLabel: "C7",
+      secondaryLabel: "C4 - E4 - G4 - Bb/A#4 - C5",
     });
   });
 
@@ -201,6 +215,52 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("names an add2 chord when the second is close-voiced", () => {
+    expect(analyzeHeldInput([60, 62, 64, 67])).toEqual({
+      primaryLabel: "Cadd2",
+      secondaryLabel: "C4 - D4 - E4 - G4",
+      alternateLabel: "Cadd9",
+    });
+  });
+
+  it("names an add9 chord when the second is compound", () => {
+    expect(analyzeHeldInput([60, 64, 67, 74])).toEqual({
+      primaryLabel: "Cadd9",
+      secondaryLabel: "C4 - E4 - G4 - D5",
+      alternateLabel: "Cadd2",
+    });
+  });
+
+  it("names an add2 chord in first inversion", () => {
+    expect(analyzeHeldInput([64, 67, 72, 74])).toEqual({
+      primaryLabel: "Cadd2, first inversion",
+      secondaryLabel: "E4 - G4 - C5 - D5",
+      alternateLabel: "Cadd9/E",
+    });
+  });
+
+  it("names a minor add2 chord when the second is close-voiced", () => {
+    expect(analyzeHeldInput([60, 62, 63, 67])).toEqual({
+      primaryLabel: "Cm(add2)",
+      secondaryLabel: "C4 - D4 - Eb/D#4 - G4",
+      alternateLabel: "Cm(add9)",
+    });
+  });
+
+  it("names an add4 chord", () => {
+    expect(analyzeHeldInput([60, 64, 65, 67])).toEqual({
+      primaryLabel: "Cadd4",
+      secondaryLabel: "C4 - E4 - F4 - G4",
+    });
+  });
+
+  it("names a minor add4 chord", () => {
+    expect(analyzeHeldInput([60, 63, 65, 67])).toEqual({
+      primaryLabel: "Cm(add4)",
+      secondaryLabel: "C4 - Eb/D#4 - F4 - G4",
+    });
+  });
+
   it("names a diminished seventh chord", () => {
     expect(analyzeHeldInput([60, 63, 66, 69])).toEqual({
       primaryLabel: "Cdim7",
@@ -212,6 +272,7 @@ describe("analyzeHeldInput", () => {
     expect(analyzeHeldInput([64, 67, 70, 72])).toEqual({
       primaryLabel: "C7, first inversion",
       secondaryLabel: "E4 - G4 - Bb/A#4 - C5",
+      alternateLabel: "C7/E",
     });
   });
 
@@ -231,15 +292,15 @@ describe("analyzeHeldInput", () => {
 
   it("shows a simple placeholder for unknown 4-note sets", () => {
     expect(analyzeHeldInput([60, 61, 64, 67])).toEqual({
-      primaryLabel: "Unknown seventh chord",
+      primaryLabel: "Unknown chord",
       secondaryLabel: "C4 - Db/C#4 - E4 - G4",
     });
   });
 
   it("shows a simple placeholder for unsupported 5-note sets", () => {
     expect(analyzeHeldInput([60, 62, 64, 67, 71])).toEqual({
-      primaryLabel: "Multiple notes",
-      secondaryLabel: "Chord naming coming soon.",
+      primaryLabel: "Unknown chord",
+      secondaryLabel: "C4 - D4 - E4 - G4 - B4",
     });
   });
 });
