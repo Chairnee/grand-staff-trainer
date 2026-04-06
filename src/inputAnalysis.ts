@@ -285,14 +285,35 @@ function analyzeFourNoteChord(
       .sort((left, right) => left - right);
     const intervalPattern = intervals.join(",");
     const seventhChordMetadata = getSeventhChordMetadata(intervalPattern);
+    const sixthChordMetadata = getSixthChordMetadata(intervalPattern);
 
-    if (!seventhChordMetadata) {
+    if (!seventhChordMetadata && !sixthChordMetadata) {
       continue;
     }
 
     const rootLabel = getPreferredPracticalRootLabel(candidateRootPitchClass);
     const bassLabel = getPreferredPracticalRootLabel(bassPitchClass);
     const bassInterval = (bassPitchClass - candidateRootPitchClass + 12) % 12;
+
+    if (sixthChordMetadata) {
+      const sixthChordVariant = buildSixthChordVariant(
+        sixthChordMetadata,
+        rootLabel,
+        bassLabel,
+        bassInterval,
+        candidateRootPitchClass,
+        bassPitchClass,
+      );
+
+      if (sixthChordVariant) {
+        candidates.push(sixthChordVariant);
+      }
+    }
+
+    if (!seventhChordMetadata) {
+      continue;
+    }
+
     const inversionMetadata = getSeventhChordInversionMetadata(
       intervals,
       bassInterval,
@@ -317,6 +338,40 @@ function analyzeFourNoteChord(
   }
 
   return candidates;
+}
+
+function buildSixthChordVariant(
+  sixthChordMetadata: ReturnType<typeof getSixthChordMetadata>,
+  rootLabel: string,
+  bassLabel: string,
+  bassInterval: number,
+  rootPitchClass: number,
+  bassPitchClass: number,
+): InputAnalysisCandidate | null {
+  if (!sixthChordMetadata) {
+    return null;
+  }
+
+  const bassIsChordTone =
+    bassInterval === 0 ||
+    sixthChordMetadata.allowedBassIntervals.includes(bassInterval);
+
+  if (!bassIsChordTone) {
+    return null;
+  }
+
+  return {
+    shorthand:
+      bassInterval === 0
+        ? `${rootLabel}${sixthChordMetadata.shorthandSuffix}`
+        : `${rootLabel}${sixthChordMetadata.shorthandSuffix}/${bassLabel}`,
+    longhand:
+      bassInterval === 0
+        ? `${rootLabel} ${sixthChordMetadata.longhandSuffix}`
+        : `${rootLabel} ${sixthChordMetadata.longhandSuffix} over ${bassLabel}`,
+    rootPitchClass,
+    bassPitchClass,
+  };
 }
 
 function buildThreeNoteChordVariant(
@@ -778,6 +833,30 @@ function getSeventhChordMetadata(intervalPattern: string) {
   };
 
   return seventhChordMetadataByPattern[intervalPattern] ?? null;
+}
+
+function getSixthChordMetadata(intervalPattern: string) {
+  const sixthChordMetadataByPattern: Record<
+    string,
+    {
+      shorthandSuffix: string;
+      longhandSuffix: string;
+      allowedBassIntervals: number[];
+    }
+  > = {
+    "4,7,9": {
+      shorthandSuffix: "6",
+      longhandSuffix: "major 6th chord",
+      allowedBassIntervals: [4, 7, 9],
+    },
+    "3,7,9": {
+      shorthandSuffix: "m6",
+      longhandSuffix: "minor 6th chord",
+      allowedBassIntervals: [3, 7, 9],
+    },
+  };
+
+  return sixthChordMetadataByPattern[intervalPattern] ?? null;
 }
 
 function getSeventhChordInversionMetadata(

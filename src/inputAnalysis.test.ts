@@ -322,7 +322,12 @@ describe("analyzeHeldInput", () => {
         shorthand: "Cm7",
         longhand: "C minor 7th chord",
       },
-      alternates: [],
+      alternates: [
+        {
+          shorthand: "Eb6/C",
+          longhand: "Eb major 6th chord over C",
+        },
+      ],
     });
   });
 
@@ -333,7 +338,12 @@ describe("analyzeHeldInput", () => {
         shorthand: "Cm7b5",
         longhand: "C half-diminished 7th chord",
       },
-      alternates: [],
+      alternates: [
+        {
+          shorthand: "Ebm6/C",
+          longhand: "Eb minor 6th chord over C",
+        },
+      ],
     });
   });
 
@@ -356,6 +366,54 @@ describe("analyzeHeldInput", () => {
         {
           shorthand: "Adim7/C",
           longhand: "A diminished 7th chord, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("prefers a 6 chord over its reasonable minor 7th alternate when the bass is the root", () => {
+    expect(analyzeHeldInput([60, 64, 67, 69])).toEqual({
+      noteLabel: "C4-E4-G4-A4",
+      primary: {
+        shorthand: "C6",
+        longhand: "C major 6th chord",
+      },
+      alternates: [
+        {
+          shorthand: "Am7/C",
+          longhand: "A minor 7th chord, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("prefers a minor 6 chord over its reasonable half-diminished 7th alternate when the bass is the root", () => {
+    expect(analyzeHeldInput([60, 63, 67, 69])).toEqual({
+      noteLabel: "C4-Eb4/D#4-G4-A4",
+      primary: {
+        shorthand: "Cm6",
+        longhand: "C minor 6th chord",
+      },
+      alternates: [
+        {
+          shorthand: "Am7b5/C",
+          longhand: "A half-diminished 7th chord, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("uses slash notation for a 6 chord over a non-root bass", () => {
+    expect(analyzeHeldInput([64, 67, 69, 72])).toEqual({
+      noteLabel: "E4-G4-A4-C5",
+      primary: {
+        shorthand: "C6/E",
+        longhand: "C major 6th chord over E",
+      },
+      alternates: [
+        {
+          shorthand: "Am7/E",
+          longhand: "A minor 7th chord, second inversion",
         },
       ],
     });
