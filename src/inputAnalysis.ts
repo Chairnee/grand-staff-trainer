@@ -11,6 +11,23 @@ export type InputAnalysis = {
 
 type InputAnalysisCandidate = InputNameVariant & {
   bassPitchClass: number;
+  kind:
+    | "note"
+    | "interval"
+    | "power-chord"
+    | "major-triad"
+    | "minor-triad"
+    | "diminished-triad"
+    | "augmented-triad"
+    | "sus2"
+    | "sus4"
+    | "major-7th"
+    | "dominant-7th"
+    | "minor-7th"
+    | "half-diminished-7th"
+    | "diminished-7th"
+    | "major-6th"
+    | "minor-6th";
   rootPitchClass: number;
 };
 
@@ -43,6 +60,7 @@ export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
       {
         shorthand,
         longhand: `${shorthand} note`,
+        kind: "note",
         rootPitchClass: getPitchClass(noteNumber),
         bassPitchClass: getPitchClass(noteNumber),
       },
@@ -224,6 +242,7 @@ function analyzePowerChord(
         bassInterval === 0
           ? `${rootLabel} 5 chord`
           : `${rootLabel} 5 chord over ${bassLabel}`,
+      kind: "power-chord",
       rootPitchClass: candidateRootPitchClass,
       bassPitchClass,
     });
@@ -332,6 +351,7 @@ function analyzeFourNoteChord(
         inversionMetadata.longhandSuffix === null
           ? `${rootLabel} ${seventhChordMetadata.longhandSuffix}`
           : `${rootLabel} ${seventhChordMetadata.longhandSuffix}, ${inversionMetadata.longhandSuffix}`,
+      kind: seventhChordMetadata.kind,
       rootPitchClass: candidateRootPitchClass,
       bassPitchClass,
     });
@@ -369,6 +389,7 @@ function buildSixthChordVariant(
       bassInterval === 0
         ? `${rootLabel} ${sixthChordMetadata.longhandSuffix}`
         : `${rootLabel} ${sixthChordMetadata.longhandSuffix} over ${bassLabel}`,
+    kind: sixthChordMetadata.kind,
     rootPitchClass,
     bassPitchClass,
   };
@@ -402,6 +423,7 @@ function buildThreeNoteChordVariant(
         inversionMetadata.longhandSuffix === null
           ? `${rootLabel} ${triadMetadata.longhandSuffix}`
           : `${rootLabel} ${triadMetadata.longhandSuffix}, ${inversionMetadata.longhandSuffix}`,
+      kind: triadMetadata.kind,
       rootPitchClass,
       bassPitchClass,
     };
@@ -423,6 +445,7 @@ function buildThreeNoteChordVariant(
     longhand: suspendedChordMetadata.usesSlashNotation
       ? `${rootLabel} ${triadMetadata.longhandSuffix} over ${bassLabel}`
       : `${rootLabel} ${triadMetadata.longhandSuffix}`,
+    kind: triadMetadata.kind,
     rootPitchClass,
     bassPitchClass,
   };
@@ -442,6 +465,7 @@ function buildIntervalVariant(
   return {
     shorthand: `${rootLabel}${intervalMetadata.shorthandSuffix}`,
     longhand: `${rootLabel} ${intervalMetadata.longhandSuffix} (${formatSemitoneCount(semitoneDistance)})`,
+    kind: "interval",
     rootPitchClass,
     bassPitchClass: rootPitchClass,
   };
@@ -499,6 +523,15 @@ function compareCandidates(
 
   if (leftCandidateRootMatchesBass !== rightCandidateRootMatchesBass) {
     return leftCandidateRootMatchesBass ? -1 : 1;
+  }
+
+  const leftCandidateIsInvertedMajorSix =
+    leftCandidate.kind === "major-6th" && !leftCandidateRootMatchesBass;
+  const rightCandidateIsInvertedMajorSix =
+    rightCandidate.kind === "major-6th" && !rightCandidateRootMatchesBass;
+
+  if (leftCandidateIsInvertedMajorSix !== rightCandidateIsInvertedMajorSix) {
+    return leftCandidateIsInvertedMajorSix ? 1 : -1;
   }
 
   if (leftCandidate.rootPitchClass !== rightCandidate.rootPitchClass) {
@@ -725,32 +758,38 @@ function getTriadMetadata(intervalPattern: string) {
     string,
     {
       family: "tertian" | "suspended";
-      kind: "major" | "minor" | "diminished" | "augmented" | "sus2" | "sus4";
+      kind:
+        | "major-triad"
+        | "minor-triad"
+        | "diminished-triad"
+        | "augmented-triad"
+        | "sus2"
+        | "sus4";
       shorthandSuffix: string;
       longhandSuffix: string;
     }
   > = {
     "4,7": {
       family: "tertian",
-      kind: "major",
+      kind: "major-triad",
       shorthandSuffix: "M",
       longhandSuffix: "major triad",
     },
     "3,7": {
       family: "tertian",
-      kind: "minor",
+      kind: "minor-triad",
       shorthandSuffix: "m",
       longhandSuffix: "minor triad",
     },
     "3,6": {
       family: "tertian",
-      kind: "diminished",
+      kind: "diminished-triad",
       shorthandSuffix: "dim",
       longhandSuffix: "diminished triad",
     },
     "4,8": {
       family: "tertian",
-      kind: "augmented",
+      kind: "augmented-triad",
       shorthandSuffix: "aug",
       longhandSuffix: "augmented triad",
     },
@@ -808,25 +847,39 @@ function getTriadInversionMetadata(bassInterval: number) {
 function getSeventhChordMetadata(intervalPattern: string) {
   const seventhChordMetadataByPattern: Record<
     string,
-    { shorthandSuffix: string; longhandSuffix: string }
+    {
+      kind:
+        | "major-7th"
+        | "dominant-7th"
+        | "minor-7th"
+        | "half-diminished-7th"
+        | "diminished-7th";
+      shorthandSuffix: string;
+      longhandSuffix: string;
+    }
   > = {
     "4,7,11": {
+      kind: "major-7th",
       shorthandSuffix: "M7",
       longhandSuffix: "major 7th chord",
     },
     "4,7,10": {
+      kind: "dominant-7th",
       shorthandSuffix: "7",
       longhandSuffix: "dominant 7th chord",
     },
     "3,7,10": {
+      kind: "minor-7th",
       shorthandSuffix: "m7",
       longhandSuffix: "minor 7th chord",
     },
     "3,6,10": {
+      kind: "half-diminished-7th",
       shorthandSuffix: "m7b5",
       longhandSuffix: "half-diminished 7th chord",
     },
     "3,6,9": {
+      kind: "diminished-7th",
       shorthandSuffix: "dim7",
       longhandSuffix: "diminished 7th chord",
     },
@@ -839,17 +892,20 @@ function getSixthChordMetadata(intervalPattern: string) {
   const sixthChordMetadataByPattern: Record<
     string,
     {
+      kind: "major-6th" | "minor-6th";
       shorthandSuffix: string;
       longhandSuffix: string;
       allowedBassIntervals: number[];
     }
   > = {
     "4,7,9": {
+      kind: "major-6th",
       shorthandSuffix: "6",
       longhandSuffix: "major 6th chord",
       allowedBassIntervals: [4, 7, 9],
     },
     "3,7,9": {
+      kind: "minor-6th",
       shorthandSuffix: "m6",
       longhandSuffix: "minor 6th chord",
       allowedBassIntervals: [3, 7, 9],
@@ -894,7 +950,13 @@ function getSeventhChordInversionMetadata(
 }
 
 function getSuspendedChordBassMetadata(
-  kind: "major" | "minor" | "diminished" | "augmented" | "sus2" | "sus4",
+  kind:
+    | "major-triad"
+    | "minor-triad"
+    | "diminished-triad"
+    | "augmented-triad"
+    | "sus2"
+    | "sus4",
   bassInterval: number,
 ) {
   if (kind === "sus2") {

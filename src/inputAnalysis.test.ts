@@ -403,17 +403,17 @@ describe("analyzeHeldInput", () => {
     });
   });
 
-  it("uses slash notation for a 6 chord over a non-root bass", () => {
+  it("prefers the minor 7th reading over an inverted major 6 chord", () => {
     expect(analyzeHeldInput([64, 67, 69, 72])).toEqual({
       noteLabel: "E4-G4-A4-C5",
       primary: {
-        shorthand: "C6/E",
-        longhand: "C major 6th chord over E",
+        shorthand: "Am7/E",
+        longhand: "A minor 7th chord, second inversion",
       },
       alternates: [
         {
-          shorthand: "Am7/E",
-          longhand: "A minor 7th chord, second inversion",
+          shorthand: "C6/E",
+          longhand: "C major 6th chord over E",
         },
       ],
     });
