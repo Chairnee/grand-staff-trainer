@@ -134,6 +134,25 @@ body {
   color: #1f1d1b;
 }
 
+.attempt-window-picker {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #5b4931;
+  white-space: nowrap;
+}
+
+.attempt-window-picker input {
+  width: 78px;
+  padding: 8px 10px;
+  border: 1px solid rgba(70, 52, 28, 0.2);
+  border-radius: 10px;
+  background: #fffdf7;
+  color: #1f1d1b;
+  font: inherit;
+}
+
 .midi-debug {
   position: fixed;
   right: calc(20px * var(--stage-scale));

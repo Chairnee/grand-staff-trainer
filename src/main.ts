@@ -41,7 +41,9 @@ import {
   type Tonic,
 } from "./music";
 
-const ATTEMPT_WINDOW_MS = 40;
+const DEFAULT_ATTEMPT_WINDOW_MS = 40;
+const MIN_ATTEMPT_WINDOW_MS = 10;
+const MAX_ATTEMPT_WINDOW_MS = 250;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
 const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const PROMPT_QUEUE_LENGTH = 8;
@@ -87,6 +89,7 @@ type AppState = {
   currentPromptIndex: number;
   lastAttemptResult: AttemptResult;
   attemptFeedbackCount: number;
+  attemptWindowMs: number;
   generationSettings: GenerationSettings;
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
@@ -117,6 +120,17 @@ app.innerHTML = `
         <label class="midi-picker">
           <span>MIDI Input</span>
           <select id="midi-input-select"></select>
+        </label>
+        <label class="attempt-window-picker">
+          <span>Chord window</span>
+          <input
+            id="attempt-window-input"
+            type="number"
+            min="${MIN_ATTEMPT_WINDOW_MS}"
+            max="${MAX_ATTEMPT_WINDOW_MS}"
+            step="5"
+          />
+          <span>ms</span>
         </label>
         <div id="midi-status" class="status-pill"></div>
       </header>
@@ -247,6 +261,9 @@ const keyboardDisplay =
   document.querySelector<HTMLDivElement>("#keyboard-display");
 const midiInputSelect =
   document.querySelector<HTMLSelectElement>("#midi-input-select");
+const attemptWindowInput = document.querySelector<HTMLInputElement>(
+  "#attempt-window-input",
+);
 const midiDebug = document.querySelector<HTMLDivElement>("#midi-debug");
 const settingsToggle =
   document.querySelector<HTMLButtonElement>("#settings-toggle");
@@ -320,6 +337,7 @@ if (
   !inputNameDisplay ||
   !keyboardDisplay ||
   !midiInputSelect ||
+  !attemptWindowInput ||
   !midiDebug ||
   !settingsToggle ||
   !debugToggle ||
@@ -358,6 +376,7 @@ const notationCanvasElement = notationCanvas;
 const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
+const attemptWindowInputElement = attemptWindowInput;
 const midiDebugElement = midiDebug;
 const settingsToggleElement = settingsToggle;
 const debugToggleElement = debugToggle;
@@ -421,6 +440,7 @@ const state: AppState = {
   currentPromptIndex: 0,
   lastAttemptResult: null,
   attemptFeedbackCount: 0,
+  attemptWindowMs: initialStoredSettings.attemptWindowMs,
   generationSettings: {
     ...initialStoredSettings.generationSettings,
   },
@@ -447,6 +467,7 @@ const midiConnection = connectMidi(handleMidiStateChange, {
   preferredInputId: loadPreferredMidiDeviceId(),
 });
 midiInputSelectElement.addEventListener("change", handleMidiInputChange);
+attemptWindowInputElement.addEventListener("change", handleAttemptWindowChange);
 settingsToggleElement.addEventListener("click", toggleSettingsDrawer);
 settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
@@ -570,6 +591,7 @@ function renderToolbar() {
   debugToggleElement.textContent = state.isDebugVisible
     ? "Hide Debug"
     : "Show Debug";
+  attemptWindowInputElement.value = state.attemptWindowMs.toString();
   settingsToggleElement.setAttribute(
     "aria-expanded",
     String(state.isSettingsOpen),
@@ -644,6 +666,7 @@ function renderMidiDebug() {
     `Accidental spelling: ${state.generationSettings.accidentalSpellingMode}`,
     `Tonic: ${state.generationSettings.tonic}`,
     `Scale type: ${state.generationSettings.scaleType}`,
+    `Attempt window: ${state.attemptWindowMs}ms`,
     `Key signature: ${getDerivedKeySignature(state.generationSettings)}`,
     `Range: ${formatKeyLabel(state.generationSettings.rangeStart)} to ${formatKeyLabel(state.generationSettings.rangeEnd)}`,
     `Held keys: ${state.midi.heldKeys.join(", ") || "none"}`,
@@ -949,7 +972,7 @@ function handleMidiNoteOn(noteNumber: number) {
     clearTimeout(attemptTimer);
   }
 
-  attemptTimer = setTimeout(finalizeMidiAttempt, ATTEMPT_WINDOW_MS);
+  attemptTimer = setTimeout(finalizeMidiAttempt, state.attemptWindowMs);
 }
 
 function finalizeMidiAttempt() {
@@ -1028,6 +1051,25 @@ function resetPromptQueue() {
     state.generationSettings,
   );
   state.currentPromptIndex = 0;
+  renderApp();
+}
+
+function clampAttemptWindowMs(value: number) {
+  return Math.min(
+    MAX_ATTEMPT_WINDOW_MS,
+    Math.max(MIN_ATTEMPT_WINDOW_MS, value),
+  );
+}
+
+function handleAttemptWindowChange() {
+  const parsedValue = Number.parseInt(attemptWindowInputElement.value, 10);
+  const nextAttemptWindowMs = Number.isNaN(parsedValue)
+    ? DEFAULT_ATTEMPT_WINDOW_MS
+    : clampAttemptWindowMs(parsedValue);
+
+  state.attemptWindowMs = nextAttemptWindowMs;
+  attemptWindowInputElement.value = nextAttemptWindowMs.toString();
+  saveStoredSettings();
   renderApp();
 }
 
@@ -1464,6 +1506,7 @@ function savePreferredMidiDeviceId(deviceId: string) {
 
 function loadStoredSettings(): {
   generationSettings: GenerationSettings;
+  attemptWindowMs: number;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
   isInputNameVisible: boolean;
@@ -1480,6 +1523,7 @@ function loadStoredSettings(): {
 
       return {
         generationSettings,
+        attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
         isDebugVisible: false,
         isExerciseVisible: false,
         isInputNameVisible: false,
@@ -1497,6 +1541,10 @@ function loadStoredSettings(): {
 
     return {
       generationSettings,
+      attemptWindowMs:
+        typeof parsedSettings?.attemptWindowMs === "number"
+          ? clampAttemptWindowMs(parsedSettings.attemptWindowMs)
+          : DEFAULT_ATTEMPT_WINDOW_MS,
       isDebugVisible:
         typeof parsedSettings?.isDebugVisible === "boolean"
           ? parsedSettings.isDebugVisible
@@ -1522,6 +1570,7 @@ function loadStoredSettings(): {
 
     return {
       generationSettings,
+      attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
       isDebugVisible: false,
       isExerciseVisible: false,
       isInputNameVisible: false,
@@ -1536,6 +1585,7 @@ function saveStoredSettings() {
       SETTINGS_STORAGE_KEY,
       JSON.stringify({
         generationSettings: state.generationSettings,
+        attemptWindowMs: state.attemptWindowMs,
         isDebugVisible: state.isDebugVisible,
         isExerciseVisible: state.isExerciseVisible,
         isInputNameVisible: state.isInputNameVisible,
