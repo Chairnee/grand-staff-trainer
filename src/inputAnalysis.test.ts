@@ -347,6 +347,17 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("describes a minor (major 7th) chord", () => {
+    expect(analyzeHeldInput([60, 63, 67, 71])).toEqual({
+      noteLabel: "C4-Eb4/D#4-G4-B4",
+      primary: {
+        shorthand: "CmM7",
+        longhand: "C minor (major 7th) chord",
+      },
+      alternates: [],
+    });
+  });
+
   it("describes a diminished 7th chord", () => {
     expect(analyzeHeldInput([60, 63, 66, 69])).toEqual({
       noteLabel: "C4-Eb4/D#4-Gb4/F#4-A4",
@@ -368,6 +379,28 @@ describe("analyzeHeldInput", () => {
           longhand: "A diminished 7th chord, first inversion",
         },
       ],
+    });
+  });
+
+  it("describes an augmented major 7th chord", () => {
+    expect(analyzeHeldInput([60, 64, 68, 71])).toEqual({
+      noteLabel: "C4-E4-Ab4/G#4-B4",
+      primary: {
+        shorthand: "CaugM7",
+        longhand: "C augmented major 7th chord",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes an augmented 7th chord", () => {
+    expect(analyzeHeldInput([60, 64, 68, 70])).toEqual({
+      noteLabel: "C4-E4-Ab4/G#4-Bb4/A#4",
+      primary: {
+        shorthand: "Caug7",
+        longhand: "C augmented 7th chord",
+      },
+      alternates: [],
     });
   });
 

@@ -24,8 +24,11 @@ type InputAnalysisCandidate = InputNameVariant & {
     | "major-7th"
     | "dominant-7th"
     | "minor-7th"
+    | "minor-major-7th"
     | "half-diminished-7th"
     | "diminished-7th"
+    | "augmented-major-7th"
+    | "augmented-7th"
     | "major-6th"
     | "minor-6th";
   rootPitchClass: number;
@@ -852,8 +855,11 @@ function getSeventhChordMetadata(intervalPattern: string) {
         | "major-7th"
         | "dominant-7th"
         | "minor-7th"
+        | "minor-major-7th"
         | "half-diminished-7th"
-        | "diminished-7th";
+        | "diminished-7th"
+        | "augmented-major-7th"
+        | "augmented-7th";
       shorthandSuffix: string;
       longhandSuffix: string;
     }
@@ -873,6 +879,11 @@ function getSeventhChordMetadata(intervalPattern: string) {
       shorthandSuffix: "m7",
       longhandSuffix: "minor 7th chord",
     },
+    "3,7,11": {
+      kind: "minor-major-7th",
+      shorthandSuffix: "mM7",
+      longhandSuffix: "minor (major 7th) chord",
+    },
     "3,6,10": {
       kind: "half-diminished-7th",
       shorthandSuffix: "m7b5",
@@ -882,6 +893,16 @@ function getSeventhChordMetadata(intervalPattern: string) {
       kind: "diminished-7th",
       shorthandSuffix: "dim7",
       longhandSuffix: "diminished 7th chord",
+    },
+    "4,8,11": {
+      kind: "augmented-major-7th",
+      shorthandSuffix: "augM7",
+      longhandSuffix: "augmented major 7th chord",
+    },
+    "4,8,10": {
+      kind: "augmented-7th",
+      shorthandSuffix: "aug7",
+      longhandSuffix: "augmented 7th chord",
     },
   };
 
