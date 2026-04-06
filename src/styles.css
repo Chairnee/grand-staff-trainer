@@ -194,6 +194,9 @@ body {
 
 .input-name-display {
   padding: 12px 14px;
+  min-height: 98.89px;
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: 12px;
   background: rgba(255, 253, 247, 0.82);
@@ -204,38 +207,72 @@ body {
   display: none;
 }
 
-.input-name-heading,
-.input-name-primary,
-.input-name-secondary,
-.input-name-alternate {
+.input-name-content-wrap,
+.input-name-status-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.input-name-content-wrap {
+  gap: 2px;
+}
+
+.input-name-longhand,
+.input-name-note-list,
+.input-name-separator,
+.input-name-status {
   margin: 0;
 }
 
-.input-name-heading {
-  color: #7a6445;
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.input-name-note-list {
+  color: #5c4932;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
 }
 
-.input-name-primary {
-  margin-top: 2px;
-  color: #2d2419;
-  font-size: 1.15rem;
-  font-weight: 600;
+.input-name-reading-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
-.input-name-secondary {
-  margin-top: 2px;
-  color: #6d5a40;
+.input-name-pill {
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(70, 52, 28, 0.12);
+  background: rgba(255, 252, 246, 0.96);
+  color: #453423;
+  font: inherit;
   font-size: 0.9rem;
+  line-height: 1.1;
+  cursor: default;
 }
 
-.input-name-alternate {
-  margin-top: 4px;
-  color: #857155;
-  font-size: 0.82rem;
-  font-style: italic;
+.input-name-pill-primary {
+  border-color: rgba(166, 64, 31, 0.24);
+  background: rgba(255, 244, 234, 0.96);
+  color: #7a3f1f;
+  font-weight: 700;
+}
+
+.input-name-pill-alternate {
+  color: #6b5840;
+  font-weight: 500;
+}
+
+.input-name-separator {
+  color: #b2a084;
+  font-size: 0.8rem;
+}
+
+.input-name-status,
+.input-name-longhand {
+  color: #6c5840;
+  font-size: 0.86rem;
 }
 
 .notation {

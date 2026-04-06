@@ -3,304 +3,349 @@ import { describe, expect, it } from "vitest";
 import { analyzeHeldInput } from "./inputAnalysis";
 
 describe("analyzeHeldInput", () => {
-  it("shows a no-input placeholder when nothing is held", () => {
+  it("returns an empty-state analysis when no notes are held", () => {
     expect(analyzeHeldInput([])).toEqual({
-      primaryLabel: "No input",
-      secondaryLabel: "Hold notes to analyse input.",
+      noteLabel: null,
+      primary: null,
+      alternates: [],
     });
   });
 
-  it("uses common practical spelling for a single held note", () => {
+  it("describes a single held note with note label and primary names", () => {
     expect(analyzeHeldInput([70])).toEqual({
-      primaryLabel: "Bb/A#4",
-      secondaryLabel: "Single note",
+      noteLabel: "Bb4/A#4",
+      primary: {
+        shorthand: "Bb/A#",
+        longhand: "Bb/A# note",
+      },
+      alternates: [],
     });
   });
 
-  it("keeps practical single-note spelling key-agnostic", () => {
-    expect(analyzeHeldInput([70])).toEqual({
-      primaryLabel: "Bb/A#4",
-      secondaryLabel: "Single note",
-    });
-  });
-
-  it("names a perfect fifth from two held notes", () => {
-    expect(analyzeHeldInput([59, 66])).toEqual({
-      primaryLabel: "B Perfect Fifth",
-      secondaryLabel: "B3 - Gb/F#4",
-    });
-  });
-
-  it("uses practical semitone-based naming within the octave", () => {
+  it("describes a simple minor second interval", () => {
     expect(analyzeHeldInput([60, 61])).toEqual({
-      primaryLabel: "C Minor Second",
-      secondaryLabel: "C4 - Db/C#4",
+      noteLabel: "C4-Db4/C#4",
+      primary: {
+        shorthand: "Cm2",
+        longhand: "C minor 2nd (1 semitone)",
+      },
+      alternates: [],
     });
   });
 
-  it("uses compound interval naming above the octave", () => {
-    expect(analyzeHeldInput([60, 74])).toEqual({
-      primaryLabel: "C Major Ninth",
-      secondaryLabel: "C4 - D5",
+  it("describes a simple major second interval", () => {
+    expect(analyzeHeldInput([60, 62])).toEqual({
+      noteLabel: "C4-D4",
+      primary: {
+        shorthand: "CM2",
+        longhand: "C major 2nd (2 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("uses practical semitone-based naming above the octave", () => {
-    expect(analyzeHeldInput([60, 73])).toEqual({
-      primaryLabel: "C Minor Ninth",
-      secondaryLabel: "C4 - Db/C#5",
+  it("describes a tritone interval", () => {
+    expect(analyzeHeldInput([60, 66])).toEqual({
+      noteLabel: "C4-Gb4/F#4",
+      primary: {
+        shorthand: "CTT",
+        longhand: "C tritone (6 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("uses flat spelling for intervals in flat keys", () => {
-    expect(analyzeHeldInput([65, 70])).toEqual({
-      primaryLabel: "F Perfect Fourth",
-      secondaryLabel: "F4 - Bb/A#4",
-    });
-  });
-
-  it("names octave-spaced notes as an octave", () => {
+  it("describes an octave interval", () => {
     expect(analyzeHeldInput([60, 72])).toEqual({
-      primaryLabel: "C Octave",
-      secondaryLabel: "C4 - C5",
+      noteLabel: "C4-C5",
+      primary: {
+        shorthand: "CP8",
+        longhand: "C octave (12 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("names a major triad in root position", () => {
-    expect(analyzeHeldInput([60, 64, 67])).toEqual({
-      primaryLabel: "C major triad",
-      secondaryLabel: "C4 - E4 - G4",
+  it("describes a major ninth interval", () => {
+    expect(analyzeHeldInput([60, 74])).toEqual({
+      noteLabel: "C4-D5",
+      primary: {
+        shorthand: "CM9",
+        longhand: "C major 9th (14 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("names a major triad with a doubled root", () => {
-    expect(analyzeHeldInput([60, 64, 67, 72])).toEqual({
-      primaryLabel: "C major triad",
-      secondaryLabel: "C4 - E4 - G4 - C5",
+  it("describes a perfect twelfth interval", () => {
+    expect(analyzeHeldInput([60, 79])).toEqual({
+      noteLabel: "C4-G5",
+      primary: {
+        shorthand: "CP12",
+        longhand: "C perfect 12th (19 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("names a major triad in first inversion", () => {
-    expect(analyzeHeldInput([64, 67, 72])).toEqual({
-      primaryLabel: "C major triad, first inversion",
-      secondaryLabel: "E4 - G4 - C5",
-      alternateLabel: "C/E",
+  it("describes a compound tritone interval", () => {
+    expect(analyzeHeldInput([60, 78])).toEqual({
+      noteLabel: "C4-Gb5/F#5",
+      primary: {
+        shorthand: "CTT",
+        longhand: "C tritone (18 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("names a sus2 chord in root position", () => {
-    expect(analyzeHeldInput([60, 62, 67])).toEqual({
-      primaryLabel: "C sus2",
-      secondaryLabel: "C4 - D4 - G4",
-      alternateLabel: "G sus4/C",
+  it("describes a double octave interval", () => {
+    expect(analyzeHeldInput([60, 84])).toEqual({
+      noteLabel: "C4-C6",
+      primary: {
+        shorthand: "CP15",
+        longhand: "C double octave (24 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("names a sus4 chord in root position", () => {
-    expect(analyzeHeldInput([60, 65, 67])).toEqual({
-      primaryLabel: "C sus4",
-      secondaryLabel: "C4 - F4 - G4",
-      alternateLabel: "F sus2/C",
+  it("falls back to simple naming plus semitone distance for larger awkward intervals", () => {
+    expect(analyzeHeldInput([60, 94])).toEqual({
+      noteLabel: "C4-Bb6/A#6",
+      primary: {
+        shorthand: "Cm7",
+        longhand: "C minor 7th (34 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("prefers the bass-root suspended reading when the voicing is ambiguous", () => {
-    expect(analyzeHeldInput([65, 67, 72])).toEqual({
-      primaryLabel: "F sus2",
-      secondaryLabel: "F4 - G4 - C5",
-      alternateLabel: "C sus4/F",
+  it("collapses octave stacks of one pitch class to the outer interval", () => {
+    expect(analyzeHeldInput([84, 96, 108])).toEqual({
+      noteLabel: "C6-C7-C8",
+      primary: {
+        shorthand: "CP15",
+        longhand: "C double octave (24 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("uses practical naming for enharmonic triad spellings", () => {
-    expect(analyzeHeldInput([60, 63, 67])).toEqual({
-      primaryLabel: "C minor triad",
-      secondaryLabel: "C4 - Eb/D#4 - G4",
+  it("collapses octave-doubled interval inputs to the simple interval", () => {
+    expect(analyzeHeldInput([60, 64, 72])).toEqual({
+      noteLabel: "C4-E4-C5",
+      primary: {
+        shorthand: "CM3",
+        longhand: "C major 3rd (4 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("prefers flat root names for practical triads in flat keys", () => {
-    expect(analyzeHeldInput([56, 60, 63])).toEqual({
-      primaryLabel: "Ab major triad",
-      secondaryLabel: "Ab/G#3 - C4 - Eb/D#4",
+  it("treats sustain-style exact duplicates the same as doubled notes", () => {
+    expect(analyzeHeldInput([60, 64, 64, 72])).toEqual({
+      noteLabel: "C4-E4-C5",
+      primary: {
+        shorthand: "CM3",
+        longhand: "C major 3rd (4 semitones)",
+      },
+      alternates: [],
     });
   });
 
-  it("prefers Db as the practical chord root name by default", () => {
-    expect(analyzeHeldInput([61, 65, 68])).toEqual({
-      primaryLabel: "Db major triad",
-      secondaryLabel: "Db/C#4 - F4 - Ab/G#4",
+  it("prefers a 5 chord reading for doubled root-fifth voicings", () => {
+    expect(analyzeHeldInput([60, 72, 79])).toEqual({
+      noteLabel: "C4-C5-G5",
+      primary: {
+        shorthand: "C5",
+        longhand: "C 5 chord",
+      },
+      alternates: [],
     });
   });
 
-  it("names a major seventh chord", () => {
-    expect(analyzeHeldInput([60, 64, 67, 71])).toEqual({
-      primaryLabel: "Cmaj7",
-      secondaryLabel: "C4 - E4 - G4 - B4",
-    });
-  });
-
-  it("names a dominant seventh chord with a doubled root", () => {
-    expect(analyzeHeldInput([60, 64, 67, 70, 72])).toEqual({
-      primaryLabel: "C7",
-      secondaryLabel: "C4 - E4 - G4 - Bb/A#4 - C5",
-    });
-  });
-
-  it("prefers a 6 chord when its root matches the bass", () => {
-    expect(analyzeHeldInput([60, 64, 67, 69])).toEqual({
-      primaryLabel: "C6",
-      secondaryLabel: "C4 - E4 - G4 - A4",
-      alternateLabel: "Am7/C",
-    });
-  });
-
-  it("prefers a seventh chord when its root matches the bass", () => {
-    expect(analyzeHeldInput([57, 60, 64, 67])).toEqual({
-      primaryLabel: "Am7",
-      secondaryLabel: "A3 - C4 - E4 - G4",
-      alternateLabel: "C6/A",
-    });
-  });
-
-  it("names a dominant seventh chord", () => {
-    expect(analyzeHeldInput([60, 64, 67, 70])).toEqual({
-      primaryLabel: "C7",
-      secondaryLabel: "C4 - E4 - G4 - Bb/A#4",
-    });
-  });
-
-  it("names a minor major seventh chord", () => {
-    expect(analyzeHeldInput([60, 63, 67, 71])).toEqual({
-      primaryLabel: "Cm(maj7)",
-      secondaryLabel: "C4 - Eb/D#4 - G4 - B4",
-    });
-  });
-
-  it("names an augmented major seventh chord", () => {
-    expect(analyzeHeldInput([60, 64, 68, 71])).toEqual({
-      primaryLabel: "Cmaj7#5",
-      secondaryLabel: "C4 - E4 - Ab/G#4 - B4",
-    });
-  });
-
-  it("names an augmented dominant seventh chord", () => {
-    expect(analyzeHeldInput([60, 64, 68, 70])).toEqual({
-      primaryLabel: "C7#5",
-      secondaryLabel: "C4 - E4 - Ab/G#4 - Bb/A#4",
-    });
-  });
-
-  it("names a minor seventh chord", () => {
-    expect(analyzeHeldInput([60, 63, 67, 70])).toEqual({
-      primaryLabel: "Cm7",
-      secondaryLabel: "C4 - Eb/D#4 - G4 - Bb/A#4",
-      alternateLabel: "Eb6/C",
-    });
-  });
-
-  it("names a half-diminished seventh chord", () => {
-    expect(analyzeHeldInput([60, 63, 66, 70])).toEqual({
-      primaryLabel: "Cm7b5",
-      secondaryLabel: "C4 - Eb/D#4 - Gb/F#4 - Bb/A#4",
-      alternateLabel: "Ebm6/C",
-    });
-  });
-
-  it("prefers a minor 6 chord when its root matches the bass", () => {
-    expect(analyzeHeldInput([60, 63, 67, 69])).toEqual({
-      primaryLabel: "Cm6",
-      secondaryLabel: "C4 - Eb/D#4 - G4 - A4",
-      alternateLabel: "Am7b5/C",
-    });
-  });
-
-  it("names an add2 chord when the second is close-voiced", () => {
-    expect(analyzeHeldInput([60, 62, 64, 67])).toEqual({
-      primaryLabel: "Cadd2",
-      secondaryLabel: "C4 - D4 - E4 - G4",
-      alternateLabel: "Cadd9",
-    });
-  });
-
-  it("names an add9 chord when the second is compound", () => {
-    expect(analyzeHeldInput([60, 64, 67, 74])).toEqual({
-      primaryLabel: "Cadd9",
-      secondaryLabel: "C4 - E4 - G4 - D5",
-      alternateLabel: "Cadd2",
-    });
-  });
-
-  it("names an add2 chord in first inversion", () => {
-    expect(analyzeHeldInput([64, 67, 72, 74])).toEqual({
-      primaryLabel: "Cadd2, first inversion",
-      secondaryLabel: "E4 - G4 - C5 - D5",
-      alternateLabel: "Cadd9/E",
-    });
-  });
-
-  it("names a minor add2 chord when the second is close-voiced", () => {
-    expect(analyzeHeldInput([60, 62, 63, 67])).toEqual({
-      primaryLabel: "Cm(add2)",
-      secondaryLabel: "C4 - D4 - Eb/D#4 - G4",
-      alternateLabel: "Cm(add9)",
-    });
-  });
-
-  it("names an add4 chord", () => {
-    expect(analyzeHeldInput([60, 64, 65, 67])).toEqual({
-      primaryLabel: "Cadd4",
-      secondaryLabel: "C4 - E4 - F4 - G4",
-    });
-  });
-
-  it("names a minor add4 chord", () => {
-    expect(analyzeHeldInput([60, 63, 65, 67])).toEqual({
-      primaryLabel: "Cm(add4)",
-      secondaryLabel: "C4 - Eb/D#4 - F4 - G4",
-    });
-  });
-
-  it("names a diminished seventh chord", () => {
-    expect(analyzeHeldInput([60, 63, 66, 69])).toEqual({
-      primaryLabel: "Cdim7",
-      secondaryLabel: "C4 - Eb/D#4 - Gb/F#4 - A4",
-    });
-  });
-
-  it("names a dominant seventh chord in first inversion", () => {
-    expect(analyzeHeldInput([64, 67, 70, 72])).toEqual({
-      primaryLabel: "C7, first inversion",
-      secondaryLabel: "E4 - G4 - Bb/A#4 - C5",
-      alternateLabel: "C7/E",
-    });
-  });
-
-  it("names a power chord with octave doubling", () => {
+  it("describes a root-position 5 chord when a fifth is doubled as a voicing", () => {
     expect(analyzeHeldInput([60, 67, 72])).toEqual({
-      primaryLabel: "C5",
-      secondaryLabel: "C4 - G4 - C5",
+      noteLabel: "C4-G4-C5",
+      primary: {
+        shorthand: "C5",
+        longhand: "C 5 chord",
+      },
+      alternates: [],
     });
   });
 
-  it("finds the harmonic root for inverted power-chord voicings", () => {
+  it("describes a slash-bass 5 chord when the fifth is in the bass", () => {
     expect(analyzeHeldInput([55, 60, 67])).toEqual({
-      primaryLabel: "C5",
-      secondaryLabel: "G3 - C4 - G4",
+      noteLabel: "G3-C4-G4",
+      primary: {
+        shorthand: "C5/G",
+        longhand: "C 5 chord over G",
+      },
+      alternates: [],
     });
   });
 
-  it("shows a simple placeholder for unknown 4-note sets", () => {
-    expect(analyzeHeldInput([60, 61, 64, 67])).toEqual({
-      primaryLabel: "Unknown chord",
-      secondaryLabel: "C4 - Db/C#4 - E4 - G4",
+  it("describes a major triad", () => {
+    expect(analyzeHeldInput([60, 64, 67])).toEqual({
+      noteLabel: "C4-E4-G4",
+      primary: {
+        shorthand: "CM",
+        longhand: "C major triad",
+      },
+      alternates: [],
     });
   });
 
-  it("shows a simple placeholder for unsupported 5-note sets", () => {
-    expect(analyzeHeldInput([60, 62, 64, 67, 71])).toEqual({
-      primaryLabel: "Unknown chord",
-      secondaryLabel: "C4 - D4 - E4 - G4 - B4",
+  it("describes a major triad in first inversion", () => {
+    expect(analyzeHeldInput([64, 67, 72])).toEqual({
+      noteLabel: "E4-G4-C5",
+      primary: {
+        shorthand: "CM/E",
+        longhand: "C major triad, first inversion",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a major triad in second inversion", () => {
+    expect(analyzeHeldInput([67, 72, 76])).toEqual({
+      noteLabel: "G4-C5-E5",
+      primary: {
+        shorthand: "CM/G",
+        longhand: "C major triad, second inversion",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a minor triad", () => {
+    expect(analyzeHeldInput([60, 63, 67])).toEqual({
+      noteLabel: "C4-Eb4/D#4-G4",
+      primary: {
+        shorthand: "Cm",
+        longhand: "C minor triad",
+      },
+      alternates: [],
+    });
+  });
+
+  it("keeps triad inversion labeling when notes are doubled", () => {
+    expect(analyzeHeldInput([64, 67, 72, 76])).toEqual({
+      noteLabel: "E4-G4-C5-E5",
+      primary: {
+        shorthand: "CM/E",
+        longhand: "C major triad, first inversion",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a diminished triad", () => {
+    expect(analyzeHeldInput([60, 63, 66])).toEqual({
+      noteLabel: "C4-Eb4/D#4-Gb4/F#4",
+      primary: {
+        shorthand: "Cdim",
+        longhand: "C diminished triad",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes an augmented triad", () => {
+    expect(analyzeHeldInput([60, 64, 68])).toEqual({
+      noteLabel: "C4-E4-Ab4/G#4",
+      primary: {
+        shorthand: "Caug",
+        longhand: "C augmented triad",
+      },
+      alternates: [
+        {
+          shorthand: "Eaug/C",
+          longhand: "E augmented triad, first inversion",
+        },
+        {
+          shorthand: "Abaug/C",
+          longhand: "Ab augmented triad, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("surfaces reasonable augmented-triad alternates", () => {
+    expect(analyzeHeldInput([64, 68, 72])).toEqual({
+      noteLabel: "E4-Ab4/G#4-C5",
+      primary: {
+        shorthand: "Eaug",
+        longhand: "E augmented triad",
+      },
+      alternates: [
+        {
+          shorthand: "Caug/E",
+          longhand: "C augmented triad, first inversion",
+        },
+        {
+          shorthand: "Abaug/E",
+          longhand: "Ab augmented triad, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("describes a suspended 2nd chord with an alternate suspended 4th reading", () => {
+    expect(analyzeHeldInput([60, 62, 67])).toEqual({
+      noteLabel: "C4-D4-G4",
+      primary: {
+        shorthand: "Csus2",
+        longhand: "C suspended 2nd",
+      },
+      alternates: [
+        {
+          shorthand: "Gsus4/C",
+          longhand: "G suspended 4th over C",
+        },
+      ],
+    });
+  });
+
+  it("describes a suspended 4th chord with an alternate suspended 2nd reading", () => {
+    expect(analyzeHeldInput([60, 65, 67])).toEqual({
+      noteLabel: "C4-F4-G4",
+      primary: {
+        shorthand: "Csus4",
+        longhand: "C suspended 4th",
+      },
+      alternates: [
+        {
+          shorthand: "Fsus2/C",
+          longhand: "F suspended 2nd over C",
+        },
+      ],
+    });
+  });
+
+  it("keeps the bass-note suspended reading primary in inversion-like voicings", () => {
+    expect(analyzeHeldInput([65, 67, 72])).toEqual({
+      noteLabel: "F4-G4-C5",
+      primary: {
+        shorthand: "Fsus2",
+        longhand: "F suspended 2nd",
+      },
+      alternates: [
+        {
+          shorthand: "Csus4/F",
+          longhand: "C suspended 4th over F",
+        },
+      ],
+    });
+  });
+
+  it("returns an unknown-input analysis for other unsupported inputs", () => {
+    expect(analyzeHeldInput([60, 61, 67])).toEqual({
+      noteLabel: "C4-Db4/C#4-G4",
+      primary: null,
+      alternates: [],
     });
   });
 });

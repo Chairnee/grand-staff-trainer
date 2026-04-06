@@ -1,0 +1,72 @@
+type InputNameLine = {
+  shorthand: string;
+  longhand: string;
+};
+
+type InputNameDisplayModel = {
+  noteLabel: string;
+  primary: InputNameLine;
+  alternates: InputNameLine[];
+};
+
+const MOCK_INPUT_NAME_DISPLAY: InputNameDisplayModel = {
+  noteLabel: "C4-E4-G4-A4",
+  primary: {
+    shorthand: "C6",
+    longhand: "C major sixth chord",
+  },
+  alternates: [
+    {
+      shorthand: "Am7/C",
+      longhand: "A minor seventh, first inversion",
+    },
+    {
+      shorthand: "Em add b6/C",
+      longhand: "E minor add flat sixth over C",
+    },
+  ],
+};
+
+export function renderInputNameDisplay(container: HTMLDivElement) {
+  container.replaceChildren();
+
+  const heading = document.createElement("p");
+  heading.className = "input-name-heading";
+  heading.textContent = "Current input";
+
+  const notesValue = document.createElement("p");
+  notesValue.className = "input-name-note-list";
+  notesValue.textContent = MOCK_INPUT_NAME_DISPLAY.noteLabel;
+
+  const readingRow = document.createElement("div");
+  readingRow.className = "input-name-reading-row";
+
+  const primaryPill = document.createElement("button");
+  primaryPill.className = "input-name-pill input-name-pill-primary";
+  primaryPill.type = "button";
+  primaryPill.textContent = MOCK_INPUT_NAME_DISPLAY.primary.shorthand;
+  primaryPill.setAttribute("aria-pressed", "true");
+
+  readingRow.append(primaryPill);
+
+  if (MOCK_INPUT_NAME_DISPLAY.alternates.length > 0) {
+    const separator = document.createElement("span");
+    separator.className = "input-name-separator";
+    separator.textContent = "|";
+    readingRow.append(separator);
+  }
+
+  for (const alternate of MOCK_INPUT_NAME_DISPLAY.alternates) {
+    const alternatePill = document.createElement("button");
+    alternatePill.className = "input-name-pill input-name-pill-alternate";
+    alternatePill.type = "button";
+    alternatePill.textContent = alternate.shorthand;
+    readingRow.append(alternatePill);
+  }
+
+  const longhand = document.createElement("p");
+  longhand.className = "input-name-longhand";
+  longhand.textContent = MOCK_INPUT_NAME_DISPLAY.primary.longhand;
+
+  container.append(heading, notesValue, readingRow, longhand);
+}

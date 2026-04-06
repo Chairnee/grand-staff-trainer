@@ -1,1169 +1,396 @@
+export type InputNameVariant = {
+  shorthand: string;
+  longhand: string;
+};
+
 export type InputAnalysis = {
-  primaryLabel: string;
-  secondaryLabel?: string;
-  alternateLabel?: string;
+  noteLabel: string | null;
+  primary: InputNameVariant | null;
+  alternates: InputNameVariant[];
 };
 
-type HeldInputNote = {
-  key: string;
-  label: string;
-  noteNumber: number;
-  pitchClass: number;
-};
-
-type TriadQuality =
-  | "major"
-  | "minor"
-  | "diminished"
-  | "augmented"
-  | "sus2"
-  | "sus4";
-type TriadInversion = "root position" | "first inversion" | "second inversion";
-
-type TriadAnalysis = {
-  rootKey: string;
-  rootPitchClass: number;
+type InputAnalysisCandidate = InputNameVariant & {
   bassPitchClass: number;
-  quality: TriadQuality;
-  inversion: TriadInversion;
-};
-
-type PowerChordAnalysis = {
-  rootKey: string;
-};
-
-type FourNoteInversion =
-  | "root position"
-  | "first inversion"
-  | "second inversion"
-  | "third inversion";
-
-type SixthChordQuality = "6" | "m6";
-
-type SixthChordAnalysis = {
-  rootKey: string;
   rootPitchClass: number;
-  bassPitchClass: number;
-  quality: SixthChordQuality;
-  inversion: FourNoteInversion;
-};
-
-type AddChordQuality =
-  | "add2"
-  | "m(add2)"
-  | "add4"
-  | "m(add4)"
-  | "add9"
-  | "m(add9)";
-
-type AddChordAnalysis = {
-  rootKey: string;
-  rootPitchClass: number;
-  bassPitchClass: number;
-  quality: AddChordQuality;
-  inversion: FourNoteInversion;
-};
-
-type SeventhChordQuality =
-  | "maj7"
-  | "7"
-  | "m7"
-  | "m(maj7)"
-  | "maj7#5"
-  | "7#5"
-  | "m7b5"
-  | "dim7";
-
-type SeventhChordAnalysis = {
-  rootKey: string;
-  rootPitchClass: number;
-  bassPitchClass: number;
-  quality: SeventhChordQuality;
-  inversion: FourNoteInversion;
-};
-
-type FourNoteChordCandidate = {
-  label: string;
-  alternateLabel?: string;
-  rootPitchClass: number;
-  inversion: FourNoteInversion;
 };
 
 export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
   if (heldNotes.length === 0) {
     return {
-      primaryLabel: "No input",
-      secondaryLabel: "Hold notes to analyse input.",
+      noteLabel: null,
+      primary: null,
+      alternates: [],
     };
   }
 
   const distinctHeldNotes = [...new Set(heldNotes)].sort(
     (left, right) => left - right,
   );
-  const inputNotes = distinctHeldNotes.map((noteNumber) => {
-    const key = getCommonPracticalAnalysisKey(noteNumber);
+  const noteLabels = distinctHeldNotes.map(getCommonPracticalDisplayLabel);
+  const noteLabel = noteLabels.join("-");
+  const distinctPitchClasses = getDistinctPitchClasses(distinctHeldNotes);
 
-    return {
-      key,
-      label: getCommonPracticalDisplayLabel(noteNumber),
-      noteNumber,
-      pitchClass: ((noteNumber % 12) + 12) % 12,
-    };
-  });
-  const distinctPitchClassNotes = getDistinctPitchClassNotes(inputNotes);
+  if (distinctHeldNotes.length === 1) {
+    const noteNumber = distinctHeldNotes[0];
 
-  if (inputNotes.length === 1) {
-    const heldKey = inputNotes[0]?.label;
-
-    if (!heldKey) {
+    if (noteNumber === undefined) {
       throw new Error("Could not determine held note.");
     }
 
-    return {
-      primaryLabel: heldKey,
-      secondaryLabel: "Single note",
-    };
+    const shorthand = getCommonPracticalPitchLabel(noteNumber);
+
+    return finalizeAnalysis(noteLabel, [
+      {
+        shorthand,
+        longhand: `${shorthand} note`,
+        rootPitchClass: getPitchClass(noteNumber),
+        bassPitchClass: getPitchClass(noteNumber),
+      },
+    ]);
   }
 
-  if (inputNotes.length === 2) {
-    const [lowerNote, higherNote] = inputNotes;
-    const intervalLabel = getIntervalLabel(lowerNote.key, higherNote.key);
+  if (distinctHeldNotes.length === 2) {
+    const [lowerNoteNumber, higherNoteNumber] = distinctHeldNotes;
 
-    return {
-      primaryLabel: formatIntervalName(lowerNote.pitchClass, intervalLabel),
-      secondaryLabel: formatHeldInputLabels(inputNotes),
-    };
-  }
+    if (lowerNoteNumber === undefined || higherNoteNumber === undefined) {
+      throw new Error("Could not determine held interval.");
+    }
 
-  if (distinctPitchClassNotes.length === 3) {
-    const triadAnalysis = analyzeTriad(distinctPitchClassNotes);
+    const intervalAnalysis = analyzeSimpleInterval(
+      lowerNoteNumber,
+      higherNoteNumber,
+    );
 
-    if (triadAnalysis) {
-      return {
-        primaryLabel: formatTriadLabel(triadAnalysis),
-        secondaryLabel: formatHeldInputLabels(inputNotes),
-        alternateLabel: getTriadAlternateLabel(
-          triadAnalysis,
-          distinctPitchClassNotes,
-        ),
-      };
+    if (intervalAnalysis) {
+      return finalizeAnalysis(noteLabel, [intervalAnalysis]);
     }
   }
 
-  if (distinctPitchClassNotes.length === 4) {
-    const fourNoteChordAnalysis = analyzeFourNoteChord(distinctPitchClassNotes);
+  if (distinctHeldNotes.length > 2 && distinctPitchClasses.length === 1) {
+    const lowerNoteNumber = distinctHeldNotes[0];
+    const higherNoteNumber = distinctHeldNotes.at(-1);
 
-    if (fourNoteChordAnalysis) {
-      return {
-        primaryLabel: fourNoteChordAnalysis.primaryLabel,
-        secondaryLabel: formatHeldInputLabels(inputNotes),
-        alternateLabel: fourNoteChordAnalysis.alternateLabel,
-      };
+    if (lowerNoteNumber === undefined || higherNoteNumber === undefined) {
+      throw new Error("Could not determine octave stack interval.");
+    }
+
+    const octaveStackAnalysis = analyzeSimpleInterval(
+      lowerNoteNumber,
+      higherNoteNumber,
+    );
+
+    if (octaveStackAnalysis) {
+      return finalizeAnalysis(noteLabel, [octaveStackAnalysis]);
     }
   }
 
-  const powerChordAnalysis = analyzePowerChord(distinctPitchClassNotes);
+  if (distinctHeldNotes.length > 2 && distinctPitchClasses.length === 2) {
+    const bassNoteNumber = distinctHeldNotes[0];
+    const [rootPitchClass, otherPitchClass] = distinctPitchClasses;
 
-  if (powerChordAnalysis) {
-    return {
-      primaryLabel: formatPowerChordLabel(powerChordAnalysis),
-      secondaryLabel: formatHeldInputLabels(inputNotes),
-    };
+    if (
+      bassNoteNumber === undefined ||
+      rootPitchClass === undefined ||
+      otherPitchClass === undefined
+    ) {
+      throw new Error("Could not determine two-pitch-class input.");
+    }
+
+    const powerChordCandidates = analyzePowerChord(
+      distinctPitchClasses,
+      getPitchClass(bassNoteNumber),
+    );
+
+    if (powerChordCandidates.length > 0) {
+      return finalizeAnalysis(noteLabel, powerChordCandidates);
+    }
+
+    const collapsedIntervalAnalysis = analyzeCollapsedInterval(
+      rootPitchClass,
+      otherPitchClass,
+    );
+
+    if (collapsedIntervalAnalysis) {
+      return finalizeAnalysis(noteLabel, [collapsedIntervalAnalysis]);
+    }
   }
 
-  if (distinctPitchClassNotes.length === 3) {
-    return {
-      primaryLabel: "Unknown triad",
-      secondaryLabel: formatHeldInputLabels(inputNotes),
-    };
-  }
+  if (distinctPitchClasses.length === 3) {
+    const bassNoteNumber = distinctHeldNotes[0];
 
-  if (distinctPitchClassNotes.length >= 4) {
-    return {
-      primaryLabel: "Unknown chord",
-      secondaryLabel: formatHeldInputLabels(inputNotes),
-    };
+    if (bassNoteNumber === undefined) {
+      throw new Error("Could not determine triad bass note.");
+    }
+
+    const triadAnalysis = analyzeThreeNoteChord(
+      distinctPitchClasses,
+      getPitchClass(bassNoteNumber),
+    );
+
+    if (triadAnalysis.length > 0) {
+      return finalizeAnalysis(noteLabel, triadAnalysis);
+    }
   }
 
   return {
-    primaryLabel: "Unknown chord",
-    secondaryLabel: formatHeldInputLabels(inputNotes),
+    noteLabel,
+    primary: null,
+    alternates: [],
   };
 }
 
-function getDistinctPitchClassNotes(inputNotes: HeldInputNote[]) {
-  const firstNoteByPitchClass = new Map<number, HeldInputNote>();
+function getDistinctPitchClasses(noteNumbers: number[]) {
+  const pitchClasses = new Set<number>();
 
-  for (const note of inputNotes) {
-    if (!firstNoteByPitchClass.has(note.pitchClass)) {
-      firstNoteByPitchClass.set(note.pitchClass, note);
-    }
+  for (const noteNumber of noteNumbers) {
+    pitchClasses.add(((noteNumber % 12) + 12) % 12);
   }
 
-  return [...firstNoteByPitchClass.values()].sort(
-    (left, right) => left.noteNumber - right.noteNumber,
-  );
+  return [...pitchClasses];
 }
 
-function getIntervalLabel(lowerKey: string, higherKey: string) {
-  return getPracticalIntervalLabel(
-    getMidiNoteNumberForKey(higherKey) - getMidiNoteNumberForKey(lowerKey),
-  );
+function analyzeSimpleInterval(
+  lowerNoteNumber: number,
+  higherNoteNumber: number,
+): InputAnalysisCandidate | null {
+  const semitoneDistance = higherNoteNumber - lowerNoteNumber;
+  return buildIntervalVariant(lowerNoteNumber, semitoneDistance);
 }
 
-function getPracticalIntervalLabel(semitoneDistance: number) {
-  if (semitoneDistance <= 0) {
-    throw new Error(`Invalid interval distance: ${semitoneDistance}`);
-  }
+function analyzeCollapsedInterval(
+  rootPitchClass: number,
+  otherPitchClass: number,
+): InputAnalysisCandidate | null {
+  const semitoneDistance = (otherPitchClass - rootPitchClass + 12) % 12;
 
-  if (semitoneDistance === 12) {
-    return "Octave";
-  }
-
-  const octaveCount = Math.floor(semitoneDistance / 12);
-  const intervalClass = semitoneDistance % 12;
-  const simpleIntervalLabels: Record<number, string> = {
-    0: "Unison",
-    1: "Minor second",
-    2: "Major second",
-    3: "Minor third",
-    4: "Major third",
-    5: "Perfect fourth",
-    6: "Tritone",
-    7: "Perfect fifth",
-    8: "Minor sixth",
-    9: "Major sixth",
-    10: "Minor seventh",
-    11: "Major seventh",
-  };
-  const compoundIntervalLabels: Record<number, string> = {
-    0: "Octave",
-    1: "Minor ninth",
-    2: "Major ninth",
-    3: "Minor tenth",
-    4: "Major tenth",
-    5: "Perfect eleventh",
-    6: "Tritone",
-    7: "Perfect twelfth",
-    8: "Minor thirteenth",
-    9: "Major thirteenth",
-    10: "Minor fourteenth",
-    11: "Major fourteenth",
-  };
-
-  if (octaveCount === 0) {
-    const intervalLabel = simpleIntervalLabels[intervalClass];
-
-    if (intervalLabel) {
-      return intervalLabel;
-    }
-  }
-
-  if (octaveCount === 1) {
-    const intervalLabel = compoundIntervalLabels[intervalClass];
-
-    if (intervalLabel) {
-      return intervalLabel;
-    }
-  }
-
-  const intervalLabel = simpleIntervalLabels[intervalClass];
-
-  if (!intervalLabel) {
-    throw new Error(`Unsupported interval class: ${intervalClass}`);
-  }
-
-  if (intervalClass === 0) {
-    return `${octaveCount} octaves`;
-  }
-
-  return `${intervalLabel} + ${octaveCount} octave${octaveCount === 1 ? "" : "s"}`;
-}
-
-function analyzeTriad(inputNotes: HeldInputNote[]): TriadAnalysis | null {
-  if (new Set(inputNotes.map((note) => note.pitchClass)).size !== 3) {
+  if (semitoneDistance === 0) {
     return null;
   }
 
-  for (const rootNote of inputNotes) {
-    const intervals = inputNotes
-      .filter((note) => note !== rootNote)
-      .map((note) =>
-        getPitchClassDistance(rootNote.pitchClass, note.pitchClass),
-      )
-      .sort((left, right) => left - right);
-    const triadQuality = getTriadQualityByIntervals(intervals);
-
-    if (!triadQuality) {
-      continue;
-    }
-
-    return {
-      rootKey: getPreferredPracticalTriadRootKey(rootNote.pitchClass),
-      rootPitchClass: rootNote.pitchClass,
-      bassPitchClass: inputNotes[0].pitchClass,
-      quality: triadQuality,
-      inversion: getTriadInversion(
-        inputNotes,
-        rootNote.pitchClass,
-        triadQuality,
-      ),
-    };
-  }
-
-  return null;
-}
-
-function getTriadQualityByIntervals(intervals: number[]) {
-  const [firstInterval, secondInterval] = intervals;
-
-  if (firstInterval === 2 && secondInterval === 7) {
-    return "sus2";
-  }
-
-  if (firstInterval === 4 && secondInterval === 7) {
-    return "major";
-  }
-
-  if (firstInterval === 3 && secondInterval === 7) {
-    return "minor";
-  }
-
-  if (firstInterval === 5 && secondInterval === 7) {
-    return "sus4";
-  }
-
-  if (firstInterval === 3 && secondInterval === 6) {
-    return "diminished";
-  }
-
-  if (firstInterval === 4 && secondInterval === 8) {
-    return "augmented";
-  }
-
-  return null;
-}
-
-function getTriadInversion(
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-  triadQuality: TriadQuality,
-): TriadInversion {
-  const bassNote = inputNotes[0];
-
-  if (!bassNote) {
-    throw new Error("Could not determine bass note.");
-  }
-
-  const thirdPitchClass =
-    (rootPitchClass + getTriadThirdOffset(triadQuality)) % 12;
-  const fifthPitchClass =
-    (rootPitchClass + getTriadFifthOffset(triadQuality)) % 12;
-
-  if (bassNote.pitchClass === rootPitchClass) {
-    return "root position";
-  }
-
-  if (bassNote.pitchClass === thirdPitchClass) {
-    return "first inversion";
-  }
-
-  if (bassNote.pitchClass === fifthPitchClass) {
-    return "second inversion";
-  }
-
-  throw new Error("Could not determine triad inversion.");
-}
-
-function getTriadThirdOffset(triadQuality: TriadQuality) {
-  if (triadQuality === "sus2") {
-    return 2;
-  }
-
-  if (triadQuality === "sus4") {
-    return 5;
-  }
-
-  return triadQuality === "major" || triadQuality === "augmented" ? 4 : 3;
-}
-
-function getTriadFifthOffset(triadQuality: TriadQuality) {
-  if (triadQuality === "diminished") {
-    return 6;
-  }
-
-  if (triadQuality === "augmented") {
-    return 8;
-  }
-
-  return 7;
-}
-
-function formatTriadLabel(triadAnalysis: TriadAnalysis) {
-  const rootLabel = formatPitchLabel(triadAnalysis.rootKey);
-  const inversionSuffix =
-    triadAnalysis.inversion === "root position"
-      ? ""
-      : `, ${triadAnalysis.inversion}`;
-
-  if (triadAnalysis.quality === "sus2" || triadAnalysis.quality === "sus4") {
-    return `${rootLabel} ${triadAnalysis.quality}${inversionSuffix}`;
-  }
-
-  return `${rootLabel} ${triadAnalysis.quality} triad${inversionSuffix}`;
-}
-
-function getTriadAlternateLabel(
-  triadAnalysis: TriadAnalysis,
-  inputNotes: HeldInputNote[],
-) {
-  const suspendedAlternate = getSuspendedTriadAlternateLabel(
-    triadAnalysis,
-    inputNotes,
-  );
-
-  if (suspendedAlternate) {
-    return suspendedAlternate;
-  }
-
-  if (triadAnalysis.inversion === "root position") {
-    return undefined;
-  }
-
-  return formatTriadSlashLabel(triadAnalysis);
-}
-
-function getSuspendedTriadAlternateLabel(
-  triadAnalysis: TriadAnalysis,
-  inputNotes: HeldInputNote[],
-) {
-  if (triadAnalysis.quality !== "sus2" && triadAnalysis.quality !== "sus4") {
-    return undefined;
-  }
-
-  for (const alternateRootNote of inputNotes) {
-    if (alternateRootNote.pitchClass === triadAnalysis.rootPitchClass) {
-      continue;
-    }
-
-    const intervals = inputNotes
-      .filter((note) => note !== alternateRootNote)
-      .map((note) =>
-        getPitchClassDistance(alternateRootNote.pitchClass, note.pitchClass),
-      )
-      .sort((left, right) => left - right);
-    const alternateQuality = getTriadQualityByIntervals(intervals);
-
-    if (alternateQuality !== "sus2" && alternateQuality !== "sus4") {
-      continue;
-    }
-
-    const alternateTriadAnalysis: TriadAnalysis = {
-      rootKey: getPreferredPracticalTriadRootKey(alternateRootNote.pitchClass),
-      rootPitchClass: alternateRootNote.pitchClass,
-      bassPitchClass: triadAnalysis.bassPitchClass,
-      quality: alternateQuality,
-      inversion: getTriadInversion(
-        inputNotes,
-        alternateRootNote.pitchClass,
-        alternateQuality,
-      ),
-    };
-
-    return formatTriadSlashLabel(alternateTriadAnalysis);
-  }
-
-  return undefined;
-}
-
-function analyzeFourNoteChord(inputNotes: HeldInputNote[]) {
-  const candidates: FourNoteChordCandidate[] = [];
-  const addChordAnalysis = analyzeAddChord(inputNotes);
-
-  if (addChordAnalysis) {
-    candidates.push({
-      label: formatAddChordLabel(addChordAnalysis),
-      alternateLabel: formatAddChordAlternateLabel(addChordAnalysis),
-      rootPitchClass: addChordAnalysis.rootPitchClass,
-      inversion: addChordAnalysis.inversion,
-    });
-  }
-
-  const sixthChordAnalysis = analyzeSixthChord(inputNotes);
-
-  if (sixthChordAnalysis) {
-    candidates.push({
-      label: formatSixthChordLabel(sixthChordAnalysis),
-      alternateLabel: formatSixthChordAlternateLabel(sixthChordAnalysis),
-      rootPitchClass: sixthChordAnalysis.rootPitchClass,
-      inversion: sixthChordAnalysis.inversion,
-    });
-  }
-
-  const seventhChordAnalysis = analyzeSeventhChord(inputNotes);
-
-  if (seventhChordAnalysis) {
-    candidates.push({
-      label: formatSeventhChordLabel(seventhChordAnalysis),
-      alternateLabel: formatSeventhChordAlternateLabel(seventhChordAnalysis),
-      rootPitchClass: seventhChordAnalysis.rootPitchClass,
-      inversion: seventhChordAnalysis.inversion,
-    });
-  }
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  const rankedCandidates = [...candidates].sort((left, right) =>
-    compareFourNoteChordCandidates(left, right, inputNotes),
-  );
-  const [primaryCandidate, alternateCandidate] = rankedCandidates;
-
-  if (!primaryCandidate) {
-    return null;
-  }
-
-  return {
-    primaryLabel: primaryCandidate.label,
-    alternateLabel:
-      alternateCandidate && alternateCandidate.label !== primaryCandidate.label
-        ? alternateCandidate.alternateLabel
-        : primaryCandidate.alternateLabel !== primaryCandidate.label
-          ? primaryCandidate.alternateLabel
-          : undefined,
-  };
-}
-
-function analyzeAddChord(inputNotes: HeldInputNote[]): AddChordAnalysis | null {
-  if (new Set(inputNotes.map((note) => note.pitchClass)).size !== 4) {
-    return null;
-  }
-
-  for (const rootNote of inputNotes) {
-    const intervals = inputNotes
-      .filter((note) => note !== rootNote)
-      .map((note) =>
-        getPitchClassDistance(rootNote.pitchClass, note.pitchClass),
-      )
-      .sort((left, right) => left - right);
-    const addChordQuality = getAddChordQualityByIntervals(
-      intervals,
-      inputNotes,
-      rootNote.pitchClass,
-    );
-
-    if (!addChordQuality) {
-      continue;
-    }
-
-    return {
-      rootKey: getPreferredPracticalTriadRootKey(rootNote.pitchClass),
-      rootPitchClass: rootNote.pitchClass,
-      bassPitchClass: inputNotes[0].pitchClass,
-      quality: addChordQuality,
-      inversion: getAddChordInversion(
-        inputNotes,
-        rootNote.pitchClass,
-        addChordQuality,
-      ),
-    };
-  }
-
-  return null;
-}
-
-function getAddChordQualityByIntervals(
-  intervals: number[],
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-) {
-  const [firstInterval, secondInterval, thirdInterval] = intervals;
-
-  if (firstInterval === 2 && secondInterval === 4 && thirdInterval === 7) {
-    return getAddedSecondQuality(inputNotes, rootPitchClass, "major");
-  }
-
-  if (firstInterval === 2 && secondInterval === 3 && thirdInterval === 7) {
-    return getAddedSecondQuality(inputNotes, rootPitchClass, "minor");
-  }
-
-  if (firstInterval === 4 && secondInterval === 5 && thirdInterval === 7) {
-    return "add4";
-  }
-
-  if (firstInterval === 3 && secondInterval === 5 && thirdInterval === 7) {
-    return "m(add4)";
-  }
-
-  return null;
-}
-
-function getAddChordInversion(
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-  addChordQuality: AddChordQuality,
-): FourNoteInversion {
-  const bassNote = inputNotes[0];
-
-  if (!bassNote) {
-    throw new Error("Could not determine bass note.");
-  }
-
-  const thirdPitchClass =
-    (rootPitchClass + getAddChordThirdOffset(addChordQuality)) % 12;
-  const addedTonePitchClass =
-    (rootPitchClass + getAddChordAddedToneOffset(addChordQuality)) % 12;
-  const fifthPitchClass = (rootPitchClass + 7) % 12;
-
-  if (bassNote.pitchClass === rootPitchClass) {
-    return "root position";
-  }
-
-  if (bassNote.pitchClass === thirdPitchClass) {
-    return "first inversion";
-  }
-
-  if (bassNote.pitchClass === fifthPitchClass) {
-    return "second inversion";
-  }
-
-  if (bassNote.pitchClass === addedTonePitchClass) {
-    return "third inversion";
-  }
-
-  throw new Error("Could not determine added-chord inversion.");
-}
-
-function getAddChordThirdOffset(addChordQuality: AddChordQuality) {
-  return addChordQuality === "add2" ||
-    addChordQuality === "add4" ||
-    addChordQuality === "add9"
-    ? 4
-    : 3;
-}
-
-function getAddChordAddedToneOffset(addChordQuality: AddChordQuality) {
-  return addChordQuality === "add2" ||
-    addChordQuality === "m(add2)" ||
-    addChordQuality === "add9" ||
-    addChordQuality === "m(add9)"
-    ? 2
-    : 5;
-}
-
-function getAddedSecondQuality(
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-  triadFlavor: "major" | "minor",
-): AddChordQuality {
-  const rootNote = inputNotes.find(
-    (note) => note.pitchClass === rootPitchClass,
-  );
-  const addedSecondNote = inputNotes.find(
-    (note) => note.pitchClass === (rootPitchClass + 2) % 12,
-  );
-
-  if (!rootNote || !addedSecondNote) {
-    throw new Error("Could not determine added-second voicing.");
-  }
-
-  const semitoneDistance = addedSecondNote.noteNumber - rootNote.noteNumber;
-
-  if (semitoneDistance > 0 && semitoneDistance < 12) {
-    return triadFlavor === "major" ? "add2" : "m(add2)";
-  }
-
-  return triadFlavor === "major" ? "add9" : "m(add9)";
-}
-
-function analyzeSixthChord(
-  inputNotes: HeldInputNote[],
-): SixthChordAnalysis | null {
-  if (new Set(inputNotes.map((note) => note.pitchClass)).size !== 4) {
-    return null;
-  }
-
-  for (const rootNote of inputNotes) {
-    const intervals = inputNotes
-      .filter((note) => note !== rootNote)
-      .map((note) =>
-        getPitchClassDistance(rootNote.pitchClass, note.pitchClass),
-      )
-      .sort((left, right) => left - right);
-    const sixthChordQuality = getSixthChordQualityByIntervals(intervals);
-
-    if (!sixthChordQuality) {
-      continue;
-    }
-
-    return {
-      rootKey: getPreferredPracticalTriadRootKey(rootNote.pitchClass),
-      rootPitchClass: rootNote.pitchClass,
-      bassPitchClass: inputNotes[0].pitchClass,
-      quality: sixthChordQuality,
-      inversion: getSixthChordInversion(
-        inputNotes,
-        rootNote.pitchClass,
-        sixthChordQuality,
-      ),
-    };
-  }
-
-  return null;
-}
-
-function getSixthChordQualityByIntervals(intervals: number[]) {
-  const [firstInterval, secondInterval, thirdInterval] = intervals;
-
-  if (firstInterval === 4 && secondInterval === 7 && thirdInterval === 9) {
-    return "6";
-  }
-
-  if (firstInterval === 3 && secondInterval === 7 && thirdInterval === 9) {
-    return "m6";
-  }
-
-  return null;
-}
-
-function getSixthChordInversion(
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-  sixthChordQuality: SixthChordQuality,
-): FourNoteInversion {
-  const bassNote = inputNotes[0];
-
-  if (!bassNote) {
-    throw new Error("Could not determine bass note.");
-  }
-
-  const thirdPitchClass =
-    (rootPitchClass + getSixthChordThirdOffset(sixthChordQuality)) % 12;
-  const fifthPitchClass = (rootPitchClass + 7) % 12;
-  const sixthPitchClass = (rootPitchClass + 9) % 12;
-
-  if (bassNote.pitchClass === rootPitchClass) {
-    return "root position";
-  }
-
-  if (bassNote.pitchClass === thirdPitchClass) {
-    return "first inversion";
-  }
-
-  if (bassNote.pitchClass === fifthPitchClass) {
-    return "second inversion";
-  }
-
-  if (bassNote.pitchClass === sixthPitchClass) {
-    return "third inversion";
-  }
-
-  throw new Error("Could not determine sixth-chord inversion.");
-}
-
-function getSixthChordThirdOffset(sixthChordQuality: SixthChordQuality) {
-  return sixthChordQuality === "6" ? 4 : 3;
-}
-
-function formatSixthChordLabel(sixthChordAnalysis: SixthChordAnalysis) {
-  const rootLabel = formatPitchLabel(sixthChordAnalysis.rootKey);
-  const inversionSuffix =
-    sixthChordAnalysis.inversion === "root position"
-      ? ""
-      : `, ${sixthChordAnalysis.inversion}`;
-
-  return `${rootLabel}${sixthChordAnalysis.quality}${inversionSuffix}`;
-}
-
-function formatAddChordLabel(addChordAnalysis: AddChordAnalysis) {
-  const rootLabel = formatPitchLabel(addChordAnalysis.rootKey);
-  const inversionSuffix =
-    addChordAnalysis.inversion === "root position"
-      ? ""
-      : `, ${addChordAnalysis.inversion}`;
-
-  return `${rootLabel}${addChordAnalysis.quality}${inversionSuffix}`;
-}
-
-function formatTriadSlashLabel(triadAnalysis: TriadAnalysis) {
-  const rootLabel = formatPitchLabel(triadAnalysis.rootKey);
-
-  if (triadAnalysis.quality === "sus2" || triadAnalysis.quality === "sus4") {
-    return formatSlashChordLabel(
-      `${rootLabel} ${triadAnalysis.quality}`,
-      triadAnalysis.inversion,
-      triadAnalysis.bassPitchClass,
-    );
-  }
-
-  return formatSlashChordLabel(
-    `${rootLabel}`,
-    triadAnalysis.inversion,
-    triadAnalysis.bassPitchClass,
-  );
-}
-
-function analyzeSeventhChord(
-  inputNotes: HeldInputNote[],
-): SeventhChordAnalysis | null {
-  if (new Set(inputNotes.map((note) => note.pitchClass)).size !== 4) {
-    return null;
-  }
-
-  for (const rootNote of inputNotes) {
-    const intervals = inputNotes
-      .filter((note) => note !== rootNote)
-      .map((note) =>
-        getPitchClassDistance(rootNote.pitchClass, note.pitchClass),
-      )
-      .sort((left, right) => left - right);
-    const seventhChordQuality = getSeventhChordQualityByIntervals(intervals);
-
-    if (!seventhChordQuality) {
-      continue;
-    }
-
-    return {
-      rootKey: getPreferredPracticalTriadRootKey(rootNote.pitchClass),
-      rootPitchClass: rootNote.pitchClass,
-      bassPitchClass: inputNotes[0].pitchClass,
-      quality: seventhChordQuality,
-      inversion: getSeventhChordInversion(
-        inputNotes,
-        rootNote.pitchClass,
-        seventhChordQuality,
-      ),
-    };
-  }
-
-  return null;
-}
-
-function getSeventhChordQualityByIntervals(intervals: number[]) {
-  const [firstInterval, secondInterval, thirdInterval] = intervals;
-
-  if (firstInterval === 4 && secondInterval === 7 && thirdInterval === 11) {
-    return "maj7";
-  }
-
-  if (firstInterval === 4 && secondInterval === 7 && thirdInterval === 10) {
-    return "7";
-  }
-
-  if (firstInterval === 3 && secondInterval === 7 && thirdInterval === 11) {
-    return "m(maj7)";
-  }
-
-  if (firstInterval === 4 && secondInterval === 8 && thirdInterval === 11) {
-    return "maj7#5";
-  }
-
-  if (firstInterval === 4 && secondInterval === 8 && thirdInterval === 10) {
-    return "7#5";
-  }
-
-  if (firstInterval === 3 && secondInterval === 7 && thirdInterval === 10) {
-    return "m7";
-  }
-
-  if (firstInterval === 3 && secondInterval === 6 && thirdInterval === 10) {
-    return "m7b5";
-  }
-
-  if (firstInterval === 3 && secondInterval === 6 && thirdInterval === 9) {
-    return "dim7";
-  }
-
-  return null;
-}
-
-function getSeventhChordInversion(
-  inputNotes: HeldInputNote[],
-  rootPitchClass: number,
-  seventhChordQuality: SeventhChordQuality,
-): FourNoteInversion {
-  const bassNote = inputNotes[0];
-
-  if (!bassNote) {
-    throw new Error("Could not determine bass note.");
-  }
-
-  const thirdPitchClass =
-    (rootPitchClass + getSeventhChordThirdOffset(seventhChordQuality)) % 12;
-  const fifthPitchClass =
-    (rootPitchClass + getSeventhChordFifthOffset(seventhChordQuality)) % 12;
-  const seventhPitchClass =
-    (rootPitchClass + getSeventhChordSeventhOffset(seventhChordQuality)) % 12;
-
-  if (bassNote.pitchClass === rootPitchClass) {
-    return "root position";
-  }
-
-  if (bassNote.pitchClass === thirdPitchClass) {
-    return "first inversion";
-  }
-
-  if (bassNote.pitchClass === fifthPitchClass) {
-    return "second inversion";
-  }
-
-  if (bassNote.pitchClass === seventhPitchClass) {
-    return "third inversion";
-  }
-
-  throw new Error("Could not determine seventh-chord inversion.");
-}
-
-function getSeventhChordThirdOffset(seventhChordQuality: SeventhChordQuality) {
-  return seventhChordQuality === "maj7" ||
-    seventhChordQuality === "7" ||
-    seventhChordQuality === "maj7#5" ||
-    seventhChordQuality === "7#5"
-    ? 4
-    : 3;
-}
-
-function getSeventhChordFifthOffset(seventhChordQuality: SeventhChordQuality) {
-  if (seventhChordQuality === "m7b5" || seventhChordQuality === "dim7") {
-    return 6;
-  }
-
-  if (seventhChordQuality === "maj7#5" || seventhChordQuality === "7#5") {
-    return 8;
-  }
-
-  return 7;
-}
-
-function getSeventhChordSeventhOffset(
-  seventhChordQuality: SeventhChordQuality,
-) {
-  if (
-    seventhChordQuality === "maj7" ||
-    seventhChordQuality === "m(maj7)" ||
-    seventhChordQuality === "maj7#5"
-  ) {
-    return 11;
-  }
-
-  if (seventhChordQuality === "dim7") {
-    return 9;
-  }
-
-  return 10;
-}
-
-function formatSeventhChordLabel(seventhChordAnalysis: SeventhChordAnalysis) {
-  const rootLabel = formatPitchLabel(seventhChordAnalysis.rootKey);
-  const inversionSuffix =
-    seventhChordAnalysis.inversion === "root position"
-      ? ""
-      : `, ${seventhChordAnalysis.inversion}`;
-
-  return `${rootLabel}${seventhChordAnalysis.quality}${inversionSuffix}`;
-}
-
-function formatSixthChordAlternateLabel(
-  sixthChordAnalysis: SixthChordAnalysis,
-) {
-  return formatSlashChordLabel(
-    `${formatPitchLabel(sixthChordAnalysis.rootKey)}${sixthChordAnalysis.quality}`,
-    sixthChordAnalysis.inversion,
-    sixthChordAnalysis.bassPitchClass,
-  );
-}
-
-function formatAddChordAlternateLabel(addChordAnalysis: AddChordAnalysis) {
-  const aliasQuality = getAddChordAliasQuality(addChordAnalysis.quality);
-
-  if (aliasQuality) {
-    return formatSlashChordLabel(
-      `${formatPitchLabel(addChordAnalysis.rootKey)}${aliasQuality}`,
-      addChordAnalysis.inversion,
-      addChordAnalysis.bassPitchClass,
-    );
-  }
-
-  if (addChordAnalysis.inversion === "root position") {
-    return undefined;
-  }
-
-  return formatSlashChordLabel(
-    `${formatPitchLabel(addChordAnalysis.rootKey)}${addChordAnalysis.quality}`,
-    addChordAnalysis.inversion,
-    addChordAnalysis.bassPitchClass,
-  );
-}
-
-function getAddChordAliasQuality(addChordQuality: AddChordQuality) {
-  const aliasByQuality: Partial<Record<AddChordQuality, AddChordQuality>> = {
-    add2: "add9",
-    "m(add2)": "m(add9)",
-    add9: "add2",
-    "m(add9)": "m(add2)",
-  };
-
-  return aliasByQuality[addChordQuality];
-}
-
-function formatSeventhChordAlternateLabel(
-  seventhChordAnalysis: SeventhChordAnalysis,
-) {
-  return formatSlashChordLabel(
-    `${formatPitchLabel(seventhChordAnalysis.rootKey)}${seventhChordAnalysis.quality}`,
-    seventhChordAnalysis.inversion,
-    seventhChordAnalysis.bassPitchClass,
-  );
-}
-
-function formatSlashChordLabel(
-  baseLabel: string,
-  inversion: FourNoteInversion,
-  bassPitchClass: number,
-) {
-  if (inversion === "root position") {
-    return baseLabel;
-  }
-
-  return `${baseLabel}/${formatPitchLabel(getPreferredPracticalTriadRootKey(bassPitchClass))}`;
+  return buildIntervalVariant(rootPitchClass, semitoneDistance);
 }
 
 function analyzePowerChord(
-  inputNotes: HeldInputNote[],
-): PowerChordAnalysis | null {
-  const distinctPitchClasses = [
-    ...new Set(inputNotes.map((note) => note.pitchClass)),
-  ];
+  distinctPitchClasses: number[],
+  bassPitchClass: number,
+): InputAnalysisCandidate[] {
+  const candidates: InputAnalysisCandidate[] = [];
 
-  if (distinctPitchClasses.length !== 2) {
+  for (const candidateRootPitchClass of distinctPitchClasses) {
+    const otherPitchClass = distinctPitchClasses.find(
+      (pitchClass) => pitchClass !== candidateRootPitchClass,
+    );
+
+    if (otherPitchClass === undefined) {
+      continue;
+    }
+
+    const intervalFromRoot =
+      (otherPitchClass - candidateRootPitchClass + 12) % 12;
+
+    if (intervalFromRoot !== 7) {
+      continue;
+    }
+
+    const rootLabel = getPreferredPracticalRootLabel(candidateRootPitchClass);
+    const bassLabel = getPreferredPracticalRootLabel(bassPitchClass);
+    const bassInterval = (bassPitchClass - candidateRootPitchClass + 12) % 12;
+
+    if (bassInterval !== 0 && bassInterval !== 7) {
+      continue;
+    }
+
+    candidates.push({
+      shorthand:
+        bassInterval === 0 ? `${rootLabel}5` : `${rootLabel}5/${bassLabel}`,
+      longhand:
+        bassInterval === 0
+          ? `${rootLabel} 5 chord`
+          : `${rootLabel} 5 chord over ${bassLabel}`,
+      rootPitchClass: candidateRootPitchClass,
+      bassPitchClass,
+    });
+  }
+
+  return candidates;
+}
+
+function analyzeThreeNoteChord(
+  distinctPitchClasses: number[],
+  bassPitchClass: number,
+): InputAnalysisCandidate[] {
+  const candidates: InputAnalysisCandidate[] = [];
+
+  for (const candidateRootPitchClass of distinctPitchClasses) {
+    const intervals = distinctPitchClasses
+      .filter((pitchClass) => pitchClass !== candidateRootPitchClass)
+      .map((pitchClass) => (pitchClass - candidateRootPitchClass + 12) % 12)
+      .sort((left, right) => left - right);
+    const intervalPattern = intervals.join(",");
+    const rootLabel = getPreferredPracticalRootLabel(candidateRootPitchClass);
+    const triadMetadata = getTriadMetadata(intervalPattern);
+
+    if (!triadMetadata) {
+      continue;
+    }
+
+    const bassInterval = (bassPitchClass - candidateRootPitchClass + 12) % 12;
+    const bassLabel = getPreferredPracticalRootLabel(bassPitchClass);
+    const threeNoteChordVariant = buildThreeNoteChordVariant(
+      triadMetadata,
+      rootLabel,
+      bassLabel,
+      bassInterval,
+      candidateRootPitchClass,
+      bassPitchClass,
+    );
+
+    if (!threeNoteChordVariant) {
+      continue;
+    }
+
+    candidates.push(threeNoteChordVariant);
+  }
+
+  return candidates;
+}
+
+function buildThreeNoteChordVariant(
+  triadMetadata: ReturnType<typeof getTriadMetadata>,
+  rootLabel: string,
+  bassLabel: string,
+  bassInterval: number,
+  rootPitchClass: number,
+  bassPitchClass: number,
+): InputAnalysisCandidate | null {
+  if (!triadMetadata) {
     return null;
   }
 
-  const [firstPitchClass, secondPitchClass] = distinctPitchClasses;
+  if (triadMetadata.family === "tertian") {
+    const inversionMetadata = getTriadInversionMetadata(bassInterval);
 
-  if (firstPitchClass === undefined || secondPitchClass === undefined) {
-    return null;
-  }
+    if (!inversionMetadata) {
+      return null;
+    }
 
-  if (getPitchClassDistance(firstPitchClass, secondPitchClass) === 7) {
     return {
-      rootKey: getPreferredPracticalTriadRootKey(firstPitchClass),
+      shorthand:
+        inversionMetadata.shorthandSuffix === null
+          ? `${rootLabel}${triadMetadata.shorthandSuffix}`
+          : `${rootLabel}${triadMetadata.shorthandSuffix}/${bassLabel}`,
+      longhand:
+        inversionMetadata.longhandSuffix === null
+          ? `${rootLabel} ${triadMetadata.longhandSuffix}`
+          : `${rootLabel} ${triadMetadata.longhandSuffix}, ${inversionMetadata.longhandSuffix}`,
+      rootPitchClass,
+      bassPitchClass,
     };
   }
 
-  if (getPitchClassDistance(secondPitchClass, firstPitchClass) === 7) {
-    return {
-      rootKey: getPreferredPracticalTriadRootKey(secondPitchClass),
-    };
-  }
-
-  return null;
-}
-
-function formatPowerChordLabel(powerChordAnalysis: PowerChordAnalysis) {
-  const rootLabel = formatPitchLabel(powerChordAnalysis.rootKey);
-
-  return `${rootLabel}5`;
-}
-
-function compareFourNoteChordCandidates(
-  left: FourNoteChordCandidate,
-  right: FourNoteChordCandidate,
-  inputNotes: HeldInputNote[],
-) {
-  const bassNote = inputNotes[0];
-
-  if (!bassNote) {
-    return 0;
-  }
-
-  const leftBassRootMatch = left.rootPitchClass === bassNote.pitchClass;
-  const rightBassRootMatch = right.rootPitchClass === bassNote.pitchClass;
-
-  if (leftBassRootMatch !== rightBassRootMatch) {
-    return leftBassRootMatch ? -1 : 1;
-  }
-
-  const inversionDifference =
-    getFourNoteInversionIndex(left.inversion) -
-    getFourNoteInversionIndex(right.inversion);
-
-  if (inversionDifference !== 0) {
-    return inversionDifference;
-  }
-
-  return left.label.localeCompare(right.label);
-}
-
-function getFourNoteInversionIndex(inversion: FourNoteInversion) {
-  const inversionOrder: Record<FourNoteInversion, number> = {
-    "root position": 0,
-    "first inversion": 1,
-    "second inversion": 2,
-    "third inversion": 3,
-  };
-
-  return inversionOrder[inversion];
-}
-
-function formatIntervalName(rootPitchClass: number, intervalLabel: string) {
-  const rootLabel = formatPitchLabel(
-    getPreferredPracticalTriadRootKey(rootPitchClass),
+  const suspendedChordMetadata = getSuspendedChordBassMetadata(
+    triadMetadata.kind,
+    bassInterval,
   );
-  const titledIntervalLabel = intervalLabel
-    .split(" ")
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    .join(" ");
 
-  return `${rootLabel} ${titledIntervalLabel}`;
-}
-
-function formatPitchLabel(key: string) {
-  const [noteName] = key.split("/");
-
-  if (!noteName) {
-    return key;
+  if (!suspendedChordMetadata) {
+    return null;
   }
 
-  return `${noteName.charAt(0).toUpperCase()}${noteName.slice(1)}`;
+  return {
+    shorthand: suspendedChordMetadata.usesSlashNotation
+      ? `${rootLabel}${triadMetadata.shorthandSuffix}/${bassLabel}`
+      : `${rootLabel}${triadMetadata.shorthandSuffix}`,
+    longhand: suspendedChordMetadata.usesSlashNotation
+      ? `${rootLabel} ${triadMetadata.longhandSuffix} over ${bassLabel}`
+      : `${rootLabel} ${triadMetadata.longhandSuffix}`,
+    rootPitchClass,
+    bassPitchClass,
+  };
 }
 
-function formatHeldInputLabels(inputNotes: HeldInputNote[]) {
-  return inputNotes.map((note) => note.label).join(" - ");
-}
+function buildIntervalVariant(
+  rootPitchClass: number,
+  semitoneDistance: number,
+): InputAnalysisCandidate | null {
+  const rootLabel = getPreferredPracticalRootLabel(rootPitchClass);
+  const intervalMetadata = getIntervalMetadata(semitoneDistance);
 
-function getPreferredPracticalTriadRootKey(rootPitchClass: number) {
-  return getCommonPracticalChordRootKey(60 + rootPitchClass);
-}
-
-function getCommonPracticalAnalysisKey(noteNumber: number) {
-  const commonPracticalNoteNames = [
-    "c",
-    "c#",
-    "d",
-    "eb",
-    "e",
-    "f",
-    "f#",
-    "g",
-    "ab",
-    "a",
-    "bb",
-    "b",
-  ];
-  const noteName = commonPracticalNoteNames[((noteNumber % 12) + 12) % 12];
-  const octave = Math.floor(noteNumber / 12) - 1;
-
-  if (!noteName) {
-    throw new Error(`Invalid MIDI note number: ${noteNumber}`);
+  if (!intervalMetadata) {
+    return null;
   }
 
-  return `${noteName}/${octave}`;
+  return {
+    shorthand: `${rootLabel}${intervalMetadata.shorthandSuffix}`,
+    longhand: `${rootLabel} ${intervalMetadata.longhandSuffix} (${formatSemitoneCount(semitoneDistance)})`,
+    rootPitchClass,
+    bassPitchClass: rootPitchClass,
+  };
 }
 
-function getCommonPracticalDisplayLabel(noteNumber: number) {
-  const commonPracticalNoteLabels = [
+function finalizeAnalysis(
+  noteLabel: string,
+  candidates: InputAnalysisCandidate[],
+): InputAnalysis {
+  const uniqueCandidates = dedupeCandidates(candidates);
+  const sortedCandidates = uniqueCandidates.sort(compareCandidates);
+  const [primaryCandidate, ...alternateCandidates] = sortedCandidates;
+
+  return {
+    noteLabel,
+    primary: primaryCandidate
+      ? {
+          shorthand: primaryCandidate.shorthand,
+          longhand: primaryCandidate.longhand,
+        }
+      : null,
+    alternates: alternateCandidates.map(({ shorthand, longhand }) => ({
+      shorthand,
+      longhand,
+    })),
+  };
+}
+
+function dedupeCandidates(candidates: InputAnalysisCandidate[]) {
+  const seenCandidateKeys = new Set<string>();
+  const uniqueCandidates: InputAnalysisCandidate[] = [];
+
+  for (const candidate of candidates) {
+    const candidateKey = `${candidate.shorthand}::${candidate.longhand}`;
+
+    if (seenCandidateKeys.has(candidateKey)) {
+      continue;
+    }
+
+    seenCandidateKeys.add(candidateKey);
+    uniqueCandidates.push(candidate);
+  }
+
+  return uniqueCandidates;
+}
+
+function compareCandidates(
+  leftCandidate: InputAnalysisCandidate,
+  rightCandidate: InputAnalysisCandidate,
+) {
+  const leftCandidateRootMatchesBass =
+    leftCandidate.rootPitchClass === leftCandidate.bassPitchClass;
+  const rightCandidateRootMatchesBass =
+    rightCandidate.rootPitchClass === rightCandidate.bassPitchClass;
+
+  if (leftCandidateRootMatchesBass !== rightCandidateRootMatchesBass) {
+    return leftCandidateRootMatchesBass ? -1 : 1;
+  }
+
+  if (leftCandidate.rootPitchClass !== rightCandidate.rootPitchClass) {
+    return leftCandidate.rootPitchClass - rightCandidate.rootPitchClass;
+  }
+
+  return leftCandidate.shorthand.localeCompare(rightCandidate.shorthand);
+}
+
+function getCommonPracticalPitchLabel(noteNumber: number) {
+  const commonPracticalPitchLabels = [
     "C",
     "Db/C#",
     "D",
@@ -1177,86 +404,342 @@ function getCommonPracticalDisplayLabel(noteNumber: number) {
     "Bb/A#",
     "B",
   ];
-  const noteLabel = commonPracticalNoteLabels[((noteNumber % 12) + 12) % 12];
-  const octave = Math.floor(noteNumber / 12) - 1;
+  const pitchLabel = commonPracticalPitchLabels[((noteNumber % 12) + 12) % 12];
 
-  if (!noteLabel) {
+  if (!pitchLabel) {
     throw new Error(`Invalid MIDI note number: ${noteNumber}`);
   }
 
-  return `${noteLabel}${octave}`;
+  return pitchLabel;
 }
 
-function getCommonPracticalChordRootKey(noteNumber: number) {
-  const commonPracticalChordRootNames = [
-    "c",
-    "db",
-    "d",
-    "eb",
-    "e",
-    "f",
-    "gb",
-    "g",
-    "ab",
-    "a",
-    "bb",
-    "b",
+function getPitchClass(noteNumber: number) {
+  return ((noteNumber % 12) + 12) % 12;
+}
+
+function getPreferredPracticalRootLabel(noteNumber: number) {
+  const preferredPracticalRootLabels = [
+    "C",
+    "Db",
+    "D",
+    "Eb",
+    "E",
+    "F",
+    "Gb",
+    "G",
+    "Ab",
+    "A",
+    "Bb",
+    "B",
   ];
-  const noteName = commonPracticalChordRootNames[((noteNumber % 12) + 12) % 12];
-  const octave = Math.floor(noteNumber / 12) - 1;
+  const rootLabel = preferredPracticalRootLabels[((noteNumber % 12) + 12) % 12];
 
-  if (!noteName) {
+  if (!rootLabel) {
     throw new Error(`Invalid MIDI note number: ${noteNumber}`);
   }
 
-  return `${noteName}/${octave}`;
+  return rootLabel;
 }
 
-function getPitchClassDistance(
-  lowerPitchClass: number,
-  higherPitchClass: number,
-) {
-  return (higherPitchClass - lowerPitchClass + 12) % 12;
-}
+function getCommonPracticalDisplayLabel(noteNumber: number) {
+  const commonPracticalPitchLabels = [
+    "C",
+    "Db/C#",
+    "D",
+    "Eb/D#",
+    "E",
+    "F",
+    "Gb/F#",
+    "G",
+    "Ab/G#",
+    "A",
+    "Bb/A#",
+    "B",
+  ];
+  const pitchLabel = commonPracticalPitchLabels[((noteNumber % 12) + 12) % 12];
+  const octave = Math.floor(noteNumber / 12) - 1;
 
-function getMidiNoteNumberForKey(key: string) {
-  const [noteName, octaveText] = key.split("/");
-
-  if (!noteName || !octaveText) {
-    throw new Error(`Invalid key format: ${key}`);
+  if (!pitchLabel) {
+    throw new Error(`Invalid MIDI note number: ${noteNumber}`);
   }
 
-  const letterPitchClasses: Record<string, number> = {
-    c: 0,
-    d: 2,
-    e: 4,
-    f: 5,
-    g: 7,
-    a: 9,
-    b: 11,
+  return pitchLabel
+    .split("/")
+    .map((label) => `${label}${octave}`)
+    .join("/");
+}
+
+function getIntervalMetadata(semitoneDistance: number) {
+  if (semitoneDistance <= 0) {
+    return null;
+  }
+
+  const intervalDescriptorBySemitoneClass: Record<
+    number,
+    {
+      qualityCode: "m" | "M" | "P";
+      qualityWord: "minor" | "major" | "perfect";
+      intervalNumber: number;
+      longhandName: string;
+    }
+  > = {
+    1: {
+      qualityCode: "m",
+      qualityWord: "minor",
+      intervalNumber: 2,
+      longhandName: "minor 2nd",
+    },
+    2: {
+      qualityCode: "M",
+      qualityWord: "major",
+      intervalNumber: 2,
+      longhandName: "major 2nd",
+    },
+    3: {
+      qualityCode: "m",
+      qualityWord: "minor",
+      intervalNumber: 3,
+      longhandName: "minor 3rd",
+    },
+    4: {
+      qualityCode: "M",
+      qualityWord: "major",
+      intervalNumber: 3,
+      longhandName: "major 3rd",
+    },
+    5: {
+      qualityCode: "P",
+      qualityWord: "perfect",
+      intervalNumber: 4,
+      longhandName: "perfect 4th",
+    },
+    6: {
+      qualityCode: "P",
+      qualityWord: "perfect",
+      intervalNumber: 0,
+      longhandName: "tritone",
+    },
+    7: {
+      qualityCode: "P",
+      qualityWord: "perfect",
+      intervalNumber: 5,
+      longhandName: "perfect 5th",
+    },
+    8: {
+      qualityCode: "m",
+      qualityWord: "minor",
+      intervalNumber: 6,
+      longhandName: "minor 6th",
+    },
+    9: {
+      qualityCode: "M",
+      qualityWord: "major",
+      intervalNumber: 6,
+      longhandName: "major 6th",
+    },
+    10: {
+      qualityCode: "m",
+      qualityWord: "minor",
+      intervalNumber: 7,
+      longhandName: "minor 7th",
+    },
+    11: {
+      qualityCode: "M",
+      qualityWord: "major",
+      intervalNumber: 7,
+      longhandName: "major 7th",
+    },
+    0: {
+      qualityCode: "P",
+      qualityWord: "perfect",
+      intervalNumber: 8,
+      longhandName: "octave",
+    },
   };
-  const pitchClass = letterPitchClasses[noteName.charAt(0)];
-  const octave = Number.parseInt(octaveText, 10);
+  const semitoneClass = semitoneDistance % 12;
+  const descriptor = intervalDescriptorBySemitoneClass[semitoneClass];
 
-  if (pitchClass === undefined || Number.isNaN(octave)) {
-    throw new Error(`Invalid key format: ${key}`);
+  if (!descriptor) {
+    return null;
   }
 
-  let accidentalOffset = 0;
-
-  for (const accidental of noteName.slice(1)) {
-    if (accidental === "#") {
-      accidentalOffset += 1;
-      continue;
-    }
-
-    if (accidental === "b") {
-      accidentalOffset -= 1;
-      continue;
-    }
-
-    throw new Error(`Unsupported accidental in key: ${key}`);
+  if (semitoneDistance <= 12) {
+    return {
+      shorthandSuffix:
+        semitoneDistance === 6
+          ? "TT"
+          : `${descriptor.qualityCode}${descriptor.intervalNumber}`,
+      longhandSuffix: descriptor.longhandName,
+    };
   }
 
-  return (octave + 1) * 12 + pitchClass + accidentalOffset;
+  const octaveCount = Math.floor(semitoneDistance / 12);
+  const isCompoundTritone = semitoneClass === 6;
+  const isCleanCompoundInterval = semitoneDistance <= 24 && !isCompoundTritone;
+
+  if (isCleanCompoundInterval) {
+    const intervalNumber =
+      semitoneClass === 0
+        ? descriptor.intervalNumber + (octaveCount - 1) * 7
+        : descriptor.intervalNumber + octaveCount * 7;
+
+    return {
+      shorthandSuffix: `${descriptor.qualityCode}${intervalNumber}`,
+      longhandSuffix:
+        intervalNumber === 15 && semitoneClass === 0
+          ? "double octave"
+          : `${descriptor.qualityWord} ${formatIntervalOrdinal(intervalNumber)}`,
+    };
+  }
+
+  return {
+    shorthandSuffix:
+      semitoneClass === 6
+        ? "TT"
+        : `${descriptor.qualityCode}${descriptor.intervalNumber}`,
+    longhandSuffix: descriptor.longhandName,
+  };
+}
+
+function getTriadMetadata(intervalPattern: string) {
+  const triadMetadataByPattern: Record<
+    string,
+    {
+      family: "tertian" | "suspended";
+      kind: "major" | "minor" | "diminished" | "augmented" | "sus2" | "sus4";
+      shorthandSuffix: string;
+      longhandSuffix: string;
+    }
+  > = {
+    "4,7": {
+      family: "tertian",
+      kind: "major",
+      shorthandSuffix: "M",
+      longhandSuffix: "major triad",
+    },
+    "3,7": {
+      family: "tertian",
+      kind: "minor",
+      shorthandSuffix: "m",
+      longhandSuffix: "minor triad",
+    },
+    "3,6": {
+      family: "tertian",
+      kind: "diminished",
+      shorthandSuffix: "dim",
+      longhandSuffix: "diminished triad",
+    },
+    "4,8": {
+      family: "tertian",
+      kind: "augmented",
+      shorthandSuffix: "aug",
+      longhandSuffix: "augmented triad",
+    },
+    "2,7": {
+      family: "suspended",
+      kind: "sus2",
+      shorthandSuffix: "sus2",
+      longhandSuffix: "suspended 2nd",
+    },
+    "5,7": {
+      family: "suspended",
+      kind: "sus4",
+      shorthandSuffix: "sus4",
+      longhandSuffix: "suspended 4th",
+    },
+  };
+
+  return triadMetadataByPattern[intervalPattern] ?? null;
+}
+
+function getTriadInversionMetadata(bassInterval: number) {
+  const inversionMetadataByBassInterval: Record<
+    number,
+    { shorthandSuffix: null | string; longhandSuffix: null | string }
+  > = {
+    0: {
+      shorthandSuffix: null,
+      longhandSuffix: null,
+    },
+    3: {
+      shorthandSuffix: "/3",
+      longhandSuffix: "first inversion",
+    },
+    4: {
+      shorthandSuffix: "/3",
+      longhandSuffix: "first inversion",
+    },
+    6: {
+      shorthandSuffix: "/5",
+      longhandSuffix: "second inversion",
+    },
+    7: {
+      shorthandSuffix: "/5",
+      longhandSuffix: "second inversion",
+    },
+    8: {
+      shorthandSuffix: "/3",
+      longhandSuffix: "first inversion",
+    },
+  };
+
+  return inversionMetadataByBassInterval[bassInterval] ?? null;
+}
+
+function getSuspendedChordBassMetadata(
+  kind: "major" | "minor" | "diminished" | "augmented" | "sus2" | "sus4",
+  bassInterval: number,
+) {
+  if (kind === "sus2") {
+    const suspendedChordBassMetadataByInterval: Record<
+      number,
+      { usesSlashNotation: boolean }
+    > = {
+      0: { usesSlashNotation: false },
+      2: { usesSlashNotation: true },
+      7: { usesSlashNotation: true },
+    };
+
+    return suspendedChordBassMetadataByInterval[bassInterval] ?? null;
+  }
+
+  if (kind === "sus4") {
+    const suspendedChordBassMetadataByInterval: Record<
+      number,
+      { usesSlashNotation: boolean }
+    > = {
+      0: { usesSlashNotation: false },
+      5: { usesSlashNotation: true },
+      7: { usesSlashNotation: true },
+    };
+
+    return suspendedChordBassMetadataByInterval[bassInterval] ?? null;
+  }
+
+  return null;
+}
+
+function formatIntervalOrdinal(intervalNumber: number) {
+  const intervalOrdinals: Record<number, string> = {
+    2: "2nd",
+    3: "3rd",
+    4: "4th",
+    5: "5th",
+    6: "6th",
+    7: "7th",
+    8: "8th",
+    9: "9th",
+    10: "10th",
+    11: "11th",
+    12: "12th",
+    13: "13th",
+    14: "14th",
+    15: "15th",
+  };
+
+  return intervalOrdinals[intervalNumber] ?? `${intervalNumber}th`;
+}
+
+function formatSemitoneCount(semitoneDistance: number) {
+  return `${semitoneDistance} ${semitoneDistance === 1 ? "semitone" : "semitones"}`;
 }

@@ -27,8 +27,11 @@ export type MidiState = {
   deviceId: string | null;
   deviceName: string | null;
   availableInputs: MidiInputOption[];
+  sustainPedalDown: boolean;
   heldKeys: string[];
   heldNotes: number[];
+  analysisHeldKeys: string[];
+  analysisHeldNotes: number[];
   lastEvent: MidiEventInfo;
   errorMessage: string | null;
 };
@@ -55,7 +58,9 @@ export function connectMidi(
   let access: MIDIAccess | null = null;
   let activeInput: MIDIInput | null = null;
   let preferredInputId = options.preferredInputId ?? null;
-  const heldNotes = new Set<number>();
+  const physicallyHeldNotes = new Set<number>();
+  const sustainedNotes = new Set<number>();
+  let sustainPedalDown = false;
 
   function emit(state: Partial<MidiState>) {
     const midiState: MidiState = {
@@ -63,8 +68,11 @@ export function connectMidi(
       deviceId: activeInput?.id ?? null,
       deviceName: activeInput?.name ?? null,
       availableInputs: getAvailableInputs(),
+      sustainPedalDown,
       heldKeys: getHeldKeys(),
       heldNotes: getHeldNotes(),
+      analysisHeldKeys: getAnalysisHeldKeys(),
+      analysisHeldNotes: getAnalysisHeldNotes(),
       lastEvent: null,
       errorMessage: null,
       ...state,
@@ -74,11 +82,21 @@ export function connectMidi(
   }
 
   function getHeldNotes() {
-    return [...heldNotes].sort((left, right) => left - right);
+    return [...physicallyHeldNotes].sort((left, right) => left - right);
+  }
+
+  function getAnalysisHeldNotes() {
+    return [...new Set([...physicallyHeldNotes, ...sustainedNotes])].sort(
+      (left, right) => left - right,
+    );
   }
 
   function getHeldKeys() {
     return getHeldNotes().map(midiNoteNumberToKey);
+  }
+
+  function getAnalysisHeldKeys() {
+    return getAnalysisHeldNotes().map(midiNoteNumberToKey);
   }
 
   function getAvailableInputs() {
@@ -98,7 +116,9 @@ export function connectMidi(
     }
 
     activeInput = input;
-    heldNotes.clear();
+    physicallyHeldNotes.clear();
+    sustainedNotes.clear();
+    sustainPedalDown = false;
 
     if (!activeInput) {
       emit({
@@ -118,7 +138,8 @@ export function connectMidi(
       const messageType = statusByte & 0xf0;
 
       if (messageType === 0x90 && velocity > 0) {
-        heldNotes.add(noteNumber);
+        physicallyHeldNotes.add(noteNumber);
+        sustainedNotes.delete(noteNumber);
         options.onNoteOn?.(noteNumber);
         emit({
           lastEvent: {
@@ -132,13 +153,33 @@ export function connectMidi(
       }
 
       if (messageType === 0x80 || (messageType === 0x90 && velocity === 0)) {
-        heldNotes.delete(noteNumber);
+        physicallyHeldNotes.delete(noteNumber);
+
+        if (sustainPedalDown) {
+          sustainedNotes.add(noteNumber);
+        } else {
+          sustainedNotes.delete(noteNumber);
+        }
+
         emit({
           lastEvent: {
             noteNumber,
             type: "noteoff",
             velocity,
           },
+          status: "ready",
+        });
+        return;
+      }
+
+      if (messageType === 0xb0 && noteNumber === 64) {
+        sustainPedalDown = velocity >= 64;
+
+        if (!sustainPedalDown) {
+          sustainedNotes.clear();
+        }
+
+        emit({
           status: "ready",
         });
       }

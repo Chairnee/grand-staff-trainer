@@ -445,8 +445,11 @@ const state: AppState = {
     deviceId: null,
     deviceName: null,
     availableInputs: [],
+    sustainPedalDown: false,
     heldKeys: [],
     heldNotes: [],
+    analysisHeldKeys: [],
+    analysisHeldNotes: [],
     lastEvent: null,
     errorMessage: null,
   },
@@ -648,6 +651,7 @@ function renderMidiDebug() {
   const lines = [
     `Status: ${state.midi.status}`,
     `Device: ${state.midi.deviceName ?? "none"}`,
+    `Sustain pedal: ${state.midi.sustainPedalDown ? "down" : "up"}`,
     `Practice mode: ${state.generationSettings.practiceMode}`,
     `Scale hands: ${state.generationSettings.scaleHands}`,
     `Scale octaves: ${state.generationSettings.scaleOctaves}`,
@@ -661,6 +665,11 @@ function renderMidiDebug() {
     `Held keys: ${state.midi.heldKeys.join(", ") || "none"}`,
     `Held notes: ${
       state.midi.heldNotes.map((note) => note.toString()).join(", ") || "none"
+    }`,
+    `Analysis held keys: ${state.midi.analysisHeldKeys.join(", ") || "none"}`,
+    `Analysis held notes: ${
+      state.midi.analysisHeldNotes.map((note) => note.toString()).join(", ") ||
+      "none"
     }`,
     `Last event: ${lastEvent}`,
     `Pending attempt: ${
@@ -731,7 +740,7 @@ function renderInputName() {
     return;
   }
 
-  const analysis = analyzeHeldInput(state.midi.heldNotes);
+  const analysis = analyzeHeldInput(state.midi.analysisHeldNotes);
 
   renderInputNameDisplay(inputNameDisplayElement, analysis);
 }
