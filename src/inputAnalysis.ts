@@ -132,6 +132,23 @@ export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
     }
   }
 
+  if (distinctPitchClasses.length === 4) {
+    const bassNoteNumber = distinctHeldNotes[0];
+
+    if (bassNoteNumber === undefined) {
+      throw new Error("Could not determine seventh-chord bass note.");
+    }
+
+    const seventhChordAnalysis = analyzeFourNoteChord(
+      distinctPitchClasses,
+      getPitchClass(bassNoteNumber),
+    );
+
+    if (seventhChordAnalysis.length > 0) {
+      return finalizeAnalysis(noteLabel, seventhChordAnalysis);
+    }
+  }
+
   return {
     noteLabel,
     primary: null,
@@ -250,6 +267,53 @@ function analyzeThreeNoteChord(
     }
 
     candidates.push(threeNoteChordVariant);
+  }
+
+  return candidates;
+}
+
+function analyzeFourNoteChord(
+  distinctPitchClasses: number[],
+  bassPitchClass: number,
+): InputAnalysisCandidate[] {
+  const candidates: InputAnalysisCandidate[] = [];
+
+  for (const candidateRootPitchClass of distinctPitchClasses) {
+    const intervals = distinctPitchClasses
+      .filter((pitchClass) => pitchClass !== candidateRootPitchClass)
+      .map((pitchClass) => (pitchClass - candidateRootPitchClass + 12) % 12)
+      .sort((left, right) => left - right);
+    const intervalPattern = intervals.join(",");
+    const seventhChordMetadata = getSeventhChordMetadata(intervalPattern);
+
+    if (!seventhChordMetadata) {
+      continue;
+    }
+
+    const rootLabel = getPreferredPracticalRootLabel(candidateRootPitchClass);
+    const bassLabel = getPreferredPracticalRootLabel(bassPitchClass);
+    const bassInterval = (bassPitchClass - candidateRootPitchClass + 12) % 12;
+    const inversionMetadata = getSeventhChordInversionMetadata(
+      intervals,
+      bassInterval,
+    );
+
+    if (!inversionMetadata) {
+      continue;
+    }
+
+    candidates.push({
+      shorthand:
+        inversionMetadata.shorthandSuffix === null
+          ? `${rootLabel}${seventhChordMetadata.shorthandSuffix}`
+          : `${rootLabel}${seventhChordMetadata.shorthandSuffix}/${bassLabel}`,
+      longhand:
+        inversionMetadata.longhandSuffix === null
+          ? `${rootLabel} ${seventhChordMetadata.longhandSuffix}`
+          : `${rootLabel} ${seventhChordMetadata.longhandSuffix}, ${inversionMetadata.longhandSuffix}`,
+      rootPitchClass: candidateRootPitchClass,
+      bassPitchClass,
+    });
   }
 
   return candidates;
@@ -684,6 +748,70 @@ function getTriadInversionMetadata(bassInterval: number) {
   };
 
   return inversionMetadataByBassInterval[bassInterval] ?? null;
+}
+
+function getSeventhChordMetadata(intervalPattern: string) {
+  const seventhChordMetadataByPattern: Record<
+    string,
+    { shorthandSuffix: string; longhandSuffix: string }
+  > = {
+    "4,7,11": {
+      shorthandSuffix: "M7",
+      longhandSuffix: "major 7th chord",
+    },
+    "4,7,10": {
+      shorthandSuffix: "7",
+      longhandSuffix: "dominant 7th chord",
+    },
+    "3,7,10": {
+      shorthandSuffix: "m7",
+      longhandSuffix: "minor 7th chord",
+    },
+    "3,6,10": {
+      shorthandSuffix: "m7b5",
+      longhandSuffix: "half-diminished 7th chord",
+    },
+    "3,6,9": {
+      shorthandSuffix: "dim7",
+      longhandSuffix: "diminished 7th chord",
+    },
+  };
+
+  return seventhChordMetadataByPattern[intervalPattern] ?? null;
+}
+
+function getSeventhChordInversionMetadata(
+  intervals: number[],
+  bassInterval: number,
+) {
+  if (bassInterval === 0) {
+    return {
+      shorthandSuffix: null,
+      longhandSuffix: null,
+    };
+  }
+
+  const inversionIndex = intervals.indexOf(bassInterval);
+
+  if (inversionIndex === -1) {
+    return null;
+  }
+
+  const inversionLonghandSuffixes = [
+    "first inversion",
+    "second inversion",
+    "third inversion",
+  ] as const;
+  const inversionLonghandSuffix = inversionLonghandSuffixes[inversionIndex];
+
+  if (!inversionLonghandSuffix) {
+    return null;
+  }
+
+  return {
+    shorthandSuffix: "/7",
+    longhandSuffix: inversionLonghandSuffix,
+  };
 }
 
 function getSuspendedChordBassMetadata(

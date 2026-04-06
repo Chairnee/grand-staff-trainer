@@ -293,6 +293,85 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("describes a major 7th chord", () => {
+    expect(analyzeHeldInput([60, 64, 67, 71])).toEqual({
+      noteLabel: "C4-E4-G4-B4",
+      primary: {
+        shorthand: "CM7",
+        longhand: "C major 7th chord",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a dominant 7th chord", () => {
+    expect(analyzeHeldInput([60, 64, 67, 70])).toEqual({
+      noteLabel: "C4-E4-G4-Bb4/A#4",
+      primary: {
+        shorthand: "C7",
+        longhand: "C dominant 7th chord",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a minor 7th chord", () => {
+    expect(analyzeHeldInput([60, 63, 67, 70])).toEqual({
+      noteLabel: "C4-Eb4/D#4-G4-Bb4/A#4",
+      primary: {
+        shorthand: "Cm7",
+        longhand: "C minor 7th chord",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a half-diminished 7th chord", () => {
+    expect(analyzeHeldInput([60, 63, 66, 70])).toEqual({
+      noteLabel: "C4-Eb4/D#4-Gb4/F#4-Bb4/A#4",
+      primary: {
+        shorthand: "Cm7b5",
+        longhand: "C half-diminished 7th chord",
+      },
+      alternates: [],
+    });
+  });
+
+  it("describes a diminished 7th chord", () => {
+    expect(analyzeHeldInput([60, 63, 66, 69])).toEqual({
+      noteLabel: "C4-Eb4/D#4-Gb4/F#4-A4",
+      primary: {
+        shorthand: "Cdim7",
+        longhand: "C diminished 7th chord",
+      },
+      alternates: [
+        {
+          shorthand: "Ebdim7/C",
+          longhand: "Eb diminished 7th chord, third inversion",
+        },
+        {
+          shorthand: "Gbdim7/C",
+          longhand: "Gb diminished 7th chord, second inversion",
+        },
+        {
+          shorthand: "Adim7/C",
+          longhand: "A diminished 7th chord, first inversion",
+        },
+      ],
+    });
+  });
+
+  it("describes a major 7th chord in first inversion", () => {
+    expect(analyzeHeldInput([64, 67, 71, 72])).toEqual({
+      noteLabel: "E4-G4-B4-C5",
+      primary: {
+        shorthand: "CM7/E",
+        longhand: "C major 7th chord, first inversion",
+      },
+      alternates: [],
+    });
+  });
+
   it("describes a suspended 2nd chord with an alternate suspended 4th reading", () => {
     expect(analyzeHeldInput([60, 62, 67])).toEqual({
       noteLabel: "C4-D4-G4",
