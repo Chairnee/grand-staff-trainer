@@ -44,6 +44,14 @@ export function renderInputNameDisplay(
   primaryPill.setAttribute("aria-pressed", "true");
   readingRow.append(primaryPill);
 
+  if (analysis.namingNote) {
+    const namingNoteBadge = document.createElement("span");
+    namingNoteBadge.className = "input-name-naming-note-badge";
+    namingNoteBadge.textContent = "voicing";
+    namingNoteBadge.title = analysis.namingNote;
+    readingRow.append(namingNoteBadge);
+  }
+
   if (analysis.alternates.length > 0) {
     const separator = document.createElement("span");
     separator.className = "input-name-separator";
@@ -64,6 +72,7 @@ export function renderInputNameDisplay(
   longhand.textContent = analysis.primary.longhand;
 
   contentWrapper.append(readingRow, notesValue, longhand);
+
   container.append(contentWrapper);
 }
 

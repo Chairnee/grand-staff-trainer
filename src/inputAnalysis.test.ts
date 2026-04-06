@@ -511,6 +511,108 @@ describe("analyzeHeldInput", () => {
     });
   });
 
+  it("describes a close-voiced major add 2 chord with an add 9 alternate", () => {
+    expect(analyzeHeldInput([60, 62, 64, 67])).toEqual({
+      noteLabel: "C4-D4-E4-G4",
+      primary: {
+        shorthand: "CMadd2",
+        longhand: "C major add 2 chord",
+      },
+      alternates: [
+        {
+          shorthand: "CMadd9",
+          longhand: "C major add 9 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
+  it("describes a compound major add 9 chord with an add 2 alternate", () => {
+    expect(analyzeHeldInput([60, 64, 67, 74])).toEqual({
+      noteLabel: "C4-E4-G4-D5",
+      primary: {
+        shorthand: "CMadd9",
+        longhand: "C major add 9 chord",
+      },
+      alternates: [
+        {
+          shorthand: "CMadd2",
+          longhand: "C major add 2 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
+  it("describes a close-voiced major add 4 chord with an add 11 alternate", () => {
+    expect(analyzeHeldInput([60, 64, 65, 67])).toEqual({
+      noteLabel: "C4-E4-F4-G4",
+      primary: {
+        shorthand: "CMadd4",
+        longhand: "C major add 4 chord",
+      },
+      alternates: [
+        {
+          shorthand: "CMadd11",
+          longhand: "C major add 11 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
+  it("describes a compound major add 11 chord with an add 4 alternate", () => {
+    expect(analyzeHeldInput([60, 64, 67, 77])).toEqual({
+      noteLabel: "C4-E4-G4-F5",
+      primary: {
+        shorthand: "CMadd11",
+        longhand: "C major add 11 chord",
+      },
+      alternates: [
+        {
+          shorthand: "CMadd4",
+          longhand: "C major add 4 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
+  it("describes a compound minor add 9 chord with an add 2 alternate", () => {
+    expect(analyzeHeldInput([60, 63, 67, 74])).toEqual({
+      noteLabel: "C4-Eb4/D#4-G4-D5",
+      primary: {
+        shorthand: "Cmadd9",
+        longhand: "C minor add 9 chord",
+      },
+      alternates: [
+        {
+          shorthand: "Cmadd2",
+          longhand: "C minor add 2 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
+  it("describes a close-voiced minor add 4 chord with an add 11 alternate", () => {
+    expect(analyzeHeldInput([60, 63, 65, 67])).toEqual({
+      noteLabel: "C4-Eb4/D#4-F4-G4",
+      primary: {
+        shorthand: "Cmadd4",
+        longhand: "C minor add 4 chord",
+      },
+      alternates: [
+        {
+          shorthand: "Cmadd11",
+          longhand: "C minor add 11 chord",
+        },
+      ],
+      namingNote: "Voicing-based label",
+    });
+  });
+
   it("returns an unknown-input analysis for other unsupported inputs", () => {
     expect(analyzeHeldInput([60, 61, 67])).toEqual({
       noteLabel: "C4-Db4/C#4-G4",

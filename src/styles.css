@@ -264,6 +264,17 @@ body {
   font-weight: 500;
 }
 
+.input-name-naming-note-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(210, 196, 172, 0.32);
+  color: #7a6548;
+  font-size: 0.68rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
 .input-name-separator {
   color: #b2a084;
   font-size: 0.8rem;

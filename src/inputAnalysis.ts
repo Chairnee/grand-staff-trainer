@@ -7,6 +7,7 @@ export type InputAnalysis = {
   noteLabel: string | null;
   primary: InputNameVariant | null;
   alternates: InputNameVariant[];
+  namingNote?: string;
 };
 
 type InputAnalysisCandidate = InputNameVariant & {
@@ -30,8 +31,12 @@ type InputAnalysisCandidate = InputNameVariant & {
     | "augmented-major-7th"
     | "augmented-7th"
     | "major-6th"
-    | "minor-6th";
+    | "minor-6th"
+    | "major-add"
+    | "minor-add";
+  namingNote?: string;
   rootPitchClass: number;
+  sortPriority?: number;
 };
 
 export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
@@ -161,6 +166,7 @@ export function analyzeHeldInput(heldNotes: number[]): InputAnalysis {
     }
 
     const seventhChordAnalysis = analyzeFourNoteChord(
+      distinctHeldNotes,
       distinctPitchClasses,
       getPitchClass(bassNoteNumber),
     );
@@ -295,6 +301,7 @@ function analyzeThreeNoteChord(
 }
 
 function analyzeFourNoteChord(
+  distinctHeldNotes: number[],
   distinctPitchClasses: number[],
   bassPitchClass: number,
 ): InputAnalysisCandidate[] {
@@ -308,8 +315,9 @@ function analyzeFourNoteChord(
     const intervalPattern = intervals.join(",");
     const seventhChordMetadata = getSeventhChordMetadata(intervalPattern);
     const sixthChordMetadata = getSixthChordMetadata(intervalPattern);
+    const addedChordMetadata = getAddedChordMetadata(intervalPattern);
 
-    if (!seventhChordMetadata && !sixthChordMetadata) {
+    if (!seventhChordMetadata && !sixthChordMetadata && !addedChordMetadata) {
       continue;
     }
 
@@ -330,6 +338,20 @@ function analyzeFourNoteChord(
       if (sixthChordVariant) {
         candidates.push(sixthChordVariant);
       }
+    }
+
+    if (addedChordMetadata) {
+      const addedChordVariants = buildAddedChordVariants(
+        distinctHeldNotes,
+        addedChordMetadata,
+        rootLabel,
+        bassLabel,
+        bassInterval,
+        candidateRootPitchClass,
+        bassPitchClass,
+      );
+
+      candidates.push(...addedChordVariants);
     }
 
     if (!seventhChordMetadata) {
@@ -361,6 +383,95 @@ function analyzeFourNoteChord(
   }
 
   return candidates;
+}
+
+function buildAddedChordVariants(
+  distinctHeldNotes: number[],
+  addedChordMetadata: ReturnType<typeof getAddedChordMetadata>,
+  rootLabel: string,
+  bassLabel: string,
+  bassInterval: number,
+  rootPitchClass: number,
+  bassPitchClass: number,
+): InputAnalysisCandidate[] {
+  if (!addedChordMetadata) {
+    return [];
+  }
+
+  const bassIsChordTone =
+    bassInterval === 0 ||
+    addedChordMetadata.allowedBassIntervals.includes(bassInterval);
+
+  if (!bassIsChordTone) {
+    return [];
+  }
+
+  const preferredAddLabel = getPreferredAddedChordLabel(
+    distinctHeldNotes,
+    rootPitchClass,
+    addedChordMetadata.addedPitchClassInterval,
+  );
+  const alternateAddLabel =
+    preferredAddLabel === addedChordMetadata.closeLabel
+      ? addedChordMetadata.compoundLabel
+      : addedChordMetadata.closeLabel;
+  const namingNote = "Voicing-based label";
+
+  return [
+    buildAddedChordVariant(
+      rootLabel,
+      bassLabel,
+      bassInterval,
+      rootPitchClass,
+      bassPitchClass,
+      addedChordMetadata.shorthandQualityPrefix,
+      addedChordMetadata.longhandQualityPrefix,
+      preferredAddLabel,
+      namingNote,
+      0,
+    ),
+    buildAddedChordVariant(
+      rootLabel,
+      bassLabel,
+      bassInterval,
+      rootPitchClass,
+      bassPitchClass,
+      addedChordMetadata.shorthandQualityPrefix,
+      addedChordMetadata.longhandQualityPrefix,
+      alternateAddLabel,
+      namingNote,
+      1,
+    ),
+  ];
+}
+
+function buildAddedChordVariant(
+  rootLabel: string,
+  bassLabel: string,
+  bassInterval: number,
+  rootPitchClass: number,
+  bassPitchClass: number,
+  shorthandQualityPrefix: "M" | "m",
+  longhandQualityPrefix: string,
+  addLabel: "add2" | "add4" | "add9" | "add11",
+  namingNote: string,
+  sortPriority: number,
+): InputAnalysisCandidate {
+  return {
+    shorthand:
+      bassInterval === 0
+        ? `${rootLabel}${shorthandQualityPrefix}${addLabel}`
+        : `${rootLabel}${shorthandQualityPrefix}${addLabel}/${bassLabel}`,
+    longhand:
+      bassInterval === 0
+        ? `${rootLabel} ${longhandQualityPrefix} ${formatAddedChordLonghand(addLabel)} chord`
+        : `${rootLabel} ${longhandQualityPrefix} ${formatAddedChordLonghand(addLabel)} chord over ${bassLabel}`,
+    kind: longhandQualityPrefix === "major" ? "major-add" : "minor-add",
+    namingNote,
+    rootPitchClass,
+    bassPitchClass,
+    sortPriority,
+  };
 }
 
 function buildSixthChordVariant(
@@ -471,6 +582,7 @@ function buildIntervalVariant(
     kind: "interval",
     rootPitchClass,
     bassPitchClass: rootPitchClass,
+    sortPriority: 0,
   };
 }
 
@@ -494,6 +606,9 @@ function finalizeAnalysis(
       shorthand,
       longhand,
     })),
+    ...(primaryCandidate?.namingNote
+      ? { namingNote: primaryCandidate.namingNote }
+      : {}),
   };
 }
 
@@ -535,6 +650,13 @@ function compareCandidates(
 
   if (leftCandidateIsInvertedMajorSix !== rightCandidateIsInvertedMajorSix) {
     return leftCandidateIsInvertedMajorSix ? 1 : -1;
+  }
+
+  const leftCandidateSortPriority = leftCandidate.sortPriority ?? 0;
+  const rightCandidateSortPriority = rightCandidate.sortPriority ?? 0;
+
+  if (leftCandidateSortPriority !== rightCandidateSortPriority) {
+    return leftCandidateSortPriority - rightCandidateSortPriority;
   }
 
   if (leftCandidate.rootPitchClass !== rightCandidate.rootPitchClass) {
@@ -936,6 +1058,55 @@ function getSixthChordMetadata(intervalPattern: string) {
   return sixthChordMetadataByPattern[intervalPattern] ?? null;
 }
 
+function getAddedChordMetadata(intervalPattern: string) {
+  const addedChordMetadataByPattern: Record<
+    string,
+    {
+      addedPitchClassInterval: 2 | 5;
+      allowedBassIntervals: number[];
+      closeLabel: "add2" | "add4";
+      compoundLabel: "add9" | "add11";
+      shorthandQualityPrefix: "M" | "m";
+      longhandQualityPrefix: "major" | "minor";
+    }
+  > = {
+    "2,4,7": {
+      addedPitchClassInterval: 2,
+      allowedBassIntervals: [2, 4, 7],
+      closeLabel: "add2",
+      compoundLabel: "add9",
+      shorthandQualityPrefix: "M",
+      longhandQualityPrefix: "major",
+    },
+    "4,5,7": {
+      addedPitchClassInterval: 5,
+      allowedBassIntervals: [4, 5, 7],
+      closeLabel: "add4",
+      compoundLabel: "add11",
+      shorthandQualityPrefix: "M",
+      longhandQualityPrefix: "major",
+    },
+    "2,3,7": {
+      addedPitchClassInterval: 2,
+      allowedBassIntervals: [2, 3, 7],
+      closeLabel: "add2",
+      compoundLabel: "add9",
+      shorthandQualityPrefix: "m",
+      longhandQualityPrefix: "minor",
+    },
+    "3,5,7": {
+      addedPitchClassInterval: 5,
+      allowedBassIntervals: [3, 5, 7],
+      closeLabel: "add4",
+      compoundLabel: "add11",
+      shorthandQualityPrefix: "m",
+      longhandQualityPrefix: "minor",
+    },
+  };
+
+  return addedChordMetadataByPattern[intervalPattern] ?? null;
+}
+
 function getSeventhChordInversionMetadata(
   intervals: number[],
   bassInterval: number,
@@ -1032,4 +1203,54 @@ function formatIntervalOrdinal(intervalNumber: number) {
 
 function formatSemitoneCount(semitoneDistance: number) {
   return `${semitoneDistance} ${semitoneDistance === 1 ? "semitone" : "semitones"}`;
+}
+
+function formatAddedChordLonghand(addLabel: "add2" | "add4" | "add9" | "add11") {
+  const addLabelByLonghand: Record<typeof addLabel, string> = {
+    add2: "add 2",
+    add4: "add 4",
+    add9: "add 9",
+    add11: "add 11",
+  };
+
+  return addLabelByLonghand[addLabel];
+}
+
+function getPreferredAddedChordLabel(
+  distinctHeldNotes: number[],
+  rootPitchClass: number,
+  addedPitchClassInterval: 2 | 5,
+) {
+  const candidateRootNote = distinctHeldNotes.find(
+    (noteNumber) => getPitchClass(noteNumber) === rootPitchClass,
+  );
+
+  if (candidateRootNote === undefined) {
+    throw new Error("Could not determine added-chord root note.");
+  }
+
+  const addedPitchClass = (rootPitchClass + addedPitchClassInterval) % 12;
+  const addedNoteDistances = distinctHeldNotes
+    .filter((noteNumber) => getPitchClass(noteNumber) === addedPitchClass)
+    .map((noteNumber) => {
+      let upwardDistance = noteNumber - candidateRootNote;
+
+      while (upwardDistance <= 0) {
+        upwardDistance += 12;
+      }
+
+      return upwardDistance;
+    })
+    .sort((left, right) => left - right);
+  const preferredDistance = addedNoteDistances[0];
+
+  if (preferredDistance === undefined) {
+    throw new Error("Could not determine added-chord added note.");
+  }
+
+  if (addedPitchClassInterval === 2) {
+    return preferredDistance <= 12 ? "add2" : "add9";
+  }
+
+  return preferredDistance <= 12 ? "add4" : "add11";
 }
