@@ -176,10 +176,6 @@ app.innerHTML = `
         <input id="settings-keyboard-toggle" type="checkbox" />
         <span>Show keyboard</span>
       </label>
-      <label class="settings-toggle">
-        <input id="settings-debug-toggle" type="checkbox" />
-        <span>Show debug panel</span>
-      </label>
     </section>
 
     <section class="settings-section">
@@ -313,9 +309,6 @@ const accidentalSpellingField = document.querySelector<HTMLLabelElement>(
 const tonicSelect = document.querySelector<HTMLSelectElement>("#tonic-select");
 const scaleTypeSelect =
   document.querySelector<HTMLSelectElement>("#scale-type-select");
-const settingsDebugToggle = document.querySelector<HTMLInputElement>(
-  "#settings-debug-toggle",
-);
 const settingsExerciseToggle = document.querySelector<HTMLInputElement>(
   "#settings-exercise-toggle",
 );
@@ -360,7 +353,6 @@ if (
   !accidentalSpellingField ||
   !tonicSelect ||
   !scaleTypeSelect ||
-  !settingsDebugToggle ||
   !settingsExerciseToggle ||
   !exerciseSettingsHeading ||
   !settingsKeyboardToggle ||
@@ -399,7 +391,6 @@ const accidentalSpellingSelectElement = accidentalSpellingSelect;
 const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
-const settingsDebugToggleElement = settingsDebugToggle;
 const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
@@ -472,7 +463,6 @@ settingsToggleElement.addEventListener("click", toggleSettingsDrawer);
 settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
 debugToggleElement.addEventListener("click", toggleDebugPanel);
-settingsDebugToggleElement.addEventListener("change", handleDebugToggleChange);
 settingsExerciseToggleElement.addEventListener(
   "change",
   handleExerciseToggleChange,
@@ -606,7 +596,6 @@ function renderSettingsDrawer() {
   );
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
-  settingsDebugToggleElement.checked = state.isDebugVisible;
   settingsExerciseToggleElement.checked = state.isExerciseVisible;
   settingsInputNameToggleElement.checked = state.isInputNameVisible;
   settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
@@ -848,12 +837,6 @@ function handleExerciseToggleChange() {
 
 function handleInputNameToggleChange() {
   state.isInputNameVisible = settingsInputNameToggleElement.checked;
-  saveStoredSettings();
-  renderApp();
-}
-
-function handleDebugToggleChange() {
-  state.isDebugVisible = settingsDebugToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
