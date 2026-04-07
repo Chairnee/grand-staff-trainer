@@ -3,7 +3,7 @@ import {
   getClefForKey,
   getGeneratedNotePool,
   getNotesInScale,
-} from "../music";
+} from "../theory/music";
 import type { PromptSlot } from "./types";
 
 export function createRandomNotePromptQueue(

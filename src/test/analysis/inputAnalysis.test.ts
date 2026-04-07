@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analyzeHeldInput } from "./inputAnalysis";
+import { analyzeHeldInput } from "../../analysis/inputAnalysis";
 
 describe("analyzeHeldInput", () => {
   it("returns an empty-state analysis when no notes are held", () => {

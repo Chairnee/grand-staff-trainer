@@ -1,4 +1,4 @@
-import type { InputAnalysis } from "../inputAnalysis";
+import type { InputAnalysis } from "../analysis/inputAnalysis";
 
 export function renderInputNameDisplay(
   container: HTMLDivElement,

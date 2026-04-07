@@ -3,7 +3,7 @@ import {
   getAscendingTriadPositions,
   getTriadStartingOctave,
   type ScaleHands,
-} from "../music";
+} from "../theory/music";
 import type { PromptSlot } from "./types";
 
 export function createTriadPracticeQueue(

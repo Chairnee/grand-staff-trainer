@@ -18,7 +18,7 @@ import {
   fillExercisePromptQueue,
 } from "./exercises";
 import type { PromptSlot } from "./exercises/types";
-import { analyzeHeldInput } from "./inputAnalysis";
+import { analyzeHeldInput } from "./analysis/inputAnalysis";
 import { connectMidi, type MidiState } from "./midi";
 import {
   type AccidentalSpellingMode,
@@ -46,7 +46,7 @@ import {
   type ScaleType,
   type Tonic,
   type TriadType,
-} from "./music";
+} from "./theory/music";
 
 const DEFAULT_ATTEMPT_WINDOW_MS = 40;
 const MIN_ATTEMPT_WINDOW_MS = 10;
@@ -736,7 +736,9 @@ function renderExerciseNotice() {
 
   if (state.isExerciseVisible) {
     if (state.generationSettings.practiceMode === "scales") {
-      const renderingOptions = getScaleRenderingOptions(state.generationSettings);
+      const renderingOptions = getScaleRenderingOptions(
+        state.generationSettings,
+      );
       const scaleLabel = formatScaleTypeLabelForDisplay(
         state.generationSettings.scaleType,
       );
@@ -749,7 +751,9 @@ function renderExerciseNotice() {
 
       exerciseNotice = getScaleRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.practiceMode === "triads") {
-      const renderingOptions = getTriadRenderingOptions(state.generationSettings);
+      const renderingOptions = getTriadRenderingOptions(
+        state.generationSettings,
+      );
       const triadLabel = `${state.generationSettings.triadType} triads`;
 
       if (renderingOptions.alternate) {
@@ -760,7 +764,9 @@ function renderExerciseNotice() {
 
       exerciseNotice = getTriadRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.noteSourceMode === "in-scale") {
-      const renderingOptions = getScaleRenderingOptions(state.generationSettings);
+      const renderingOptions = getScaleRenderingOptions(
+        state.generationSettings,
+      );
       const scaleLabel = formatScaleTypeLabelForDisplay(
         state.generationSettings.scaleType,
       );
@@ -1453,7 +1459,12 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
 
-  drawTrebleOttavaBracket(appState.promptQueue, trebleNotes, trebleStave, context);
+  drawTrebleOttavaBracket(
+    appState.promptQueue,
+    trebleNotes,
+    trebleStave,
+    context,
+  );
 
   if (currentTrebleTickable) {
     for (const currentTrebleHeldOverlayNote of currentTrebleHeldOverlayNotes) {
@@ -1578,12 +1589,12 @@ function getStaffClefChangeBefore(
 
   const currentClef =
     hand === "treble"
-      ? currentPrompt.trebleDisplayedClef ?? "treble"
-      : currentPrompt.bassDisplayedClef ?? "bass";
+      ? (currentPrompt.trebleDisplayedClef ?? "treble")
+      : (currentPrompt.bassDisplayedClef ?? "bass");
   const previousClef =
     hand === "treble"
-      ? previousPrompt.trebleDisplayedClef ?? "treble"
-      : previousPrompt.bassDisplayedClef ?? "bass";
+      ? (previousPrompt.trebleDisplayedClef ?? "treble")
+      : (previousPrompt.bassDisplayedClef ?? "bass");
 
   if (
     hand === "bass" &&
@@ -1689,8 +1700,9 @@ function assignHeldOverlayHand(
     );
 
     if (specialContextCandidates.length > 0) {
-      assignedHand = specialContextCandidates.reduce((bestCandidate, candidate) =>
-        candidate.score < bestCandidate.score ? candidate : bestCandidate,
+      assignedHand = specialContextCandidates.reduce(
+        (bestCandidate, candidate) =>
+          candidate.score < bestCandidate.score ? candidate : bestCandidate,
       ).hand;
     } else {
       const literalKey = getHeldOverlayKey(
@@ -1806,7 +1818,9 @@ function getMatchedDisplayedPromptKey(
     return null;
   }
 
-  return displayedKeys?.[matchingKeyIndex] ?? actualKeys[matchingKeyIndex] ?? null;
+  return (
+    displayedKeys?.[matchingKeyIndex] ?? actualKeys[matchingKeyIndex] ?? null
+  );
 }
 
 function getSpecialNotationContext(
@@ -1829,18 +1843,22 @@ function isTrebleNotationTransformActive(
   appState: AppState,
   prompt: PromptSlot,
 ) {
-  return Boolean(prompt.displayedTrebleKeys) &&
+  return (
+    Boolean(prompt.displayedTrebleKeys) &&
     (appState.generationSettings.scaleHands === "treble" ||
-      appState.generationSettings.scaleHands === "together");
+      appState.generationSettings.scaleHands === "together")
+  );
 }
 
 function isBassNotationTransformActive(
   appState: AppState,
   displayedPrompt: PromptSlot,
 ) {
-  return (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass" &&
+  return (
+    (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass" &&
     (appState.generationSettings.scaleHands === "bass" ||
-      appState.generationSettings.scaleHands === "together");
+      appState.generationSettings.scaleHands === "together")
+  );
 }
 
 function getSpecialNotationCandidates(
@@ -1965,14 +1983,19 @@ function drawTrebleOttavaBracket(
   const ottavaStartIndex = promptQueue.findIndex(
     (prompt) => prompt.trebleOttavaStart,
   );
-  const ottavaEndIndex = promptQueue.findIndex((prompt) => prompt.trebleOttavaEnd);
+  const ottavaEndIndex = promptQueue.findIndex(
+    (prompt) => prompt.trebleOttavaEnd,
+  );
 
   if (ottavaStartIndex === -1 || ottavaEndIndex === -1) {
     return;
   }
 
   if (ottavaStartIndex <= ottavaEndIndex) {
-    const segmentNotes = trebleNotes.slice(ottavaStartIndex, ottavaEndIndex + 1);
+    const segmentNotes = trebleNotes.slice(
+      ottavaStartIndex,
+      ottavaEndIndex + 1,
+    );
     const safeTopTextLine = getSafeTopTextLineForNotes(
       trebleNotes[ottavaStartIndex],
       segmentNotes,
@@ -2026,7 +2049,8 @@ function drawTrebleOttavaBracket(
     {
       labelAnchorX: trebleStave.getNoteStartX(),
       lineEndX:
-        currentSegmentEndNote.getAbsoluteX() + currentSegmentEndNote.getGlyphWidth(),
+        currentSegmentEndNote.getAbsoluteX() +
+        currentSegmentEndNote.getGlyphWidth(),
       showLabel: true,
       showEndCap: true,
       topTextLine: safeTopTextLine,
@@ -2041,7 +2065,8 @@ function drawTrebleOttavaBracket(
       labelAnchorX: futureSegmentStartNote.getAbsoluteX(),
       lineEndX: Math.min(
         trebleStave.getNoteEndX(),
-        futureSegmentEndNote.getAbsoluteX() + futureSegmentEndNote.getGlyphWidth(),
+        futureSegmentEndNote.getAbsoluteX() +
+          futureSegmentEndNote.getGlyphWidth(),
       ),
       showLabel: true,
       showEndCap: false,

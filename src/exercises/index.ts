@@ -1,4 +1,4 @@
-import type { GenerationSettings } from "../music";
+import type { GenerationSettings } from "../theory/music";
 import {
   createRandomNotePromptQueue,
   fillRandomNotePromptQueue,

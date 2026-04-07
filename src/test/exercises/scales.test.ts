@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { GenerationSettings } from "../music";
-import { createScalePracticeQueue } from "./scales";
+import type { GenerationSettings } from "../../theory/music";
+import { createScalePracticeQueue } from "../../exercises/scales";
 
 function createScaleSettings(
   overrides: Partial<GenerationSettings> = {},

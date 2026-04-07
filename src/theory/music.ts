@@ -1,4 +1,4 @@
-import type { PromptSlot } from "./exercises/types";
+import type { PromptSlot } from "../exercises/types";
 
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];

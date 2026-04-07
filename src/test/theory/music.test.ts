@@ -11,7 +11,7 @@ import {
   getScaleStartingOctave,
   getTonicReadabilityOptionsForScaleType,
   keyToMidiNoteNumber,
-} from "./music";
+} from "../../theory/music";
 
 function createGenerationSettings(
   overrides: Partial<GenerationSettings> = {},
