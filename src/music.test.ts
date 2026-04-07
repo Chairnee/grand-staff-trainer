@@ -25,6 +25,7 @@ function createGenerationSettings(
     accidentalSpellingMode: "sharps",
     tonic: "C",
     scaleType: "major",
+    triadType: "major",
     ...overrides,
   };
 }

@@ -4,6 +4,7 @@ import {
   fillRandomNotePromptQueue,
 } from "./randomNotes";
 import { createScalePracticeQueue } from "./scales";
+import { createTriadPracticeQueue } from "./triads";
 import type { PromptSlot } from "./types";
 
 export function createExercisePromptQueue(
@@ -13,6 +14,10 @@ export function createExercisePromptQueue(
 ) {
   if (generationSettings.practiceMode === "scales") {
     return createScalePracticeQueue(generationSettings);
+  }
+
+  if (generationSettings.practiceMode === "triads") {
+    return createTriadPracticeQueue(generationSettings);
   }
 
   return createRandomNotePromptQueue(
@@ -29,6 +34,10 @@ export function fillExercisePromptQueue(
   generatedNotePool: string[],
 ) {
   if (generationSettings.practiceMode === "scales") {
+    return;
+  }
+
+  if (generationSettings.practiceMode === "triads") {
     return;
   }
 

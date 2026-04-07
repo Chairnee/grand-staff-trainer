@@ -16,6 +16,7 @@ function createScaleSettings(
     accidentalSpellingMode: "sharps",
     tonic: "C",
     scaleType: "major",
+    triadType: "major",
     ...overrides,
   };
 }

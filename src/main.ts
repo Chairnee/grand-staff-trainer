@@ -1,12 +1,15 @@
 import "./styles.css";
 import {
   Accidental,
+  ClefNote,
   Formatter,
   ModifierContext,
+  NoteSubGroup,
   Renderer,
   Stave,
   StaveConnector,
   StaveNote,
+  TextBracket,
   Voice,
 } from "vexflow";
 import { renderInputNameDisplay } from "./display/inputName";
@@ -31,6 +34,7 @@ import {
   getPracticalTonic,
   getRenderedAccidentalForKey,
   getScaleRenderingNotice,
+  getTriadRenderingNotice,
   type KeySignature,
   keyToMidiNoteNumber,
   type NoteSourceMode,
@@ -39,6 +43,7 @@ import {
   type ScaleOctaves,
   type ScaleType,
   type Tonic,
+  type TriadType,
 } from "./music";
 
 const DEFAULT_ATTEMPT_WINDOW_MS = 40;
@@ -185,6 +190,7 @@ app.innerHTML = `
         <select id="practice-mode-select">
           <option value="random-notes">Random notes</option>
           <option value="scales">Scales</option>
+          <option value="triads">Triads</option>
         </select>
       </label>
       <label id="scale-hands-field" class="settings-field" hidden>
@@ -221,6 +227,13 @@ app.innerHTML = `
           <option value="natural-minor">Natural minor</option>
           <option value="harmonic-minor">Harmonic minor</option>
           <option value="melodic-minor">Melodic minor</option>
+        </select>
+      </label>
+      <label id="triad-type-field" class="settings-field" hidden>
+        <span>Triad type</span>
+        <select id="triad-type-select">
+          <option value="major">Major</option>
+          <option value="minor">Minor</option>
         </select>
       </label>
       <label id="note-source-field" class="settings-field">
@@ -309,6 +322,10 @@ const accidentalSpellingField = document.querySelector<HTMLLabelElement>(
 const tonicSelect = document.querySelector<HTMLSelectElement>("#tonic-select");
 const scaleTypeSelect =
   document.querySelector<HTMLSelectElement>("#scale-type-select");
+const triadTypeField =
+  document.querySelector<HTMLLabelElement>("#triad-type-field");
+const triadTypeSelect =
+  document.querySelector<HTMLSelectElement>("#triad-type-select");
 const settingsExerciseToggle = document.querySelector<HTMLInputElement>(
   "#settings-exercise-toggle",
 );
@@ -353,6 +370,8 @@ if (
   !accidentalSpellingField ||
   !tonicSelect ||
   !scaleTypeSelect ||
+  !triadTypeField ||
+  !triadTypeSelect ||
   !settingsExerciseToggle ||
   !exerciseSettingsHeading ||
   !settingsKeyboardToggle ||
@@ -391,6 +410,8 @@ const accidentalSpellingSelectElement = accidentalSpellingSelect;
 const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
+const triadTypeFieldElement = triadTypeField;
+const triadTypeSelectElement = triadTypeSelect;
 const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
@@ -420,6 +441,7 @@ const initialGenerationSettings: GenerationSettings = {
   accidentalSpellingMode: "sharps",
   tonic: "C",
   scaleType: "major",
+  triadType: "major",
 };
 const initialStoredSettings = loadStoredSettings();
 const initialPromptQueue = createPromptQueue(PROMPT_QUEUE_LENGTH, {
@@ -490,6 +512,7 @@ accidentalSpellingSelectElement.addEventListener(
 );
 tonicSelectElement.addEventListener("change", handleTonicChange);
 scaleTypeSelectElement.addEventListener("change", handleScaleTypeChange);
+triadTypeSelectElement.addEventListener("change", handleTriadTypeChange);
 window.addEventListener("resize", handleWindowResize);
 
 if (state.promptQueue.length === 0) {
@@ -610,8 +633,11 @@ function renderSettingsDrawer() {
   accidentalSpellingSelectElement.value =
     state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
+  triadTypeSelectElement.value = state.generationSettings.triadType;
   const isRandomNotesMode =
     state.generationSettings.practiceMode === "random-notes";
+  const isScalesMode = state.generationSettings.practiceMode === "scales";
+  const isTriadsMode = state.generationSettings.practiceMode === "triads";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
     scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
@@ -627,7 +653,8 @@ function renderSettingsDrawer() {
   rangeEndFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   tonicFieldElement.hidden = !areExerciseSettingsVisible;
-  scaleTypeFieldElement.hidden = !areExerciseSettingsVisible;
+  scaleTypeFieldElement.hidden = !areExerciseSettingsVisible || !isScalesMode;
+  triadTypeFieldElement.hidden = !areExerciseSettingsVisible || !isTriadsMode;
   noteSourceFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   accidentalSpellingFieldElement.hidden =
@@ -659,6 +686,7 @@ function renderMidiDebug() {
     `Accidental spelling: ${state.generationSettings.accidentalSpellingMode}`,
     `Tonic: ${state.generationSettings.tonic}`,
     `Scale type: ${state.generationSettings.scaleType}`,
+    `Triad type: ${state.generationSettings.triadType}`,
     `Attempt window: ${state.attemptWindowMs}ms`,
     `Key signature: ${getDerivedKeySignature(state.generationSettings)}`,
     `Range: ${formatKeyLabel(state.generationSettings.rangeStart)} to ${formatKeyLabel(state.generationSettings.rangeEnd)}`,
@@ -685,13 +713,17 @@ function renderMidiDebug() {
 }
 
 function renderExerciseNotice() {
-  const shouldShowScaleRenderingNote =
-    state.isExerciseVisible &&
-    (state.generationSettings.practiceMode === "scales" ||
-      state.generationSettings.noteSourceMode === "in-scale");
-  const exerciseNotice = shouldShowScaleRenderingNote
-    ? getScaleRenderingNotice(state.generationSettings)
-    : null;
+  let exerciseNotice: string | null = null;
+
+  if (state.isExerciseVisible) {
+    if (state.generationSettings.practiceMode === "scales") {
+      exerciseNotice = getScaleRenderingNotice(state.generationSettings);
+    } else if (state.generationSettings.practiceMode === "triads") {
+      exerciseNotice = getTriadRenderingNotice(state.generationSettings);
+    } else if (state.generationSettings.noteSourceMode === "in-scale") {
+      exerciseNotice = getScaleRenderingNotice(state.generationSettings);
+    }
+  }
 
   notationElement.dataset.exerciseNoticeVisible = String(
     Boolean(exerciseNotice),
@@ -914,6 +946,13 @@ function handleScaleTypeChange() {
   resetPromptQueue();
 }
 
+function handleTriadTypeChange() {
+  state.generationSettings.triadType =
+    triadTypeSelectElement.value as TriadType;
+  saveStoredSettings();
+  resetPromptQueue();
+}
+
 function updateGenerationRange(nextStart: string, nextEnd: string) {
   const nextStartIndex = GENERATED_NOTE_POOL.indexOf(nextStart);
   const nextEndIndex = GENERATED_NOTE_POOL.indexOf(nextEnd);
@@ -1013,7 +1052,10 @@ function consumeCurrentPrompt() {
   )[0];
   state.currentPromptIndex = 0;
 
-  if (state.generationSettings.practiceMode === "scales") {
+  if (
+    state.generationSettings.practiceMode === "scales" ||
+    state.generationSettings.practiceMode === "triads"
+  ) {
     if (consumedPrompt) {
       state.promptQueue.push(consumedPrompt);
     }
@@ -1088,12 +1130,20 @@ function createPromptStaveNote(
   keys: string[],
   duration: string,
   displayedKeySignature: KeySignature | null,
+  inlineClefChangeBefore?: "treble" | "bass",
 ) {
   const note = new StaveNote({
     clef,
     keys,
     duration,
   });
+
+  if (inlineClefChangeBefore) {
+    note.addModifier(
+      new NoteSubGroup([new ClefNote(inlineClefChangeBefore, "small")]),
+      0,
+    );
+  }
 
   for (const [index, key] of keys.entries()) {
     const accidental = getRenderedAccidentalForKey(key, displayedKeySignature);
@@ -1111,11 +1161,13 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   const promptKeys = getPromptQueueKeys(appState.promptQueue);
   const defaultTopVisibleMidiNote =
-    appState.generationSettings.practiceMode === "scales"
+    appState.generationSettings.practiceMode === "scales" ||
+    appState.generationSettings.practiceMode === "triads"
       ? SCALE_TOP_VISIBLE_MIDI_NOTE
       : DEFAULT_TOP_VISIBLE_MIDI_NOTE;
   const defaultBottomVisibleMidiNote =
-    appState.generationSettings.practiceMode === "scales"
+    appState.generationSettings.practiceMode === "scales" ||
+    appState.generationSettings.practiceMode === "triads"
       ? SCALE_BOTTOM_VISIBLE_MIDI_NOTE
       : DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
   const topMidiNoteNumber =
@@ -1182,6 +1234,9 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     return;
   }
 
+  const displayedPrompts = appState.promptQueue.map((prompt) =>
+    getDisplayedPromptSlot(prompt, appState),
+  );
   const trebleNotes: StaveNote[] = [];
   const bassNotes: StaveNote[] = [];
   let currentTrebleTickable: StaveNote | null = null;
@@ -1192,23 +1247,35 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const currentBassHeldOverlayNotes: StaveNote[] = [];
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
-    const displayedPrompt = getDisplayedPromptSlot(prompt, appState);
+    const displayedPrompt = displayedPrompts[index];
+
+    if (!displayedPrompt) {
+      continue;
+    }
+
     const trebleNote = displayedPrompt.trebleKeys
       ? createPromptStaveNote(
-          "treble",
+          displayedPrompt.trebleDisplayedClef ?? "treble",
           displayedPrompt.trebleKeys,
           displayedPrompt.duration,
           displayedKeySignature,
         )
-      : createRest("treble", displayedPrompt.duration);
+      : createRest(
+          displayedPrompt.trebleDisplayedClef ?? "treble",
+          displayedPrompt.duration,
+        );
     const bassNote = displayedPrompt.bassKeys
       ? createPromptStaveNote(
-          "bass",
+          displayedPrompt.bassDisplayedClef ?? "bass",
           displayedPrompt.bassKeys,
           displayedPrompt.duration,
           displayedKeySignature,
+          getStaffClefChangeBefore(displayedPrompts, index, "bass"),
         )
-      : createRest("bass", displayedPrompt.duration);
+      : createRest(
+          displayedPrompt.bassDisplayedClef ?? "bass",
+          displayedPrompt.duration,
+        );
 
     if (index === appState.currentPromptIndex) {
       trebleNote.setStyle({
@@ -1228,20 +1295,20 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       for (const heldNoteNumber of [...appState.midi.heldNotes].sort(
         (left, right) => left - right,
       )) {
-        const heldKey = getHeldOverlayKey(
+        const heldOverlayPresentation = getHeldOverlayPresentation(
+          prompt,
           displayedPrompt,
           heldNoteNumber,
           displayedKeySignature,
         );
-        const heldClef = getClefForKey(heldKey);
         const heldOverlayNote = createHeldInputOverlayNote(
-          heldClef,
-          heldKey,
+          heldOverlayPresentation.clef,
+          heldOverlayPresentation.key,
           displayedPrompt.duration,
           displayedKeySignature,
         );
 
-        if (heldClef === "treble") {
+        if (heldOverlayPresentation.hand === "treble") {
           currentTrebleHeldOverlayNotes.push(heldOverlayNote);
         } else {
           currentBassHeldOverlayNotes.push(heldOverlayNote);
@@ -1270,6 +1337,12 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
+
+  drawTrebleOttavaBracket(
+    appState.promptQueue,
+    trebleNotes,
+    context,
+  );
 
   if (currentTrebleTickable) {
     for (const currentTrebleHeldOverlayNote of currentTrebleHeldOverlayNotes) {
@@ -1326,29 +1399,82 @@ function getDisplayedPromptSlot(
   prompt: PromptSlot,
   appState: AppState,
 ): PromptSlot {
-  if (appState.generationSettings.practiceMode !== "scales") {
-    return prompt;
-  }
+  if (appState.generationSettings.practiceMode === "scales") {
+    const displayedTrebleKeys = [
+      ...(prompt.trebleKeys ?? []),
+      ...(prompt.bassKeys ?? []),
+    ]
+      .filter((key) => getClefForKey(key) === "treble")
+      .sort(compareKeysByMidiNumber);
+    const displayedBassKeys = [
+      ...(prompt.trebleKeys ?? []),
+      ...(prompt.bassKeys ?? []),
+    ]
+      .filter((key) => getClefForKey(key) === "bass")
+      .sort(compareKeysByMidiNumber);
 
-  const displayedTrebleKeys = [
-    ...(prompt.trebleKeys ?? []),
-    ...(prompt.bassKeys ?? []),
-  ]
-    .filter((key) => getClefForKey(key) === "treble")
-    .sort(compareKeysByMidiNumber);
-  const displayedBassKeys = [
-    ...(prompt.trebleKeys ?? []),
-    ...(prompt.bassKeys ?? []),
-  ]
-    .filter((key) => getClefForKey(key) === "bass")
-    .sort(compareKeysByMidiNumber);
+    return {
+      duration: prompt.duration,
+      trebleKeys:
+        displayedTrebleKeys.length > 0 ? displayedTrebleKeys : undefined,
+      bassKeys: displayedBassKeys.length > 0 ? displayedBassKeys : undefined,
+    };
+  }
 
   return {
     duration: prompt.duration,
-    trebleKeys:
-      displayedTrebleKeys.length > 0 ? displayedTrebleKeys : undefined,
-    bassKeys: displayedBassKeys.length > 0 ? displayedBassKeys : undefined,
+    trebleKeys: prompt.displayedTrebleKeys ?? prompt.trebleKeys,
+    bassKeys: prompt.displayedBassKeys ?? prompt.bassKeys,
+    trebleDisplayedClef: prompt.trebleDisplayedClef,
+    bassDisplayedClef: prompt.bassDisplayedClef,
+    trebleOttavaStart: prompt.trebleOttavaStart,
+    trebleOttavaEnd: prompt.trebleOttavaEnd,
   };
+}
+
+function getStaffClefChangeBefore(
+  promptQueue: PromptSlot[],
+  index: number,
+  hand: "treble" | "bass",
+): "treble" | "bass" | undefined {
+  const currentPrompt = promptQueue[index];
+
+  if (!currentPrompt || promptQueue.length < 2) {
+    return undefined;
+  }
+
+  const previousPrompt = promptQueue.at(
+    (index - 1 + promptQueue.length) % promptQueue.length,
+  );
+
+  if (!previousPrompt) {
+    return undefined;
+  }
+
+  const currentKeys =
+    hand === "treble" ? currentPrompt.trebleKeys : currentPrompt.bassKeys;
+  const previousKeys =
+    hand === "treble" ? previousPrompt.trebleKeys : previousPrompt.bassKeys;
+
+  if (
+    !currentKeys ||
+    currentKeys.length === 0 ||
+    !previousKeys ||
+    previousKeys.length === 0
+  ) {
+    return undefined;
+  }
+
+  const currentClef =
+    hand === "treble"
+      ? currentPrompt.trebleDisplayedClef ?? "treble"
+      : currentPrompt.bassDisplayedClef ?? "bass";
+  const previousClef =
+    hand === "treble"
+      ? previousPrompt.trebleDisplayedClef ?? "treble"
+      : previousPrompt.bassDisplayedClef ?? "bass";
+
+  return currentClef !== previousClef ? currentClef : undefined;
 }
 
 function getDisplayedKeySignature(appState: AppState) {
@@ -1366,6 +1492,136 @@ function getPromptMidiNotes(prompt: PromptSlot) {
   return [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])].map(
     keyToMidiNoteNumber,
   );
+}
+
+function getHeldOverlayPresentation(
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+) {
+  const matchedTrebleDisplayKey = getMatchedDisplayedPromptKey(
+    prompt.trebleKeys,
+    prompt.displayedTrebleKeys,
+    heldNoteNumber,
+  );
+
+  if (matchedTrebleDisplayKey) {
+    return {
+      hand: "treble" as const,
+      key: matchedTrebleDisplayKey,
+      clef: displayedPrompt.trebleDisplayedClef ?? "treble",
+    };
+  }
+
+  const matchedBassDisplayKey = getMatchedDisplayedPromptKey(
+    prompt.bassKeys,
+    prompt.displayedBassKeys,
+    heldNoteNumber,
+  );
+
+  if (matchedBassDisplayKey) {
+    return {
+      hand: "bass" as const,
+      key: matchedBassDisplayKey,
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+    };
+  }
+
+  const activeNotationContext = getActiveNotationContext(prompt, displayedPrompt);
+  const fallbackHand = resolveHeldOverlayHand(prompt, heldNoteNumber);
+  let key = getHeldOverlayKey(prompt, heldNoteNumber, displayedKeySignature);
+
+  if (fallbackHand === "treble" && activeNotationContext.trebleOttavaActive) {
+    key = shiftKeyByOctaves(key, -1);
+  }
+
+  return {
+    hand: fallbackHand,
+    key,
+    clef:
+      fallbackHand === "treble"
+        ? activeNotationContext.trebleClef
+        : activeNotationContext.bassClef,
+  };
+}
+
+function getMatchedDisplayedPromptKey(
+  actualKeys: string[] | undefined,
+  displayedKeys: string[] | undefined,
+  heldNoteNumber: number,
+) {
+  if (!actualKeys) {
+    return null;
+  }
+
+  const matchingKeyIndex = actualKeys.findIndex(
+    (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
+  );
+
+  if (matchingKeyIndex === -1) {
+    return null;
+  }
+
+  return displayedKeys?.[matchingKeyIndex] ?? actualKeys[matchingKeyIndex] ?? null;
+}
+
+function getActiveNotationContext(
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+) {
+  return {
+    trebleClef: displayedPrompt.trebleDisplayedClef ?? "treble",
+    bassClef: displayedPrompt.bassDisplayedClef ?? "bass",
+    trebleOttavaActive: Boolean(prompt.displayedTrebleKeys),
+  };
+}
+
+function resolveHeldOverlayHand(prompt: PromptSlot, heldNoteNumber: number) {
+  const hasTreblePrompt = (prompt.trebleKeys?.length ?? 0) > 0;
+  const hasBassPrompt = (prompt.bassKeys?.length ?? 0) > 0;
+
+  if (hasTreblePrompt && !hasBassPrompt) {
+    return "treble" as const;
+  }
+
+  if (hasBassPrompt && !hasTreblePrompt) {
+    return "bass" as const;
+  }
+
+  const trebleMidiNoteNumbers = (prompt.trebleKeys ?? []).map(keyToMidiNoteNumber);
+  const bassMidiNoteNumbers = (prompt.bassKeys ?? []).map(keyToMidiNoteNumber);
+  const lowestTrebleMidiNoteNumber = Math.min(...trebleMidiNoteNumbers);
+  const highestBassMidiNoteNumber = Math.max(...bassMidiNoteNumbers);
+
+  if (heldNoteNumber >= lowestTrebleMidiNoteNumber) {
+    return "treble" as const;
+  }
+
+  if (heldNoteNumber <= highestBassMidiNoteNumber) {
+    return "bass" as const;
+  }
+
+  const midpoint =
+    (lowestTrebleMidiNoteNumber + highestBassMidiNoteNumber) / 2;
+
+  return heldNoteNumber >= midpoint ? ("treble" as const) : ("bass" as const);
+}
+
+function shiftKeyByOctaves(key: string, octaveDelta: number) {
+  const [noteName, octaveText] = key.split("/");
+
+  if (!noteName || !octaveText) {
+    throw new Error(`Invalid key format: ${key}`);
+  }
+
+  const octave = Number.parseInt(octaveText, 10);
+
+  if (Number.isNaN(octave)) {
+    throw new Error(`Invalid octave in key: ${key}`);
+  }
+
+  return `${noteName}/${octave + octaveDelta}`;
 }
 
 function createHeldInputOverlayNote(
@@ -1408,6 +1664,103 @@ function drawHeldOverlayNote(
   note.setStave(stave);
   note.preFormat();
   note.setContext(context).draw();
+}
+
+function drawTrebleOttavaBracket(
+  promptQueue: PromptSlot[],
+  trebleNotes: StaveNote[],
+  context: ReturnType<Renderer["getContext"]>,
+) {
+  const ottavaStartIndex = promptQueue.findIndex(
+    (prompt) => prompt.trebleOttavaStart,
+  );
+  const ottavaEndIndex = promptQueue.findIndex((prompt) => prompt.trebleOttavaEnd);
+
+  if (ottavaStartIndex === -1 || ottavaEndIndex === -1) {
+    return;
+  }
+
+  if (ottavaStartIndex <= ottavaEndIndex) {
+    drawOttavaBracketSegment(
+      trebleNotes[ottavaStartIndex],
+      trebleNotes[ottavaEndIndex],
+      trebleNotes.slice(ottavaStartIndex, ottavaEndIndex + 1),
+      context,
+      true,
+    );
+    return;
+  }
+
+  drawOttavaBracketSegment(
+    trebleNotes[ottavaStartIndex],
+    trebleNotes.at(-1),
+    trebleNotes.slice(ottavaStartIndex),
+    context,
+    true,
+  );
+  drawOttavaBracketSegment(
+    trebleNotes[0],
+    trebleNotes[ottavaEndIndex],
+    trebleNotes.slice(0, ottavaEndIndex + 1),
+    context,
+    false,
+  );
+}
+
+function drawOttavaBracketSegment(
+  ottavaStartNote: StaveNote | undefined,
+  ottavaEndNote: StaveNote | undefined,
+  segmentNotes: StaveNote[],
+  context: ReturnType<Renderer["getContext"]>,
+  showLabel: boolean,
+) {
+  if (!ottavaStartNote || !ottavaEndNote) {
+    return;
+  }
+
+  const textBracket = new TextBracket({
+    start: ottavaStartNote,
+    stop: ottavaEndNote,
+    text: showLabel ? "8" : "",
+    superscript: showLabel ? "va" : "",
+    position: TextBracket.Position.TOP,
+  })
+    .setDashed(false);
+  const safeTopTextLine = getSafeTopTextLineForNotes(
+    ottavaStartNote,
+    segmentNotes,
+  );
+
+  textBracket.setLine(safeTopTextLine).setContext(context).draw();
+}
+
+function getSafeTopTextLineForNotes(
+  referenceNote: StaveNote,
+  notes: StaveNote[],
+) {
+  const stave = referenceNote.checkStave();
+  const noteTopPadding = 8;
+  const minimumVisibleY = 18;
+  const topMostOccupiedY = Math.min(
+    ...notes.map((note) => {
+      const stemTopY = note.getStemExtents().topY;
+      const noteHeadTopY = Math.min(...note.getYs());
+
+      return Math.min(stemTopY, noteHeadTopY);
+    }),
+  );
+  const targetTopTextY = topMostOccupiedY - noteTopPadding;
+  let line = 1;
+
+  while (
+    line < 12 &&
+    stave.getYForTopText(line + 0.5) > targetTopTextY &&
+    stave.getYForTopText(line + 0.5) >= minimumVisibleY
+  ) {
+    line += 0.5;
+  }
+
+  return line;
 }
 
 function applyWrongAttemptFeedback(notes: Array<StaveNote | null>) {

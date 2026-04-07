@@ -3,11 +3,12 @@ import type { PromptSlot } from "./exercises/types";
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
-export type PracticeMode = "random-notes" | "scales";
+export type PracticeMode = "random-notes" | "scales" | "triads";
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type NoteSourceMode = "chromatic" | "in-scale";
 export type AccidentalSpellingMode = "sharps" | "flats";
+export type TriadType = "major" | "minor";
 export type KeySignature =
   | "C"
   | "G"
@@ -73,12 +74,19 @@ export type GenerationSettings = {
   accidentalSpellingMode: AccidentalSpellingMode;
   tonic: Tonic;
   scaleType: ScaleType;
+  triadType: TriadType;
 };
 
 type ScaleRenderingOverride = {
   selectedTonic: Tonic;
   renderedTonic: Tonic;
   scaleType: ScaleType;
+};
+
+type TriadRenderingOverride = {
+  selectedTonic: Tonic;
+  renderedTonic: Tonic;
+  triadType: TriadType;
 };
 
 const MAJOR_KEY_SIGNATURE_BY_TONIC: Record<MajorTonic, KeySignature> = {
@@ -225,6 +233,19 @@ export function getRenderedAccidentalForKey(
 }
 
 export function getDerivedKeySignature(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "triads") {
+    const supportedTonic = getSupportedTonicForScaleType(
+      generationSettings.tonic,
+      generationSettings.triadType === "major" ? "major" : "natural-minor",
+    );
+
+    if (generationSettings.triadType === "major") {
+      return MAJOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MajorTonic];
+    }
+
+    return MINOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MinorTonic];
+  }
+
   const supportedTonic = getSupportedTonicForScaleType(
     generationSettings.tonic,
     generationSettings.scaleType,
@@ -351,6 +372,37 @@ export function getScaleRenderingNotice(
   return `${renderingOverride.selectedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} is being rendered as ${renderingOverride.renderedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} for readability.`;
 }
 
+export function getTriadRenderingOverride(
+  generationSettings: GenerationSettings,
+): TriadRenderingOverride | null {
+  const renderedTonic = getSupportedTonicForScaleType(
+    generationSettings.tonic,
+    generationSettings.triadType === "major" ? "major" : "natural-minor",
+  );
+
+  if (renderedTonic === generationSettings.tonic) {
+    return null;
+  }
+
+  return {
+    selectedTonic: generationSettings.tonic,
+    renderedTonic,
+    triadType: generationSettings.triadType,
+  };
+}
+
+export function getTriadRenderingNotice(
+  generationSettings: GenerationSettings,
+) {
+  const renderingOverride = getTriadRenderingOverride(generationSettings);
+
+  if (!renderingOverride) {
+    return null;
+  }
+
+  return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} triads are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} triads for readability.`;
+}
+
 export function getScaleStartingOctave(tonic: Tonic, scaleType?: ScaleType) {
   const renderedTonic = scaleType
     ? getSupportedTonicForScaleType(tonic, scaleType)
@@ -359,6 +411,13 @@ export function getScaleStartingOctave(tonic: Tonic, scaleType?: ScaleType) {
   return isTrebleScaleStartWithinUpperLimit(renderedTonic.toLowerCase())
     ? 4
     : 3;
+}
+
+export function getTriadStartingOctave(tonic: Tonic, triadType: TriadType) {
+  return getScaleStartingOctave(
+    tonic,
+    triadType === "major" ? "major" : "natural-minor",
+  );
 }
 
 export function getAscendingScaleKeys(
@@ -469,6 +528,82 @@ export function getScaleNoteNames(tonic: Tonic, scaleType: ScaleType) {
   });
 }
 
+export function getTriadNoteNames(tonic: Tonic, triadType: TriadType) {
+  const scaleType = triadType === "major" ? "major" : "natural-minor";
+  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
+  const root = scaleNoteNames[0];
+  const third = scaleNoteNames[2];
+  const fifth = scaleNoteNames[4];
+
+  if (!root || !third || !fifth) {
+    throw new Error("Could not determine triad note names.");
+  }
+
+  return [root, third, fifth];
+}
+
+export function getAscendingTriadPositions(
+  tonic: Tonic,
+  triadType: TriadType,
+  startingOctave: number,
+  exerciseOctaves: ScaleOctaves,
+) {
+  const triadNoteNames = getTriadNoteNames(tonic, triadType);
+  const [rootNoteName, thirdNoteName, fifthNoteName] = triadNoteNames;
+
+  if (!rootNoteName || !thirdNoteName || !fifthNoteName) {
+    throw new Error("Could not determine triad note names.");
+  }
+
+  const totalRootPositions = exerciseOctaves + 1;
+  const ascendingPositions: string[][] = [];
+
+  for (
+    let rootPositionIndex = 0;
+    rootPositionIndex < totalRootPositions;
+    rootPositionIndex += 1
+  ) {
+    const rootKey = `${rootNoteName}/${startingOctave + rootPositionIndex}`;
+    const rootMidiNoteNumber = keyToMidiNoteNumber(rootKey);
+    const rootPosition = triadNoteNames.map((noteName) =>
+      findNextTriadKeyAtOrAbove(noteName, rootMidiNoteNumber),
+    );
+
+    if (rootPositionIndex < exerciseOctaves) {
+      const firstInversionBassMidiNoteNumber = keyToMidiNoteNumber(
+        rootPosition[1] ?? "",
+      );
+      const firstInversion = [
+        rootPosition[1],
+        rootPosition[2],
+        findNextTriadKeyAtOrAbove(rootNoteName, firstInversionBassMidiNoteNumber),
+      ];
+      const secondInversionBassMidiNoteNumber = keyToMidiNoteNumber(
+        firstInversion[1] ?? "",
+      );
+      const secondInversion = [
+        firstInversion[1],
+        firstInversion[2],
+        findNextTriadKeyAtOrAbove(
+          thirdNoteName,
+          secondInversionBassMidiNoteNumber,
+        ),
+      ];
+
+      ascendingPositions.push(
+        rootPosition,
+        firstInversion,
+        secondInversion,
+      );
+      continue;
+    }
+
+    ascendingPositions.push(rootPosition);
+  }
+
+  return ascendingPositions;
+}
+
 export function getGeneratedNotePool(
   generatedNotePool: string[],
   rangeStart: string,
@@ -567,13 +702,33 @@ export function getHeldOverlayKey(
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
-  const promptKeys = [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])];
-  const matchingPromptKey = promptKeys.find(
-    (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
-  );
+  const promptKeyGroups: Array<[string[] | undefined, string[] | undefined]> = [
+    [prompt.trebleKeys, prompt.displayedTrebleKeys],
+    [prompt.bassKeys, prompt.displayedBassKeys],
+  ];
 
-  if (matchingPromptKey) {
-    return matchingPromptKey;
+  for (const [actualKeys, displayedKeys] of promptKeyGroups) {
+    if (!actualKeys) {
+      continue;
+    }
+
+    const matchingKeyIndex = actualKeys.findIndex(
+      (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
+    );
+
+    if (matchingKeyIndex === -1) {
+      continue;
+    }
+
+    const displayedKey = displayedKeys?.[matchingKeyIndex];
+
+    const fallbackKey = actualKeys[matchingKeyIndex];
+
+    if (!fallbackKey) {
+      break;
+    }
+
+    return displayedKey ?? fallbackKey;
   }
 
   return midiNoteNumberToKey(
@@ -696,6 +851,20 @@ function getAccidentalText(accidentalOffset: number) {
   }
 
   return "";
+}
+
+function findNextTriadKeyAtOrAbove(noteName: string, minimumMidiNoteNumber: number) {
+  let octave = Math.floor(minimumMidiNoteNumber / 12) - 1;
+  let key = `${noteName}/${octave}`;
+  let midiNoteNumber = keyToMidiNoteNumber(key);
+
+  while (midiNoteNumber < minimumMidiNoteNumber) {
+    octave += 1;
+    key = `${noteName}/${octave}`;
+    midiNoteNumber = keyToMidiNoteNumber(key);
+  }
+
+  return key;
 }
 
 function formatScaleTypeLabel(scaleType: ScaleType) {
