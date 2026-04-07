@@ -102,6 +102,7 @@ type AppState = {
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   midi: MidiState;
+  heldOverlayHands: Map<number, "treble" | "bass">;
 };
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -475,6 +476,7 @@ const state: AppState = {
     lastEvent: null,
     errorMessage: null,
   },
+  heldOverlayHands: new Map(),
 };
 
 notationElement.addEventListener("click", handlePromptAttempt);
@@ -566,7 +568,18 @@ function handleWindowResize() {
 
 function handleMidiStateChange(midiState: MidiState) {
   state.midi = midiState;
+  syncHeldOverlayHands();
   renderApp();
+}
+
+function syncHeldOverlayHands() {
+  const physicallyHeldNotes = new Set(state.midi.heldNotes);
+
+  for (const heldOverlayNoteNumber of state.heldOverlayHands.keys()) {
+    if (!physicallyHeldNotes.has(heldOverlayNoteNumber)) {
+      state.heldOverlayHands.delete(heldOverlayNoteNumber);
+    }
+  }
 }
 
 function handleMidiInputChange() {
@@ -1080,6 +1093,7 @@ function resetPromptQueue() {
   }
 
   pendingAttemptMidiNotes.clear();
+  state.heldOverlayHands.clear();
   state.promptQueue = createPromptQueue(
     PROMPT_QUEUE_LENGTH,
     state.generationSettings,
@@ -1339,11 +1353,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
 
-  drawTrebleOttavaBracket(
-    appState.promptQueue,
-    trebleNotes,
-    context,
-  );
+  drawTrebleOttavaBracket(appState.promptQueue, trebleNotes, trebleStave, context);
 
   if (currentTrebleTickable) {
     for (const currentTrebleHeldOverlayNote of currentTrebleHeldOverlayNotes) {
@@ -1475,6 +1485,15 @@ function getStaffClefChangeBefore(
       ? previousPrompt.trebleDisplayedClef ?? "treble"
       : previousPrompt.bassDisplayedClef ?? "bass";
 
+  if (
+    hand === "bass" &&
+    index === 0 &&
+    currentClef === "treble" &&
+    previousClef === "treble"
+  ) {
+    return "treble";
+  }
+
   return currentClef !== previousClef ? currentClef : undefined;
 }
 
@@ -1496,24 +1515,287 @@ function getPromptMidiNotes(prompt: PromptSlot) {
 }
 
 function getHeldOverlayPresentation(
-  _appState: AppState,
-  _prompt: PromptSlot,
-  _displayedPrompt: PromptSlot,
+  appState: AppState,
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
-  const key = getHeldOverlayKey(
-    { duration: "q" },
+  const exactTrebleDisplayKey = getMatchedDisplayedPromptKey(
+    prompt.trebleKeys,
+    prompt.displayedTrebleKeys,
+    heldNoteNumber,
+  );
+
+  if (exactTrebleDisplayKey) {
+    return {
+      hand: "treble" as const,
+      key: exactTrebleDisplayKey,
+      clef: displayedPrompt.trebleDisplayedClef ?? "treble",
+    };
+  }
+
+  const exactBassDisplayKey = getMatchedDisplayedPromptKey(
+    prompt.bassKeys,
+    prompt.displayedBassKeys,
+    heldNoteNumber,
+  );
+
+  const assignedHand =
+    appState.heldOverlayHands.get(heldNoteNumber) ??
+    assignHeldOverlayHand(
+      appState,
+      prompt,
+      displayedPrompt,
+      heldNoteNumber,
+      displayedKeySignature,
+      exactTrebleDisplayKey,
+      exactBassDisplayKey,
+    );
+
+  return getPresentationForAssignedHand(
+    appState,
+    prompt,
+    displayedPrompt,
+    heldNoteNumber,
+    displayedKeySignature,
+    assignedHand,
+    exactTrebleDisplayKey,
+    exactBassDisplayKey,
+  );
+}
+
+function assignHeldOverlayHand(
+  appState: AppState,
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+  exactTrebleDisplayKey: string | null,
+  exactBassDisplayKey: string | null,
+) {
+  let assignedHand: "treble" | "bass";
+
+  if (exactTrebleDisplayKey) {
+    assignedHand = "treble";
+  } else if (exactBassDisplayKey) {
+    assignedHand = "bass";
+  } else if (appState.generationSettings.scaleHands === "together") {
+    const specialContextCandidates = getSpecialNotationCandidates(
+      prompt,
+      displayedPrompt,
+      heldNoteNumber,
+      displayedKeySignature,
+    );
+
+    if (specialContextCandidates.length > 0) {
+      assignedHand = specialContextCandidates.reduce((bestCandidate, candidate) =>
+        candidate.score < bestCandidate.score ? candidate : bestCandidate,
+      ).hand;
+    } else {
+      const literalKey = getHeldOverlayKey(
+        { duration: prompt.duration },
+        heldNoteNumber,
+        displayedKeySignature,
+      );
+      assignedHand = getClefForKey(literalKey);
+    }
+  } else {
+    const specialNotationContext = getSpecialNotationContext(
+      appState,
+      prompt,
+      displayedPrompt,
+    );
+
+    if (specialNotationContext === "treble-ottava") {
+      assignedHand = "treble";
+    } else if (specialNotationContext === "bass-clef-shift") {
+      assignedHand = "bass";
+    } else {
+      const literalKey = getHeldOverlayKey(
+        { duration: prompt.duration },
+        heldNoteNumber,
+        displayedKeySignature,
+      );
+      assignedHand = getClefForKey(literalKey);
+    }
+  }
+
+  appState.heldOverlayHands.set(heldNoteNumber, assignedHand);
+
+  return assignedHand;
+}
+
+function getPresentationForAssignedHand(
+  appState: AppState,
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+  assignedHand: "treble" | "bass",
+  exactTrebleDisplayKey: string | null,
+  exactBassDisplayKey: string | null,
+) {
+  const literalKey = getHeldOverlayKey(
+    { duration: prompt.duration },
     heldNoteNumber,
     displayedKeySignature,
   );
-  const clef = getClefForKey(key);
+
+  if (assignedHand === "treble") {
+    if (exactTrebleDisplayKey) {
+      return {
+        hand: "treble" as const,
+        key: exactTrebleDisplayKey,
+        clef: displayedPrompt.trebleDisplayedClef ?? "treble",
+      };
+    }
+
+    if (isTrebleNotationTransformActive(appState, prompt)) {
+      return {
+        hand: "treble" as const,
+        key: shiftKeyByOctaves(literalKey, -1),
+        clef: displayedPrompt.trebleDisplayedClef ?? "treble",
+      };
+    }
+
+    return {
+      hand: "treble" as const,
+      key: literalKey,
+      clef: "treble" as const,
+    };
+  }
+
+  if (exactBassDisplayKey) {
+    return {
+      hand: "bass" as const,
+      key: exactBassDisplayKey,
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+    };
+  }
+
+  if (isBassNotationTransformActive(appState, displayedPrompt)) {
+    return {
+      hand: "bass" as const,
+      key: literalKey,
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+    };
+  }
 
   return {
-    hand: clef,
-    key,
-    clef,
+    hand: "bass" as const,
+    key: literalKey,
+    clef: "bass" as const,
   };
+}
+
+function getMatchedDisplayedPromptKey(
+  actualKeys: string[] | undefined,
+  displayedKeys: string[] | undefined,
+  heldNoteNumber: number,
+) {
+  if (!actualKeys) {
+    return null;
+  }
+
+  const matchingKeyIndex = actualKeys.findIndex(
+    (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
+  );
+
+  if (matchingKeyIndex === -1) {
+    return null;
+  }
+
+  return displayedKeys?.[matchingKeyIndex] ?? actualKeys[matchingKeyIndex] ?? null;
+}
+
+function getSpecialNotationContext(
+  appState: AppState,
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+) {
+  if (isTrebleNotationTransformActive(appState, prompt)) {
+    return "treble-ottava" as const;
+  }
+
+  if (isBassNotationTransformActive(appState, displayedPrompt)) {
+    return "bass-clef-shift" as const;
+  }
+
+  return null;
+}
+
+function isTrebleNotationTransformActive(
+  appState: AppState,
+  prompt: PromptSlot,
+) {
+  return Boolean(prompt.displayedTrebleKeys) &&
+    (appState.generationSettings.scaleHands === "treble" ||
+      appState.generationSettings.scaleHands === "together");
+}
+
+function isBassNotationTransformActive(
+  appState: AppState,
+  displayedPrompt: PromptSlot,
+) {
+  return (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass" &&
+    (appState.generationSettings.scaleHands === "bass" ||
+      appState.generationSettings.scaleHands === "together");
+}
+
+function getSpecialNotationCandidates(
+  prompt: PromptSlot,
+  displayedPrompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+) {
+  const literalKey = getHeldOverlayKey(
+    { duration: prompt.duration },
+    heldNoteNumber,
+    displayedKeySignature,
+  );
+  const candidates: Array<{
+    hand: "treble" | "bass";
+    key: string;
+    clef: "treble" | "bass";
+    score: number;
+  }> = [];
+
+  if ((prompt.trebleKeys?.length ?? 0) > 0 && prompt.displayedTrebleKeys) {
+    candidates.push({
+      hand: "treble",
+      key: shiftKeyByOctaves(literalKey, -1),
+      clef: displayedPrompt.trebleDisplayedClef ?? "treble",
+      score: getClosestPromptDistance(prompt.trebleKeys, heldNoteNumber),
+    });
+  }
+
+  if (
+    (prompt.bassKeys?.length ?? 0) > 0 &&
+    (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass"
+  ) {
+    candidates.push({
+      hand: "bass",
+      key: literalKey,
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+      score: getClosestPromptDistance(prompt.bassKeys, heldNoteNumber),
+    });
+  }
+
+  return candidates;
+}
+
+function getClosestPromptDistance(
+  keys: string[] | undefined,
+  heldNoteNumber: number,
+) {
+  if (!keys || keys.length === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.min(
+    ...keys.map((key) => Math.abs(keyToMidiNoteNumber(key) - heldNoteNumber)),
+  );
 }
 
 function shiftKeyByOctaves(key: string, octaveDelta: number) {
@@ -1577,6 +1859,7 @@ function drawHeldOverlayNote(
 function drawTrebleOttavaBracket(
   promptQueue: PromptSlot[],
   trebleNotes: StaveNote[],
+  trebleStave: Stave,
   context: ReturnType<Renderer["getContext"]>,
 ) {
   const ottavaStartIndex = promptQueue.findIndex(
@@ -1606,12 +1889,11 @@ function drawTrebleOttavaBracket(
     context,
     true,
   );
-  drawOttavaBracketSegment(
-    trebleNotes[0],
+  drawAnchoredOttavaBracketSegment(
+    trebleStave,
     trebleNotes[ottavaEndIndex],
     trebleNotes.slice(0, ottavaEndIndex + 1),
     context,
-    false,
   );
 }
 
@@ -1640,6 +1922,44 @@ function drawOttavaBracketSegment(
   );
 
   textBracket.setLine(safeTopTextLine).setContext(context).draw();
+}
+
+function drawAnchoredOttavaBracketSegment(
+  trebleStave: Stave,
+  ottavaEndNote: StaveNote | undefined,
+  segmentNotes: StaveNote[],
+  context: ReturnType<Renderer["getContext"]>,
+) {
+  if (!ottavaEndNote) {
+    return;
+  }
+
+  const safeTopTextLine = getSafeTopTextLineForNotes(
+    ottavaEndNote,
+    segmentNotes,
+  );
+  const bracketY = trebleStave.getYForTopText(safeTopTextLine);
+  const textX = trebleStave.getNoteStartX();
+  const text = "8va";
+
+  context.save();
+  context
+    .setFont(undefined, 15, "normal", "italic")
+    .setFillStyle("#000")
+    .setStrokeStyle("#000")
+    .setLineWidth(1);
+
+  const textWidth = context.measureText(text).width;
+  const lineStartX = textX + textWidth + 8;
+  const lineEndX = Math.max(lineStartX, ottavaEndNote.getAbsoluteX());
+
+  context.fillText(text, textX, bracketY + 4);
+  context.beginPath();
+  context.moveTo(lineStartX, bracketY);
+  context.lineTo(lineEndX, bracketY);
+  context.lineTo(lineEndX, bracketY + 10);
+  context.stroke();
+  context.restore();
 }
 
 function getSafeTopTextLineForNotes(
