@@ -1973,12 +1973,19 @@ function drawTrebleOttavaBracket(
   }
 
   if (ottavaStartIndex <= ottavaEndIndex) {
+    const segmentNotes = trebleNotes.slice(ottavaStartIndex, ottavaEndIndex + 1);
+    const safeTopTextLine = getSafeTopTextLineForNotes(
+      trebleNotes[ottavaStartIndex],
+      segmentNotes,
+    );
+
     drawOttavaBracketSegment(
       trebleNotes[ottavaStartIndex],
       trebleNotes[ottavaEndIndex],
-      trebleNotes.slice(ottavaStartIndex, ottavaEndIndex + 1),
+      segmentNotes,
       context,
       true,
+      safeTopTextLine,
     );
     return;
   }
@@ -1987,18 +1994,34 @@ function drawTrebleOttavaBracket(
     ...trebleNotes.slice(ottavaStartIndex),
     ...trebleNotes.slice(0, ottavaEndIndex + 1),
   ];
-
-  drawOpenEndedOttavaBracketSegment(
-    trebleStave,
+  const safeTopTextLine = getSafeTopTextLineForNotes(
     trebleNotes[ottavaStartIndex],
     wrappedSpanNotes,
-    context,
   );
-  drawAnchoredOttavaBracketSegment(
-    trebleStave,
-    trebleNotes[ottavaEndIndex],
-    wrappedSpanNotes,
+  const currentSegmentStartNote = trebleNotes[0];
+  const currentSegmentEndNote = trebleNotes[ottavaEndIndex];
+  const futureSegmentStartNote = trebleNotes[ottavaStartIndex];
+  const futureSegmentEndNote = trebleNotes.at(-1);
+
+  drawOttavaBracketSegment(
+    currentSegmentStartNote,
+    currentSegmentEndNote,
+    trebleNotes.slice(0, ottavaEndIndex + 1),
     context,
+    true,
+    safeTopTextLine,
+    trebleStave,
+    true,
+  );
+  drawOttavaBracketSegment(
+    futureSegmentStartNote,
+    futureSegmentEndNote,
+    trebleNotes.slice(ottavaStartIndex),
+    context,
+    true,
+    safeTopTextLine,
+    trebleStave,
+    false,
   );
 }
 
@@ -2008,6 +2031,9 @@ function drawOttavaBracketSegment(
   segmentNotes: StaveNote[],
   context: ReturnType<Renderer["getContext"]>,
   showLabel: boolean,
+  safeTopTextLine?: number,
+  trebleStave?: Stave,
+  anchorLabelToLeft = false,
 ) {
   if (!ottavaStartNote || !ottavaEndNote) {
     return;
@@ -2021,29 +2047,32 @@ function drawOttavaBracketSegment(
     position: TextBracket.Position.TOP,
   })
     .setDashed(false);
-  const safeTopTextLine = getSafeTopTextLineForNotes(
-    ottavaStartNote,
-    segmentNotes,
-  );
+  const resolvedTopTextLine =
+    safeTopTextLine ??
+    getSafeTopTextLineForNotes(ottavaStartNote, segmentNotes);
 
-  textBracket.setLine(safeTopTextLine).setContext(context).draw();
-}
-
-function drawAnchoredOttavaBracketSegment(
-  trebleStave: Stave,
-  ottavaEndNote: StaveNote | undefined,
-  segmentNotes: StaveNote[],
-  context: ReturnType<Renderer["getContext"]>,
-) {
-  if (!ottavaEndNote) {
+  if (anchorLabelToLeft && trebleStave) {
+    drawAnchoredOttavaContinuation(
+      trebleStave,
+      ottavaEndNote,
+      resolvedTopTextLine,
+      context,
+      showLabel,
+    );
     return;
   }
 
-  const safeTopTextLine = getSafeTopTextLineForNotes(
-    ottavaEndNote,
-    segmentNotes,
-  );
-  const bracketY = trebleStave.getYForTopText(safeTopTextLine);
+  textBracket.setLine(resolvedTopTextLine).setContext(context).draw();
+}
+
+function drawAnchoredOttavaContinuation(
+  trebleStave: Stave,
+  ottavaEndNote: StaveNote,
+  topTextLine: number,
+  context: ReturnType<Renderer["getContext"]>,
+  showLabel: boolean,
+) {
+  const bracketY = trebleStave.getYForTopText(topTextLine);
   const textX = trebleStave.getNoteStartX();
   const text = "8va";
 
@@ -2054,52 +2083,22 @@ function drawAnchoredOttavaBracketSegment(
     .setStrokeStyle("#000")
     .setLineWidth(1);
 
-  const textWidth = context.measureText(text).width;
-  const lineStartX = textX + textWidth + 8;
-  const lineEndX = Math.max(lineStartX, ottavaEndNote.getAbsoluteX());
+  let lineStartX = textX;
 
-  context.fillText(text, textX, bracketY + 4);
+  if (showLabel) {
+    context.fillText(text, textX, bracketY + 4);
+    lineStartX = textX + context.measureText(text).width + 8;
+  }
+
+  const lineEndX = Math.max(
+    lineStartX,
+    ottavaEndNote.getAbsoluteX() + ottavaEndNote.getGlyphWidth(),
+  );
+
   context.beginPath();
   context.moveTo(lineStartX, bracketY);
   context.lineTo(lineEndX, bracketY);
   context.lineTo(lineEndX, bracketY + 10);
-  context.stroke();
-  context.restore();
-}
-
-function drawOpenEndedOttavaBracketSegment(
-  trebleStave: Stave,
-  ottavaStartNote: StaveNote | undefined,
-  segmentNotes: StaveNote[],
-  context: ReturnType<Renderer["getContext"]>,
-) {
-  if (!ottavaStartNote) {
-    return;
-  }
-
-  const safeTopTextLine = getSafeTopTextLineForNotes(
-    ottavaStartNote,
-    segmentNotes,
-  );
-  const bracketY = trebleStave.getYForTopText(safeTopTextLine);
-  const text = "8va";
-  const textX = ottavaStartNote.getAbsoluteX();
-
-  context.save();
-  context
-    .setFont(undefined, 15, "normal", "italic")
-    .setFillStyle("#000")
-    .setStrokeStyle("#000")
-    .setLineWidth(1);
-
-  const textWidth = context.measureText(text).width;
-  const lineStartX = textX + textWidth + 8;
-  const lineEndX = Math.max(lineStartX, trebleStave.getNoteEndX());
-
-  context.fillText(text, textX, bracketY + 4);
-  context.beginPath();
-  context.moveTo(lineStartX, bracketY);
-  context.lineTo(lineEndX, bracketY);
   context.stroke();
   context.restore();
 }
