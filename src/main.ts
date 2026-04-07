@@ -34,11 +34,14 @@ import {
   getPracticalTonic,
   getRenderedAccidentalForKey,
   getScaleRenderingNotice,
+  getScaleRenderingOptions,
   getTriadRenderingNotice,
+  getTriadRenderingOptions,
   type KeySignature,
   keyToMidiNoteNumber,
   type NoteSourceMode,
   type PracticeMode,
+  type RenderingPreference,
   type ScaleHands,
   type ScaleOctaves,
   type ScaleType,
@@ -443,6 +446,7 @@ const initialGenerationSettings: GenerationSettings = {
   tonic: "C",
   scaleType: "major",
   triadType: "major",
+  renderingPreference: "preferred",
 };
 const initialStoredSettings = loadStoredSettings();
 const initialPromptQueue = createPromptQueue(PROMPT_QUEUE_LENGTH, {
@@ -727,22 +731,110 @@ function renderMidiDebug() {
 
 function renderExerciseNotice() {
   let exerciseNotice: string | null = null;
+  let exerciseNoticeButtonText: string | null = null;
+  let exerciseNoticeButtonActionText: string | null = null;
+  let exerciseNoticeButtonTitle: string | null = null;
 
   if (state.isExerciseVisible) {
     if (state.generationSettings.practiceMode === "scales") {
+      const renderingOptions = getScaleRenderingOptions(state.generationSettings);
+      const scaleLabel = formatScaleTypeLabelForDisplay(
+        state.generationSettings.scaleType,
+      );
+
+      if (renderingOptions.alternate) {
+        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${scaleLabel}`;
+        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${scaleLabel}.`;
+      }
+
       exerciseNotice = getScaleRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.practiceMode === "triads") {
+      const renderingOptions = getTriadRenderingOptions(state.generationSettings);
+      const triadLabel = `${state.generationSettings.triadType} triads`;
+
+      if (renderingOptions.alternate) {
+        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${triadLabel}`;
+        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${triadLabel}.`;
+      }
+
       exerciseNotice = getTriadRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.noteSourceMode === "in-scale") {
+      const renderingOptions = getScaleRenderingOptions(state.generationSettings);
+      const scaleLabel = formatScaleTypeLabelForDisplay(
+        state.generationSettings.scaleType,
+      );
+
+      if (renderingOptions.alternate) {
+        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${scaleLabel}`;
+        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${scaleLabel}.`;
+      }
+
       exerciseNotice = getScaleRenderingNotice(state.generationSettings);
     }
   }
 
   notationElement.dataset.exerciseNoticeVisible = String(
-    Boolean(exerciseNotice),
+    Boolean(exerciseNotice || exerciseNoticeButtonText),
   );
-  exerciseNoticeElement.hidden = !exerciseNotice;
-  exerciseNoticeElement.textContent = exerciseNotice ?? "";
+  exerciseNoticeElement.hidden = !exerciseNotice && !exerciseNoticeButtonText;
+  exerciseNoticeElement.dataset.interactive = String(
+    Boolean(exerciseNoticeButtonText),
+  );
+  exerciseNoticeElement.replaceChildren();
+
+  if (exerciseNoticeButtonText) {
+    const toggleButton = document.createElement("button");
+    toggleButton.type = "button";
+    toggleButton.className = "exercise-notice-button";
+    toggleButton.title = exerciseNoticeButtonTitle ?? "";
+    toggleButton.addEventListener("click", handleExerciseRenderingToggle);
+    const primaryLine = document.createElement("span");
+    primaryLine.className = "exercise-notice-button-primary";
+    primaryLine.textContent = exerciseNoticeButtonText;
+    toggleButton.append(primaryLine);
+
+    if (exerciseNoticeButtonActionText) {
+      const actionLine = document.createElement("span");
+      actionLine.className = "exercise-notice-button-action";
+      actionLine.textContent = exerciseNoticeButtonActionText;
+      toggleButton.append(actionLine);
+    }
+
+    exerciseNoticeElement.append(toggleButton);
+    return;
+  }
+
+  if (exerciseNotice) {
+    const noticeChip = document.createElement("span");
+    noticeChip.className = "exercise-notice-chip";
+    noticeChip.textContent = exerciseNotice;
+    exerciseNoticeElement.append(noticeChip);
+  }
+}
+
+function handleExerciseRenderingToggle() {
+  state.generationSettings.renderingPreference = getToggledRenderingPreference(
+    state.generationSettings.renderingPreference,
+  );
+  saveStoredSettings();
+  resetPromptQueue();
+}
+
+function getToggledRenderingPreference(
+  renderingPreference: RenderingPreference,
+): RenderingPreference {
+  return renderingPreference === "preferred" ? "alternate" : "preferred";
+}
+
+function formatScaleTypeLabelForDisplay(scaleType: ScaleType) {
+  if (scaleType === "major") {
+    return "major";
+  }
+
+  return scaleType.replaceAll("-", " ");
 }
 
 function renderNotation() {
@@ -898,6 +990,7 @@ function handleInputNameToggleChange() {
 function handlePracticeModeChange() {
   state.generationSettings.practiceMode =
     practiceModeSelectElement.value as PracticeMode;
+  resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -935,6 +1028,7 @@ function handleRangeEndChange() {
 function handleNoteSourceChange() {
   state.generationSettings.noteSourceMode =
     noteSourceSelectElement.value as NoteSourceMode;
+  resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -948,6 +1042,7 @@ function handleAccidentalSpellingChange() {
 
 function handleTonicChange() {
   state.generationSettings.tonic = tonicSelectElement.value as Tonic;
+  resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -955,6 +1050,7 @@ function handleTonicChange() {
 function handleScaleTypeChange() {
   state.generationSettings.scaleType =
     scaleTypeSelectElement.value as ScaleType;
+  resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -962,8 +1058,13 @@ function handleScaleTypeChange() {
 function handleTriadTypeChange() {
   state.generationSettings.triadType =
     triadTypeSelectElement.value as TriadType;
+  resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
+}
+
+function resetRenderingPreference() {
+  state.generationSettings.renderingPreference = "preferred";
 }
 
 function updateGenerationRange(nextStart: string, nextEnd: string) {
@@ -2151,6 +2252,7 @@ function loadStoredSettings(): {
       ...initialGenerationSettings,
       ...storedGenerationSettings,
     };
+    generationSettings.renderingPreference = "preferred";
     generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
 
     return {
@@ -2180,6 +2282,7 @@ function loadStoredSettings(): {
     const generationSettings = {
       ...initialGenerationSettings,
     };
+    generationSettings.renderingPreference = "preferred";
     generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
 
     return {
@@ -2195,10 +2298,14 @@ function loadStoredSettings(): {
 
 function saveStoredSettings() {
   try {
+    const {
+      renderingPreference: _renderingPreference,
+      ...storedGenerationSettings
+    } = state.generationSettings;
     localStorage.setItem(
       SETTINGS_STORAGE_KEY,
       JSON.stringify({
-        generationSettings: state.generationSettings,
+        generationSettings: storedGenerationSettings,
         attemptWindowMs: state.attemptWindowMs,
         isDebugVisible: state.isDebugVisible,
         isExerciseVisible: state.isExerciseVisible,

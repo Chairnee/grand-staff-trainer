@@ -17,6 +17,7 @@ function createScaleSettings(
     tonic: "C",
     scaleType: "major",
     triadType: "major",
+    renderingPreference: "preferred",
     ...overrides,
   };
 }

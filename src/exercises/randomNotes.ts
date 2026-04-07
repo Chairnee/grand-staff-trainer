@@ -81,6 +81,7 @@ function getAllowedGeneratedNotes(
       generationSettings.rangeEnd,
       generationSettings.tonic,
       generationSettings.scaleType,
+      generationSettings.renderingPreference,
     );
   }
 

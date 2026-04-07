@@ -12,18 +12,21 @@ export function createTriadPracticeQueue(
   const trebleStartingOctave = getTriadStartingOctave(
     generationSettings.tonic,
     generationSettings.triadType,
+    generationSettings.renderingPreference,
   );
   const trebleAscendingTriads = getAscendingTriadPositions(
     generationSettings.tonic,
     generationSettings.triadType,
     trebleStartingOctave,
     generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
   );
   const bassAscendingTriads = getAscendingTriadPositions(
     generationSettings.tonic,
     generationSettings.triadType,
     trebleStartingOctave - 1,
     generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
   );
   const ascendingPrompts = createTriadPromptsForHands(
     trebleAscendingTriads,

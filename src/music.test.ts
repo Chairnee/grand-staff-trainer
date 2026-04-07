@@ -9,6 +9,7 @@ import {
   getScaleNoteNames,
   getScaleRenderingNotice,
   getScaleStartingOctave,
+  getTonicReadabilityOptionsForScaleType,
   keyToMidiNoteNumber,
 } from "./music";
 
@@ -26,6 +27,7 @@ function createGenerationSettings(
     tonic: "C",
     scaleType: "major",
     triadType: "major",
+    renderingPreference: "preferred",
     ...overrides,
   };
 }
@@ -107,6 +109,52 @@ describe("getScaleNoteNames", () => {
       "eb",
       "f",
       "g",
+    ]);
+  });
+
+  it("prefers the lower-cost enharmonic for natural minor spellings", () => {
+    expect(getScaleNoteNames("Ab", "natural-minor")).toEqual([
+      "g#",
+      "a#",
+      "b",
+      "c#",
+      "d#",
+      "e",
+      "f#",
+    ]);
+  });
+
+  it("still weighs total accidental burden when comparing harmonic minor enharmonics", () => {
+    expect(getScaleNoteNames("Ab", "harmonic-minor")).toEqual([
+      "ab",
+      "bb",
+      "cb",
+      "db",
+      "eb",
+      "fb",
+      "g",
+    ]);
+  });
+
+  it("keeps D flat and G flat major in their conventional spellings", () => {
+    expect(getScaleNoteNames("Db", "major")).toEqual([
+      "db",
+      "eb",
+      "f",
+      "gb",
+      "ab",
+      "bb",
+      "c",
+    ]);
+
+    expect(getScaleNoteNames("Gb", "major")).toEqual([
+      "gb",
+      "ab",
+      "bb",
+      "cb",
+      "db",
+      "eb",
+      "f",
     ]);
   });
 });
@@ -231,5 +279,104 @@ describe("getScaleRenderingNotice", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  it("uses the readability-cost model for supported enharmonic minor spellings", () => {
+    expect(
+      getScaleRenderingNotice(
+        createGenerationSettings({
+          tonic: "Ab",
+          scaleType: "natural-minor",
+        }),
+      ),
+    ).toBe(
+      "Ab natural minor is being rendered as G# natural minor for readability.",
+    );
+  });
+
+  it("does not substitute conventional flat major key signatures", () => {
+    expect(
+      getScaleRenderingNotice(
+        createGenerationSettings({
+          tonic: "Db",
+          scaleType: "major",
+        }),
+      ),
+    ).toBeNull();
+
+    expect(
+      getScaleRenderingNotice(
+        createGenerationSettings({
+          tonic: "Gb",
+          scaleType: "major",
+        }),
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("getTonicReadabilityOptionsForScaleType", () => {
+  it("sorts enharmonic candidates by readability cost", () => {
+    expect(
+      getTonicReadabilityOptionsForScaleType("Ab", "natural-minor").map(
+        (option) => ({
+          tonic: option.tonic,
+          cost: option.cost,
+        }),
+      ),
+    ).toEqual([
+      { tonic: "G#", cost: 5 },
+      { tonic: "Ab", cost: 7 },
+    ]);
+  });
+
+  it("prefers D flat major and ties G flat major to the selected tonic", () => {
+    expect(
+      getTonicReadabilityOptionsForScaleType("Db", "major").map((option) => ({
+        tonic: option.tonic,
+        cost: option.cost,
+      })),
+    ).toEqual([
+      { tonic: "Db", cost: 5 },
+      { tonic: "C#", cost: 7 },
+    ]);
+
+    expect(
+      getTonicReadabilityOptionsForScaleType("Gb", "major").map((option) => ({
+        tonic: option.tonic,
+        cost: option.cost,
+      })),
+    ).toEqual([
+      { tonic: "Gb", cost: 6 },
+      { tonic: "F#", cost: 6 },
+    ]);
+  });
+
+  it("includes theoretical flat-minor spellings as alternates in the cost map", () => {
+    expect(
+      getTonicReadabilityOptionsForScaleType("Gb", "natural-minor").map(
+        (option) => ({
+          tonic: option.tonic,
+          keySignature: option.keySignature,
+          cost: option.cost,
+        }),
+      ),
+    ).toEqual([
+      { tonic: "F#", keySignature: "A", cost: 3 },
+      { tonic: "Gb", keySignature: null, cost: 20 },
+    ]);
+
+    expect(
+      getTonicReadabilityOptionsForScaleType("Db", "natural-minor").map(
+        (option) => ({
+          tonic: option.tonic,
+          keySignature: option.keySignature,
+          cost: option.cost,
+        }),
+      ),
+    ).toEqual([
+      { tonic: "C#", keySignature: "E", cost: 4 },
+      { tonic: "Db", keySignature: null, cost: 10 },
+    ]);
   });
 });

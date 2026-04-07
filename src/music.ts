@@ -8,6 +8,7 @@ export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type NoteSourceMode = "chromatic" | "in-scale";
 export type AccidentalSpellingMode = "sharps" | "flats";
+export type RenderingPreference = "preferred" | "alternate";
 export type TriadType = "major" | "minor";
 export type KeySignature =
   | "C"
@@ -75,6 +76,7 @@ export type GenerationSettings = {
   tonic: Tonic;
   scaleType: ScaleType;
   triadType: TriadType;
+  renderingPreference: RenderingPreference;
 };
 
 type ScaleRenderingOverride = {
@@ -87,6 +89,20 @@ type TriadRenderingOverride = {
   selectedTonic: Tonic;
   renderedTonic: Tonic;
   triadType: TriadType;
+};
+
+export type TonicReadabilityOption = {
+  tonic: Tonic;
+  keySignature: KeySignature | null;
+  keySignatureAccidentalCount: number;
+  doubleAccidentalCount: number;
+  cost: number;
+};
+
+export type ExerciseRenderingOptions = {
+  selectedTonic: Tonic;
+  active: TonicReadabilityOption;
+  alternate: TonicReadabilityOption | null;
 };
 
 const MAJOR_KEY_SIGNATURE_BY_TONIC: Record<MajorTonic, KeySignature> = {
@@ -146,20 +162,6 @@ const PRACTICAL_TONIC_BY_TONIC: Partial<Record<Tonic, Tonic>> = {
   "G#": "Ab",
   "D#": "Eb",
   "A#": "Bb",
-};
-const ENHARMONIC_MAJOR_TONIC_BY_MINOR_TONIC: Partial<
-  Record<MinorTonic, MajorTonic>
-> = {
-  "G#": "Ab",
-  "D#": "Eb",
-  "A#": "Bb",
-};
-const ENHARMONIC_MINOR_TONIC_BY_MAJOR_TONIC: Partial<
-  Record<MajorTonic, MinorTonic>
-> = {
-  Db: "C#",
-  Gb: "F#",
-  Cb: "B",
 };
 
 export function keyToMidiNoteNumber(key: string) {
@@ -234,28 +236,10 @@ export function getRenderedAccidentalForKey(
 
 export function getDerivedKeySignature(generationSettings: GenerationSettings) {
   if (generationSettings.practiceMode === "triads") {
-    const supportedTonic = getSupportedTonicForScaleType(
-      generationSettings.tonic,
-      generationSettings.triadType === "major" ? "major" : "natural-minor",
-    );
-
-    if (generationSettings.triadType === "major") {
-      return MAJOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MajorTonic];
-    }
-
-    return MINOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MinorTonic];
+    return getTriadRenderingOptions(generationSettings).active.keySignature;
   }
 
-  const supportedTonic = getSupportedTonicForScaleType(
-    generationSettings.tonic,
-    generationSettings.scaleType,
-  );
-
-  if (generationSettings.scaleType === "major") {
-    return MAJOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MajorTonic];
-  }
-
-  return MINOR_KEY_SIGNATURE_BY_TONIC[supportedTonic as MinorTonic];
+  return getScaleRenderingOptions(generationSettings).active.keySignature;
 }
 
 export function getTonicsForScaleType(scaleType: ScaleType): Tonic[] {
@@ -288,29 +272,45 @@ export function isTonicSupportedForScaleType(
 export function getSupportedTonicForScaleType(
   tonic: Tonic,
   scaleType: ScaleType,
+  renderingPreference: RenderingPreference = "preferred",
 ): Tonic {
-  if (scaleType === "major") {
-    if (MAJOR_TONICS.includes(tonic as MajorTonic)) {
-      return tonic;
-    }
+  const renderingOptions = getExerciseRenderingOptionsForScaleType(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
 
-    return ENHARMONIC_MAJOR_TONIC_BY_MINOR_TONIC[tonic as MinorTonic] ?? "C";
+  return renderingOptions.active.tonic;
+}
+
+export function getExerciseRenderingOptionsForScaleType(
+  tonic: Tonic,
+  scaleType: ScaleType,
+  renderingPreference: RenderingPreference = "preferred",
+): ExerciseRenderingOptions {
+  const options = getTonicReadabilityOptionsForScaleType(tonic, scaleType);
+  const preferredOption = options[0];
+  const alternateOption = options[1] ?? null;
+
+  if (!preferredOption) {
+    throw new Error(`Could not determine rendering options for tonic ${tonic}.`);
   }
 
-  if (MINOR_TONICS.includes(tonic as MinorTonic)) {
-    return tonic;
-  }
-
-  return ENHARMONIC_MINOR_TONIC_BY_MAJOR_TONIC[tonic as MajorTonic] ?? "A";
+  return {
+    selectedTonic: tonic,
+    active:
+      renderingPreference === "alternate" && alternateOption
+        ? alternateOption
+        : preferredOption,
+    alternate:
+      renderingPreference === "alternate" ? preferredOption : alternateOption,
+  };
 }
 
 export function getScaleRenderingOverride(
   generationSettings: GenerationSettings,
 ): ScaleRenderingOverride | null {
-  const renderedTonic = getSupportedTonicForScaleType(
-    generationSettings.tonic,
-    generationSettings.scaleType,
-  );
+  const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
 
   if (renderedTonic === generationSettings.tonic) {
     return null;
@@ -372,13 +372,20 @@ export function getScaleRenderingNotice(
   return `${renderingOverride.selectedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} is being rendered as ${renderingOverride.renderedTonic} ${formatScaleTypeLabel(renderingOverride.scaleType)} for readability.`;
 }
 
+export function getScaleRenderingOptions(
+  generationSettings: GenerationSettings,
+) {
+  return getExerciseRenderingOptionsForScaleType(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+    generationSettings.renderingPreference,
+  );
+}
+
 export function getTriadRenderingOverride(
   generationSettings: GenerationSettings,
 ): TriadRenderingOverride | null {
-  const renderedTonic = getSupportedTonicForScaleType(
-    generationSettings.tonic,
-    generationSettings.triadType === "major" ? "major" : "natural-minor",
-  );
+  const renderedTonic = getTriadRenderingOptions(generationSettings).active.tonic;
 
   if (renderedTonic === generationSettings.tonic) {
     return null;
@@ -403,9 +410,23 @@ export function getTriadRenderingNotice(
   return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} triads are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} triads for readability.`;
 }
 
-export function getScaleStartingOctave(tonic: Tonic, scaleType?: ScaleType) {
+export function getTriadRenderingOptions(
+  generationSettings: GenerationSettings,
+) {
+  return getExerciseRenderingOptionsForScaleType(
+    generationSettings.tonic,
+    generationSettings.triadType === "major" ? "major" : "natural-minor",
+    generationSettings.renderingPreference,
+  );
+}
+
+export function getScaleStartingOctave(
+  tonic: Tonic,
+  scaleType?: ScaleType,
+  renderingPreference: RenderingPreference = "preferred",
+) {
   const renderedTonic = scaleType
-    ? getSupportedTonicForScaleType(tonic, scaleType)
+    ? getSupportedTonicForScaleType(tonic, scaleType, renderingPreference)
     : tonic;
 
   return isTrebleScaleStartWithinUpperLimit(renderedTonic.toLowerCase())
@@ -413,10 +434,15 @@ export function getScaleStartingOctave(tonic: Tonic, scaleType?: ScaleType) {
     : 3;
 }
 
-export function getTriadStartingOctave(tonic: Tonic, triadType: TriadType) {
+export function getTriadStartingOctave(
+  tonic: Tonic,
+  triadType: TriadType,
+  renderingPreference: RenderingPreference = "preferred",
+) {
   return getScaleStartingOctave(
     tonic,
     triadType === "major" ? "major" : "natural-minor",
+    renderingPreference,
   );
 }
 
@@ -425,9 +451,14 @@ export function getAscendingScaleKeys(
   scaleType: ScaleType,
   startingOctave: number,
   scaleOctaves: ScaleOctaves,
+  renderingPreference: RenderingPreference = "preferred",
 ) {
-  const renderedTonic = getSupportedTonicForScaleType(tonic, scaleType);
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
+  const renderedTonic = getSupportedTonicForScaleType(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
+  const scaleNoteNames = getScaleNoteNames(tonic, scaleType, renderingPreference);
   const ascendingNoteNames = Array.from({ length: scaleOctaves }).flatMap(
     () => {
       return scaleNoteNames;
@@ -468,10 +499,11 @@ export function getNotesInScale(
   rangeEnd: string,
   tonic: Tonic,
   scaleType: ScaleType,
+  renderingPreference: RenderingPreference = "preferred",
 ) {
   const startMidiNoteNumber = keyToMidiNoteNumber(rangeStart);
   const endMidiNoteNumber = keyToMidiNoteNumber(rangeEnd);
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
+  const scaleNoteNames = getScaleNoteNames(tonic, scaleType, renderingPreference);
   const notesInKey: Array<{ key: string; midiNoteNumber: number }> = [];
 
   for (
@@ -502,11 +534,92 @@ export function getNotesInScale(
   return notesInKey.map((note) => note.key);
 }
 
-export function getScaleNoteNames(tonic: Tonic, scaleType: ScaleType) {
+export function getScaleNoteNames(
+  tonic: Tonic,
+  scaleType: ScaleType,
+  renderingPreference: RenderingPreference = "preferred",
+) {
   const tonicNoteName = getSupportedTonicForScaleType(
     tonic,
     scaleType,
+    renderingPreference,
   ).toLowerCase();
+  return getScaleNoteNamesForRenderedTonic(tonicNoteName, scaleType);
+}
+
+export function getTonicReadabilityOptionsForScaleType(
+  tonic: Tonic,
+  scaleType: ScaleType,
+): TonicReadabilityOption[] {
+  const candidateTonics = getCandidateTonicsForScaleType(tonic, scaleType);
+
+  return candidateTonics
+    .map((candidateTonic) => {
+      const keySignature = getKeySignatureForScaleType(candidateTonic, scaleType);
+      const scaleNoteNames = getScaleNoteNamesForRenderedTonic(
+        candidateTonic.toLowerCase(),
+        scaleType,
+      );
+      const keySignatureAccidentalCount =
+        getKeySignatureAccidentalCount(keySignature);
+      const doubleAccidentalCount = countDoubleAccidentals(scaleNoteNames);
+
+      return {
+        tonic: candidateTonic,
+        keySignature,
+        keySignatureAccidentalCount,
+        doubleAccidentalCount,
+        cost: keySignatureAccidentalCount + doubleAccidentalCount * 10,
+      };
+    })
+    .sort((left, right) => {
+      if (left.cost !== right.cost) {
+        return left.cost - right.cost;
+      }
+
+      if (left.tonic === tonic) {
+        return -1;
+      }
+
+      if (right.tonic === tonic) {
+        return 1;
+      }
+
+      return left.tonic.localeCompare(right.tonic);
+    });
+}
+
+function getCandidateTonicsForScaleType(tonic: Tonic, scaleType: ScaleType) {
+  const targetPitchClass = getPitchClassForTonic(tonic);
+  const supportedTonics = Array.from(
+    new Set<Tonic>([...MAJOR_TONICS, ...MINOR_TONICS, tonic]),
+  );
+  const candidateTonics = supportedTonics.filter(
+    (candidateTonic) => getPitchClassForTonic(candidateTonic) === targetPitchClass,
+  );
+
+  return candidateTonics.length > 0 ? candidateTonics : [tonic];
+}
+
+function getPitchClassForTonic(tonic: Tonic) {
+  return keyToMidiNoteNumber(`${tonic.toLowerCase()}/4`) % 12;
+}
+
+function getKeySignatureForScaleType(
+  tonic: Tonic,
+  scaleType: ScaleType,
+): KeySignature | null {
+  if (scaleType === "major") {
+    return MAJOR_KEY_SIGNATURE_BY_TONIC[tonic as MajorTonic] ?? null;
+  }
+
+  return MINOR_KEY_SIGNATURE_BY_TONIC[tonic as MinorTonic] ?? null;
+}
+
+function getScaleNoteNamesForRenderedTonic(
+  tonicNoteName: string,
+  scaleType: ScaleType,
+) {
   const tonicMidiNoteNumber = keyToMidiNoteNumber(`${tonicNoteName}/4`);
   const letterSequence = getScaleLetterSequence(tonicNoteName.charAt(0));
   const semitoneOffsetsByScaleType: Record<ScaleType, number[]> = {
@@ -528,9 +641,17 @@ export function getScaleNoteNames(tonic: Tonic, scaleType: ScaleType) {
   });
 }
 
-export function getTriadNoteNames(tonic: Tonic, triadType: TriadType) {
+export function getTriadNoteNames(
+  tonic: Tonic,
+  triadType: TriadType,
+  renderingPreference: RenderingPreference = "preferred",
+) {
   const scaleType = triadType === "major" ? "major" : "natural-minor";
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType);
+  const scaleNoteNames = getScaleNoteNames(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
   const root = scaleNoteNames[0];
   const third = scaleNoteNames[2];
   const fifth = scaleNoteNames[4];
@@ -547,8 +668,13 @@ export function getAscendingTriadPositions(
   triadType: TriadType,
   startingOctave: number,
   exerciseOctaves: ScaleOctaves,
+  renderingPreference: RenderingPreference = "preferred",
 ) {
-  const triadNoteNames = getTriadNoteNames(tonic, triadType);
+  const triadNoteNames = getTriadNoteNames(
+    tonic,
+    triadType,
+    renderingPreference,
+  );
   const [rootNoteName, thirdNoteName, fifthNoteName] = triadNoteNames;
 
   if (!rootNoteName || !thirdNoteName || !fifthNoteName) {
@@ -790,6 +916,18 @@ function getKeySignatureAccidentals(keySignature: KeySignature) {
   }
 
   return accidentals;
+}
+
+function getKeySignatureAccidentalCount(keySignature: KeySignature | null) {
+  if (!keySignature) {
+    return 0;
+  }
+
+  return Object.keys(getKeySignatureAccidentals(keySignature)).length;
+}
+
+function countDoubleAccidentals(noteNames: string[]) {
+  return noteNames.filter((noteName) => noteName.slice(1).length >= 2).length;
 }
 
 function isTrebleScaleStartWithinUpperLimit(noteName: string) {

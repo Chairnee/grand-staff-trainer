@@ -12,18 +12,21 @@ export function createScalePracticeQueue(
   const trebleStartingOctave = getScaleStartingOctave(
     generationSettings.tonic,
     generationSettings.scaleType,
+    generationSettings.renderingPreference,
   );
   const trebleAscendingKeys = getAscendingScaleKeys(
     generationSettings.tonic,
     generationSettings.scaleType,
     trebleStartingOctave,
     generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
   );
   const bassAscendingKeys = getAscendingScaleKeys(
     generationSettings.tonic,
     generationSettings.scaleType,
     trebleStartingOctave - 1,
     generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
   );
   const ascendingPrompts = createScalePromptsForHands(
     trebleAscendingKeys,

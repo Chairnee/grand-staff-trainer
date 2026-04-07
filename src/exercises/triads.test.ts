@@ -17,6 +17,7 @@ function createTriadSettings(
     tonic: "C",
     scaleType: "major",
     triadType: "major",
+    renderingPreference: "preferred",
     ...overrides,
   };
 }

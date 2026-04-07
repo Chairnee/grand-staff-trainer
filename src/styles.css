@@ -179,17 +179,67 @@ body {
 }
 
 .exercise-notice {
-  padding: 10px 12px;
-  border: 1px solid rgba(166, 64, 31, 0.18);
-  border-radius: 12px;
-  background: rgba(255, 244, 234, 0.92);
-  color: #7c4a28;
-  font-size: 0.9rem;
-  box-shadow: 0 10px 24px rgba(70, 52, 28, 0.05);
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  z-index: 2;
 }
 
 .exercise-notice[hidden] {
   display: none;
+}
+
+.exercise-notice[data-interactive="true"] {
+  pointer-events: auto;
+}
+
+.exercise-notice-chip,
+.exercise-notice-button {
+  padding: 8px 12px;
+  border: 1px solid rgba(166, 64, 31, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 244, 234, 0.96);
+  color: #7c4a28;
+  font-size: 0.86rem;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(70, 52, 28, 0.05);
+}
+
+.exercise-notice-chip {
+  display: inline-block;
+}
+
+.exercise-notice-button:hover {
+  background: rgba(255, 239, 223, 0.98);
+}
+
+.exercise-notice-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.exercise-notice-button-primary {
+  display: inline-block;
+}
+
+.exercise-notice-button-action {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(166, 64, 31, 0.12);
+  color: #8a4d26;
+  font-size: 0.74rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.exercise-notice-button:focus-visible {
+  outline: 2px solid rgba(166, 64, 31, 0.35);
+  outline-offset: 2px;
 }
 
 .input-name-display {
