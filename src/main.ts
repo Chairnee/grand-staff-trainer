@@ -1394,11 +1394,13 @@ function createPromptStaveNote(
   duration: string,
   displayedKeySignature: KeySignature | null,
   inlineClefChangeBefore?: "treble" | "bass",
+  stemDirection?: 1 | -1,
 ) {
   const note = new StaveNote({
     clef,
     keys,
     duration,
+    stemDirection,
   });
 
   if (inlineClefChangeBefore) {
@@ -1417,6 +1419,34 @@ function createPromptStaveNote(
   }
 
   return note;
+}
+
+function getStemDirectionForPromptSource(
+  sourceHand: "treble" | "bass",
+  displayedClef: "treble" | "bass",
+  isExplicitDisplayedClefShift = false,
+) {
+  if (
+    sourceHand === "bass" &&
+    displayedClef === "treble" &&
+    isExplicitDisplayedClefShift
+  ) {
+    return 1;
+  }
+
+  return sourceHand === "treble" ? 1 : -1;
+}
+
+function getTogetherScaleDisplayedStaff(
+  appState: AppState,
+  sourceHand: "treble" | "bass",
+  key: string,
+) {
+  if (appState.generationSettings.scaleMotion === "contrary") {
+    return sourceHand;
+  }
+
+  return getClefForKey(key);
 }
 
 function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
@@ -1506,8 +1536,14 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   let currentBassTickable: StaveNote | null = null;
   let currentTreblePromptNote: StaveNote | null = null;
   let currentBassPromptNote: StaveNote | null = null;
+  const currentSecondaryPromptNotes: StaveNote[] = [];
   const currentTrebleHeldOverlayNotes: StaveNote[] = [];
   const currentBassHeldOverlayNotes: StaveNote[] = [];
+  const secondaryPromptDrawInstructions: Array<{
+    note: StaveNote;
+    anchorStaff: "treble" | "bass";
+    index: number;
+  }> = [];
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
     const displayedPrompt = displayedPrompts[index];
@@ -1516,29 +1552,101 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       continue;
     }
 
-    const trebleNote = displayedPrompt.trebleKeys
-      ? createPromptStaveNote(
-          displayedPrompt.trebleDisplayedClef ?? "treble",
-          displayedPrompt.trebleKeys,
-          displayedPrompt.duration,
-          displayedKeySignature,
-        )
-      : createRest(
-          displayedPrompt.trebleDisplayedClef ?? "treble",
-          displayedPrompt.duration,
-        );
-    const bassNote = displayedPrompt.bassKeys
-      ? createPromptStaveNote(
-          displayedPrompt.bassDisplayedClef ?? "bass",
-          displayedPrompt.bassKeys,
-          displayedPrompt.duration,
-          displayedKeySignature,
-          getStaffClefChangeBefore(displayedPrompts, index, "bass"),
-        )
-      : createRest(
-          displayedPrompt.bassDisplayedClef ?? "bass",
-          displayedPrompt.duration,
-        );
+    let trebleNote: StaveNote;
+    let bassNote: StaveNote;
+    let trebleSecondaryNote: StaveNote | null = null;
+    let bassSecondaryNote: StaveNote | null = null;
+
+    if (
+      appState.generationSettings.practiceMode === "scales" &&
+      appState.generationSettings.scaleHands === "together"
+    ) {
+      const actualTrebleKey = prompt.trebleKeys?.[0];
+      const actualBassKey = prompt.bassKeys?.[0];
+
+      if (!actualTrebleKey || !actualBassKey) {
+        throw new Error("Together-hand scale prompt is missing a hand note.");
+      }
+
+      const trebleDisplayedStaff = getTogetherScaleDisplayedStaff(
+        appState,
+        "treble",
+        actualTrebleKey,
+      );
+      const bassDisplayedStaff = getTogetherScaleDisplayedStaff(
+        appState,
+        "bass",
+        actualBassKey,
+      );
+      const trebleHandNote = createPromptStaveNote(
+        trebleDisplayedStaff,
+        [actualTrebleKey],
+        displayedPrompt.duration,
+        displayedKeySignature,
+        undefined,
+        getStemDirectionForPromptSource("treble", trebleDisplayedStaff),
+      );
+      const bassHandNote = createPromptStaveNote(
+        bassDisplayedStaff,
+        [actualBassKey],
+        displayedPrompt.duration,
+        displayedKeySignature,
+        undefined,
+        getStemDirectionForPromptSource("bass", bassDisplayedStaff),
+      );
+
+      if (trebleDisplayedStaff === "treble" && bassDisplayedStaff === "treble") {
+        trebleNote = trebleHandNote;
+        trebleSecondaryNote = bassHandNote;
+        bassNote = createRest("bass", displayedPrompt.duration);
+      } else if (
+        trebleDisplayedStaff === "bass" &&
+        bassDisplayedStaff === "bass"
+      ) {
+        trebleNote = createRest("treble", displayedPrompt.duration);
+        bassNote = bassHandNote;
+        bassSecondaryNote = trebleHandNote;
+      } else {
+        trebleNote =
+          trebleDisplayedStaff === "treble" ? trebleHandNote : bassHandNote;
+        bassNote =
+          trebleDisplayedStaff === "bass" ? trebleHandNote : bassHandNote;
+      }
+    } else {
+      trebleNote = displayedPrompt.trebleKeys
+        ? createPromptStaveNote(
+            displayedPrompt.trebleDisplayedClef ?? "treble",
+            displayedPrompt.trebleKeys,
+            displayedPrompt.duration,
+            displayedKeySignature,
+            undefined,
+            getStemDirectionForPromptSource(
+              "treble",
+              displayedPrompt.trebleDisplayedClef ?? "treble",
+            ),
+          )
+        : createRest(
+            displayedPrompt.trebleDisplayedClef ?? "treble",
+            displayedPrompt.duration,
+          );
+      bassNote = displayedPrompt.bassKeys
+        ? createPromptStaveNote(
+            displayedPrompt.bassDisplayedClef ?? "bass",
+            displayedPrompt.bassKeys,
+            displayedPrompt.duration,
+            displayedKeySignature,
+            getStaffClefChangeBefore(displayedPrompts, index, "bass"),
+            getStemDirectionForPromptSource(
+              "bass",
+              displayedPrompt.bassDisplayedClef ?? "bass",
+              (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass",
+            ),
+          )
+        : createRest(
+            displayedPrompt.bassDisplayedClef ?? "bass",
+            displayedPrompt.duration,
+          );
+    }
 
     if (index === appState.currentPromptIndex) {
       trebleNote.setStyle({
@@ -1554,6 +1662,22 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       currentBassTickable = bassNote;
       currentTreblePromptNote = displayedPrompt.trebleKeys ? trebleNote : null;
       currentBassPromptNote = displayedPrompt.bassKeys ? bassNote : null;
+
+      if (trebleSecondaryNote) {
+        trebleSecondaryNote.setStyle({
+          fillStyle: "#a6401f",
+          strokeStyle: "#a6401f",
+        });
+        currentSecondaryPromptNotes.push(trebleSecondaryNote);
+      }
+
+      if (bassSecondaryNote) {
+        bassSecondaryNote.setStyle({
+          fillStyle: "#a6401f",
+          strokeStyle: "#a6401f",
+        });
+        currentSecondaryPromptNotes.push(bassSecondaryNote);
+      }
 
       for (const heldNoteNumber of [...appState.midi.heldNotes].sort(
         (left, right) => left - right,
@@ -1580,6 +1704,22 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       }
     }
 
+    if (trebleSecondaryNote) {
+      secondaryPromptDrawInstructions.push({
+        note: trebleSecondaryNote,
+        anchorStaff: "treble",
+        index,
+      });
+    }
+
+    if (bassSecondaryNote) {
+      secondaryPromptDrawInstructions.push({
+        note: bassSecondaryNote,
+        anchorStaff: "bass",
+        index,
+      });
+    }
+
     trebleNotes.push(trebleNote);
     bassNotes.push(bassNote);
   }
@@ -1601,6 +1741,24 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
+
+  for (const instruction of secondaryPromptDrawInstructions) {
+    const anchorTickable =
+      instruction.anchorStaff === "treble"
+        ? trebleNotes[instruction.index]
+        : bassNotes[instruction.index];
+
+    if (!anchorTickable) {
+      continue;
+    }
+
+    drawHeldOverlayNote(
+      instruction.note,
+      anchorTickable,
+      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
+      context,
+    );
+  }
 
   drawTrebleOttavaBracket(
     appState.promptQueue,
@@ -1631,7 +1789,11 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     }
   }
 
-  applyWrongAttemptFeedback([currentTreblePromptNote, currentBassPromptNote]);
+  applyWrongAttemptFeedback([
+    currentTreblePromptNote,
+    currentBassPromptNote,
+    ...currentSecondaryPromptNotes,
+  ]);
 }
 
 function getPromptQueueKeys(promptQueue: PromptSlot[]) {
