@@ -1296,6 +1296,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         (left, right) => left - right,
       )) {
         const heldOverlayPresentation = getHeldOverlayPresentation(
+          appState,
           prompt,
           displayedPrompt,
           heldNoteNumber,
@@ -1495,117 +1496,24 @@ function getPromptMidiNotes(prompt: PromptSlot) {
 }
 
 function getHeldOverlayPresentation(
-  prompt: PromptSlot,
-  displayedPrompt: PromptSlot,
+  _appState: AppState,
+  _prompt: PromptSlot,
+  _displayedPrompt: PromptSlot,
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
-  const matchedTrebleDisplayKey = getMatchedDisplayedPromptKey(
-    prompt.trebleKeys,
-    prompt.displayedTrebleKeys,
+  const key = getHeldOverlayKey(
+    { duration: "q" },
     heldNoteNumber,
+    displayedKeySignature,
   );
-
-  if (matchedTrebleDisplayKey) {
-    return {
-      hand: "treble" as const,
-      key: matchedTrebleDisplayKey,
-      clef: displayedPrompt.trebleDisplayedClef ?? "treble",
-    };
-  }
-
-  const matchedBassDisplayKey = getMatchedDisplayedPromptKey(
-    prompt.bassKeys,
-    prompt.displayedBassKeys,
-    heldNoteNumber,
-  );
-
-  if (matchedBassDisplayKey) {
-    return {
-      hand: "bass" as const,
-      key: matchedBassDisplayKey,
-      clef: displayedPrompt.bassDisplayedClef ?? "bass",
-    };
-  }
-
-  const activeNotationContext = getActiveNotationContext(prompt, displayedPrompt);
-  const fallbackHand = resolveHeldOverlayHand(prompt, heldNoteNumber);
-  let key = getHeldOverlayKey(prompt, heldNoteNumber, displayedKeySignature);
-
-  if (fallbackHand === "treble" && activeNotationContext.trebleOttavaActive) {
-    key = shiftKeyByOctaves(key, -1);
-  }
+  const clef = getClefForKey(key);
 
   return {
-    hand: fallbackHand,
+    hand: clef,
     key,
-    clef:
-      fallbackHand === "treble"
-        ? activeNotationContext.trebleClef
-        : activeNotationContext.bassClef,
+    clef,
   };
-}
-
-function getMatchedDisplayedPromptKey(
-  actualKeys: string[] | undefined,
-  displayedKeys: string[] | undefined,
-  heldNoteNumber: number,
-) {
-  if (!actualKeys) {
-    return null;
-  }
-
-  const matchingKeyIndex = actualKeys.findIndex(
-    (key) => keyToMidiNoteNumber(key) === heldNoteNumber,
-  );
-
-  if (matchingKeyIndex === -1) {
-    return null;
-  }
-
-  return displayedKeys?.[matchingKeyIndex] ?? actualKeys[matchingKeyIndex] ?? null;
-}
-
-function getActiveNotationContext(
-  prompt: PromptSlot,
-  displayedPrompt: PromptSlot,
-) {
-  return {
-    trebleClef: displayedPrompt.trebleDisplayedClef ?? "treble",
-    bassClef: displayedPrompt.bassDisplayedClef ?? "bass",
-    trebleOttavaActive: Boolean(prompt.displayedTrebleKeys),
-  };
-}
-
-function resolveHeldOverlayHand(prompt: PromptSlot, heldNoteNumber: number) {
-  const hasTreblePrompt = (prompt.trebleKeys?.length ?? 0) > 0;
-  const hasBassPrompt = (prompt.bassKeys?.length ?? 0) > 0;
-
-  if (hasTreblePrompt && !hasBassPrompt) {
-    return "treble" as const;
-  }
-
-  if (hasBassPrompt && !hasTreblePrompt) {
-    return "bass" as const;
-  }
-
-  const trebleMidiNoteNumbers = (prompt.trebleKeys ?? []).map(keyToMidiNoteNumber);
-  const bassMidiNoteNumbers = (prompt.bassKeys ?? []).map(keyToMidiNoteNumber);
-  const lowestTrebleMidiNoteNumber = Math.min(...trebleMidiNoteNumbers);
-  const highestBassMidiNoteNumber = Math.max(...bassMidiNoteNumbers);
-
-  if (heldNoteNumber >= lowestTrebleMidiNoteNumber) {
-    return "treble" as const;
-  }
-
-  if (heldNoteNumber <= highestBassMidiNoteNumber) {
-    return "bass" as const;
-  }
-
-  const midpoint =
-    (lowestTrebleMidiNoteNumber + highestBassMidiNoteNumber) / 2;
-
-  return heldNoteNumber >= midpoint ? ("treble" as const) : ("bass" as const);
 }
 
 function shiftKeyByOctaves(key: string, octaveDelta: number) {
