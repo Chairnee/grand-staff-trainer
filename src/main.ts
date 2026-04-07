@@ -2072,22 +2072,35 @@ function drawAnchoredOttavaContinuation(
   context: ReturnType<Renderer["getContext"]>,
   showLabel: boolean,
 ) {
-  const bracketY = trebleStave.getYForTopText(topTextLine);
   const textX = trebleStave.getNoteStartX();
-  const text = "8va";
+  const startY = trebleStave.getYForTopText(topTextLine);
+  const mainFontSize = 15;
+  const superscriptFontSize = mainFontSize * 0.714286;
+  const bracketHeight = 8;
 
   context.save();
   context
-    .setFont(undefined, 15, "normal", "italic")
+    .setFont(undefined, mainFontSize, "normal", "italic")
     .setFillStyle("#000")
     .setStrokeStyle("#000")
     .setLineWidth(1);
 
   let lineStartX = textX;
+  let lineY = startY;
 
   if (showLabel) {
-    context.fillText(text, textX, bracketY + 4);
-    lineStartX = textX + context.measureText(text).width + 8;
+    context.fillText("8", textX, startY);
+    const mainWidth = context.measureText("8").width;
+    const mainHeight = mainFontSize;
+    const superY = startY - mainHeight / 2.5;
+
+    context.setFont(undefined, superscriptFontSize, "normal", "italic");
+    context.fillText("va", textX + mainWidth + 1, superY);
+    const superWidth = context.measureText("va").width;
+    const superHeight = superscriptFontSize;
+
+    lineStartX = textX + mainWidth + superWidth + 5;
+    lineY = superY - superHeight / 2.7;
   }
 
   const lineEndX = Math.max(
@@ -2096,9 +2109,9 @@ function drawAnchoredOttavaContinuation(
   );
 
   context.beginPath();
-  context.moveTo(lineStartX, bracketY);
-  context.lineTo(lineEndX, bracketY);
-  context.lineTo(lineEndX, bracketY + 10);
+  context.moveTo(lineStartX, lineY);
+  context.lineTo(lineEndX, lineY);
+  context.lineTo(lineEndX, lineY + bracketHeight);
   context.stroke();
   context.restore();
 }
