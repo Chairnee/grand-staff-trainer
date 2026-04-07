@@ -218,6 +218,30 @@ body {
   pointer-events: auto;
 }
 
+.exercise-summary {
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.exercise-summary[hidden] {
+  display: none;
+}
+
+.exercise-summary-chip {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid rgba(70, 52, 28, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.9);
+  color: #6c5840;
+  font-size: 0.8rem;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(70, 52, 28, 0.04);
+}
+
 .exercise-notice-chip,
 .exercise-notice-button {
   padding: 8px 12px;

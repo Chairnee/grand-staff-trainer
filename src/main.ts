@@ -148,6 +148,7 @@ app.innerHTML = `
         <div id="input-name-display" class="input-name-display" hidden></div>
         <div id="notation" class="notation">
           <div id="exercise-notice" class="exercise-notice" hidden></div>
+          <div id="exercise-summary" class="exercise-summary" hidden></div>
           <div id="notation-canvas" class="notation-canvas"></div>
         </div>
         <div id="keyboard-display" class="keyboard-display" hidden></div>
@@ -272,6 +273,8 @@ const practiceArea = document.querySelector<HTMLElement>(".practice-area");
 const notation = document.querySelector<HTMLDivElement>("#notation");
 const exerciseNotice =
   document.querySelector<HTMLDivElement>("#exercise-notice");
+const exerciseSummary =
+  document.querySelector<HTMLDivElement>("#exercise-summary");
 const notationCanvas =
   document.querySelector<HTMLDivElement>("#notation-canvas");
 const inputNameDisplay = document.querySelector<HTMLDivElement>(
@@ -360,6 +363,7 @@ if (
   !practiceArea ||
   !notation ||
   !exerciseNotice ||
+  !exerciseSummary ||
   !notationCanvas ||
   !inputNameDisplay ||
   !keyboardDisplay ||
@@ -402,6 +406,7 @@ if (
 const practiceAreaElement = practiceArea;
 const notationElement = notation;
 const exerciseNoticeElement = exerciseNotice;
+const exerciseSummaryElement = exerciseSummary;
 const notationCanvasElement = notationCanvas;
 const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
@@ -579,6 +584,7 @@ function renderApp() {
   renderSettingsDrawer();
   renderMidiDebug();
   renderExerciseNotice();
+  renderExerciseSummary();
   renderInputName();
   renderNotation();
   renderKeyboard();
@@ -860,6 +866,22 @@ function renderExerciseNotice() {
   }
 }
 
+function renderExerciseSummary() {
+  const summary = getExerciseSummaryText(state.generationSettings);
+
+  exerciseSummaryElement.hidden = !state.isExerciseVisible || !summary;
+  exerciseSummaryElement.replaceChildren();
+
+  if (!state.isExerciseVisible || !summary) {
+    return;
+  }
+
+  const summaryChip = document.createElement("span");
+  summaryChip.className = "exercise-summary-chip";
+  summaryChip.textContent = summary;
+  exerciseSummaryElement.append(summaryChip);
+}
+
 function handleExerciseRenderingToggle() {
   state.generationSettings.renderingPreference = getToggledRenderingPreference(
     state.generationSettings.renderingPreference,
@@ -880,6 +902,75 @@ function formatScaleTypeLabelForDisplay(scaleType: ScaleType) {
   }
 
   return scaleType.replaceAll("-", " ");
+}
+
+function getExerciseSummaryText(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
+    const scaleLabel = formatCompactScaleLabel(
+      renderedTonic,
+      generationSettings.scaleType,
+    );
+    const octaveLabel = `${generationSettings.scaleOctaves} ${
+      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
+    }`;
+
+    if (generationSettings.scaleHands === "together") {
+      return `${capitalizeWord(generationSettings.scaleMotion)} · ${scaleLabel} · ${octaveLabel}`;
+    }
+
+    return `${capitalizeWord(generationSettings.scaleHands)} · ${scaleLabel} · ${octaveLabel}`;
+  }
+
+  if (generationSettings.practiceMode === "triads") {
+    const renderedTonic = getTriadRenderingOptions(generationSettings).active.tonic;
+    const triadLabel = formatCompactTriadLabel(
+      renderedTonic,
+      generationSettings.triadType,
+    );
+    const handsLabel = capitalizeWord(generationSettings.scaleHands);
+    const octaveLabel = `${generationSettings.scaleOctaves} ${
+      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
+    }`;
+
+    return `${handsLabel} · ${triadLabel} · ${octaveLabel}`;
+  }
+
+  if (generationSettings.noteSourceMode === "in-scale") {
+    const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
+    const scaleLabel = formatCompactScaleLabel(
+      renderedTonic,
+      generationSettings.scaleType,
+    );
+
+    return `Random notes · ${scaleLabel}`;
+  }
+
+  return "Random notes · Chromatic";
+}
+
+function formatCompactScaleLabel(tonic: Tonic, scaleType: ScaleType) {
+  if (scaleType === "major") {
+    return `${tonic}M`;
+  }
+
+  if (scaleType === "natural-minor") {
+    return `${tonic}m`;
+  }
+
+  if (scaleType === "harmonic-minor") {
+    return `${tonic} harm min`;
+  }
+
+  return `${tonic} mel min`;
+}
+
+function formatCompactTriadLabel(tonic: Tonic, triadType: TriadType) {
+  return triadType === "major" ? `${tonic}M triads` : `${tonic}m triads`;
+}
+
+function capitalizeWord(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function renderNotation() {
