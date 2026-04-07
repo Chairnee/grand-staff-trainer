@@ -9,7 +9,6 @@ import {
   Stave,
   StaveConnector,
   StaveNote,
-  TextBracket,
   Voice,
 } from "vexflow";
 import { renderInputNameDisplay } from "./display/inputName";
@@ -1982,10 +1981,17 @@ function drawTrebleOttavaBracket(
     drawOttavaBracketSegment(
       trebleNotes[ottavaStartIndex],
       trebleNotes[ottavaEndIndex],
-      segmentNotes,
+      trebleStave,
       context,
-      true,
-      safeTopTextLine,
+      {
+        labelAnchorX: trebleNotes[ottavaStartIndex].getAbsoluteX(),
+        lineEndX:
+          trebleNotes[ottavaEndIndex].getAbsoluteX() +
+          trebleNotes[ottavaEndIndex].getGlyphWidth(),
+        showLabel: true,
+        showEndCap: true,
+        topTextLine: safeTopTextLine,
+      },
     );
     return;
   }
@@ -2003,76 +2009,70 @@ function drawTrebleOttavaBracket(
   const futureSegmentStartNote = trebleNotes[ottavaStartIndex];
   const futureSegmentEndNote = trebleNotes.at(-1);
 
+  if (
+    !currentSegmentStartNote ||
+    !currentSegmentEndNote ||
+    !futureSegmentStartNote ||
+    !futureSegmentEndNote
+  ) {
+    return;
+  }
+
   drawOttavaBracketSegment(
     currentSegmentStartNote,
     currentSegmentEndNote,
-    trebleNotes.slice(0, ottavaEndIndex + 1),
-    context,
-    true,
-    safeTopTextLine,
     trebleStave,
-    true,
+    context,
+    {
+      labelAnchorX: trebleStave.getNoteStartX(),
+      lineEndX:
+        currentSegmentEndNote.getAbsoluteX() + currentSegmentEndNote.getGlyphWidth(),
+      showLabel: true,
+      showEndCap: true,
+      topTextLine: safeTopTextLine,
+    },
   );
   drawOttavaBracketSegment(
     futureSegmentStartNote,
     futureSegmentEndNote,
-    trebleNotes.slice(ottavaStartIndex),
-    context,
-    true,
-    safeTopTextLine,
     trebleStave,
-    false,
+    context,
+    {
+      labelAnchorX: futureSegmentStartNote.getAbsoluteX(),
+      lineEndX: Math.min(
+        trebleStave.getNoteEndX(),
+        futureSegmentEndNote.getAbsoluteX() + futureSegmentEndNote.getGlyphWidth(),
+      ),
+      showLabel: true,
+      showEndCap: false,
+      topTextLine: safeTopTextLine,
+    },
   );
 }
 
 function drawOttavaBracketSegment(
   ottavaStartNote: StaveNote | undefined,
   ottavaEndNote: StaveNote | undefined,
-  segmentNotes: StaveNote[],
+  trebleStave: Stave,
   context: ReturnType<Renderer["getContext"]>,
-  showLabel: boolean,
-  safeTopTextLine?: number,
-  trebleStave?: Stave,
-  anchorLabelToLeft = false,
+  {
+    labelAnchorX,
+    lineEndX,
+    showLabel,
+    showEndCap,
+    topTextLine,
+  }: {
+    labelAnchorX: number;
+    lineEndX: number;
+    showLabel: boolean;
+    showEndCap: boolean;
+    topTextLine: number;
+  },
 ) {
   if (!ottavaStartNote || !ottavaEndNote) {
     return;
   }
 
-  const textBracket = new TextBracket({
-    start: ottavaStartNote,
-    stop: ottavaEndNote,
-    text: showLabel ? "8" : "",
-    superscript: showLabel ? "va" : "",
-    position: TextBracket.Position.TOP,
-  })
-    .setDashed(false);
-  const resolvedTopTextLine =
-    safeTopTextLine ??
-    getSafeTopTextLineForNotes(ottavaStartNote, segmentNotes);
-
-  if (anchorLabelToLeft && trebleStave) {
-    drawAnchoredOttavaContinuation(
-      trebleStave,
-      ottavaEndNote,
-      resolvedTopTextLine,
-      context,
-      showLabel,
-    );
-    return;
-  }
-
-  textBracket.setLine(resolvedTopTextLine).setContext(context).draw();
-}
-
-function drawAnchoredOttavaContinuation(
-  trebleStave: Stave,
-  ottavaEndNote: StaveNote,
-  topTextLine: number,
-  context: ReturnType<Renderer["getContext"]>,
-  showLabel: boolean,
-) {
-  const textX = trebleStave.getNoteStartX();
   const startY = trebleStave.getYForTopText(topTextLine);
   const mainFontSize = 15;
   const superscriptFontSize = mainFontSize * 0.714286;
@@ -2085,33 +2085,34 @@ function drawAnchoredOttavaContinuation(
     .setStrokeStyle("#000")
     .setLineWidth(1);
 
-  let lineStartX = textX;
+  let lineStartX = labelAnchorX;
   let lineY = startY;
 
   if (showLabel) {
-    context.fillText("8", textX, startY);
+    context.fillText("8", labelAnchorX, startY);
     const mainWidth = context.measureText("8").width;
     const mainHeight = mainFontSize;
     const superY = startY - mainHeight / 2.5;
 
     context.setFont(undefined, superscriptFontSize, "normal", "italic");
-    context.fillText("va", textX + mainWidth + 1, superY);
+    context.fillText("va", labelAnchorX + mainWidth + 1, superY);
     const superWidth = context.measureText("va").width;
     const superHeight = superscriptFontSize;
 
-    lineStartX = textX + mainWidth + superWidth + 5;
+    lineStartX = labelAnchorX + mainWidth + superWidth + 5;
     lineY = superY - superHeight / 2.7;
   }
 
-  const lineEndX = Math.max(
-    lineStartX,
-    ottavaEndNote.getAbsoluteX() + ottavaEndNote.getGlyphWidth(),
-  );
+  const resolvedLineEndX = Math.max(lineStartX, lineEndX);
 
   context.beginPath();
   context.moveTo(lineStartX, lineY);
-  context.lineTo(lineEndX, lineY);
-  context.lineTo(lineEndX, lineY + bracketHeight);
+  context.lineTo(resolvedLineEndX, lineY);
+
+  if (showEndCap) {
+    context.lineTo(resolvedLineEndX, lineY + bracketHeight);
+  }
+
   context.stroke();
   context.restore();
 }
