@@ -10,6 +10,7 @@ function createScaleSettings(
     practiceMode: "scales",
     scaleHands: "treble",
     scaleOctaves: 1,
+    scaleMotion: "parallel",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",
@@ -61,6 +62,72 @@ describe("createScalePracticeQueue", () => {
       duration: "q",
       trebleKeys: ["c/5"],
       bassKeys: ["c/4"],
+    });
+  });
+
+  it("creates contrary-motion together-hand scales from a shared start and returns inward", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+        scaleOctaves: 1,
+      }),
+    );
+
+    expect(queue).toHaveLength(14);
+    expect(queue.slice(0, 8)).toEqual([
+      { duration: "q", trebleKeys: ["c/4"], bassKeys: ["c/4"] },
+      { duration: "q", trebleKeys: ["d/4"], bassKeys: ["b/3"] },
+      { duration: "q", trebleKeys: ["e/4"], bassKeys: ["a/3"] },
+      { duration: "q", trebleKeys: ["f/4"], bassKeys: ["g/3"] },
+      { duration: "q", trebleKeys: ["g/4"], bassKeys: ["f/3"] },
+      { duration: "q", trebleKeys: ["a/4"], bassKeys: ["e/3"] },
+      { duration: "q", trebleKeys: ["b/4"], bassKeys: ["d/3"] },
+      { duration: "q", trebleKeys: ["c/5"], bassKeys: ["c/3"] },
+    ]);
+  });
+
+  it("chooses a centered shared start for two-octave contrary motion", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+        scaleOctaves: 2,
+      }),
+    );
+
+    expect(queue[0]).toEqual({
+      duration: "q",
+      trebleKeys: ["c/4"],
+      bassKeys: ["c/4"],
+    });
+    expect(queue[14]).toEqual({
+      duration: "q",
+      trebleKeys: ["c/6"],
+      bassKeys: ["c/2"],
+    });
+  });
+
+  it("keeps the shared start intact for B major shown as Cb major in contrary motion", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+        tonic: "B",
+        scaleType: "major",
+        renderingPreference: "alternate",
+      }),
+    );
+
+    expect(queue[0]).toEqual({
+      duration: "q",
+      trebleKeys: ["cb/4"],
+      bassKeys: ["cb/4"],
+    });
+    expect(queue[1]).toEqual({
+      duration: "q",
+      trebleKeys: ["db/4"],
+      bassKeys: ["bb/3"],
     });
   });
 });

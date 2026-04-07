@@ -42,6 +42,7 @@ import {
   type PracticeMode,
   type RenderingPreference,
   type ScaleHands,
+  type ScaleMotion,
   type ScaleOctaves,
   type ScaleType,
   type Tonic,
@@ -204,6 +205,13 @@ app.innerHTML = `
           <option value="together">Together</option>
         </select>
       </label>
+      <label id="scale-motion-field" class="settings-field" hidden>
+        <span>Motion</span>
+        <select id="scale-motion-select">
+          <option value="parallel">Parallel</option>
+          <option value="contrary">Contrary</option>
+        </select>
+      </label>
       <label id="scale-octaves-field" class="settings-field" hidden>
         <span>Octaves</span>
         <select id="scale-octaves-select">
@@ -296,6 +304,12 @@ const scaleHandsField =
 const scaleHandsSelect = document.querySelector<HTMLSelectElement>(
   "#scale-hands-select",
 );
+const scaleMotionField = document.querySelector<HTMLLabelElement>(
+  "#scale-motion-field",
+);
+const scaleMotionSelect = document.querySelector<HTMLSelectElement>(
+  "#scale-motion-select",
+);
 const scaleOctavesField = document.querySelector<HTMLLabelElement>(
   "#scale-octaves-field",
 );
@@ -361,6 +375,8 @@ if (
   !practiceModeSelect ||
   !scaleHandsField ||
   !scaleHandsSelect ||
+  !scaleMotionField ||
+  !scaleMotionSelect ||
   !scaleOctavesField ||
   !scaleOctavesSelect ||
   !rangeStartField ||
@@ -401,6 +417,8 @@ const settingsCloseElement = settingsClose;
 const practiceModeSelectElement = practiceModeSelect;
 const scaleHandsFieldElement = scaleHandsField;
 const scaleHandsSelectElement = scaleHandsSelect;
+const scaleMotionFieldElement = scaleMotionField;
+const scaleMotionSelectElement = scaleMotionSelect;
 const scaleOctavesFieldElement = scaleOctavesField;
 const scaleOctavesSelectElement = scaleOctavesSelect;
 const rangeStartFieldElement = rangeStartField;
@@ -438,6 +456,7 @@ const initialGenerationSettings: GenerationSettings = {
   practiceMode: "scales",
   scaleHands: "together",
   scaleOctaves: 2,
+  scaleMotion: "parallel",
   rangeStart: DEFAULT_RANGE_START,
   rangeEnd: DEFAULT_RANGE_END,
   noteSourceMode: "in-scale",
@@ -482,7 +501,6 @@ const state: AppState = {
   heldOverlayHands: new Map(),
 };
 
-notationElement.addEventListener("click", handlePromptAttempt);
 const midiConnection = connectMidi(handleMidiStateChange, {
   onNoteOn: handleMidiNoteOn,
   preferredInputId: loadPreferredMidiDeviceId(),
@@ -507,6 +525,7 @@ settingsKeyboardToggleElement.addEventListener(
 );
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
+scaleMotionSelectElement.addEventListener("change", handleScaleMotionChange);
 scaleOctavesSelectElement.addEventListener("change", handleScaleOctavesChange);
 rangeStartSelectElement.addEventListener("change", handleRangeStartChange);
 rangeEndSelectElement.addEventListener("change", handleRangeEndChange);
@@ -643,6 +662,7 @@ function renderSettingsDrawer() {
   settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
   scaleHandsSelectElement.value = state.generationSettings.scaleHands;
+  scaleMotionSelectElement.value = state.generationSettings.scaleMotion;
   scaleOctavesSelectElement.value =
     state.generationSettings.scaleOctaves.toString();
   noteSourceSelectElement.value = state.generationSettings.noteSourceMode;
@@ -654,6 +674,8 @@ function renderSettingsDrawer() {
     state.generationSettings.practiceMode === "random-notes";
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
+  const isTogetherScalesMode =
+    isScalesMode && state.generationSettings.scaleHands === "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
     scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
@@ -662,6 +684,8 @@ function renderSettingsDrawer() {
   practiceModeFieldElement.hidden = !areExerciseSettingsVisible;
   scaleHandsFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode;
+  scaleMotionFieldElement.hidden =
+    !areExerciseSettingsVisible || !isTogetherScalesMode;
   scaleOctavesFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode;
   rangeStartFieldElement.hidden =
@@ -697,6 +721,7 @@ function renderMidiDebug() {
     `Sustain pedal: ${state.midi.sustainPedalDown ? "down" : "up"}`,
     `Practice mode: ${state.generationSettings.practiceMode}`,
     `Scale hands: ${state.generationSettings.scaleHands}`,
+    `Scale motion: ${state.generationSettings.scaleMotion}`,
     `Scale octaves: ${state.generationSettings.scaleOctaves}`,
     `Note source: ${state.generationSettings.noteSourceMode}`,
     `Accidental spelling: ${state.generationSettings.accidentalSpellingMode}`,
@@ -724,8 +749,23 @@ function renderMidiDebug() {
     `Expected MIDI: ${expectedMidiNotes.join(", ") || "none"}`,
     `Error: ${state.midi.errorMessage ?? "none"}`,
   ];
+  midiDebugElement.replaceChildren();
 
-  midiDebugElement.textContent = lines.join("\n");
+  const controls = document.createElement("div");
+  controls.className = "midi-debug-controls";
+
+  const nextPromptButton = document.createElement("button");
+  nextPromptButton.type = "button";
+  nextPromptButton.className = "midi-debug-button";
+  nextPromptButton.textContent = "Next prompt";
+  nextPromptButton.addEventListener("click", handlePromptAttempt);
+  controls.append(nextPromptButton);
+
+  const content = document.createElement("pre");
+  content.className = "midi-debug-content";
+  content.textContent = lines.join("\n");
+
+  midiDebugElement.append(controls, content);
 }
 
 function renderExerciseNotice() {
@@ -1003,6 +1043,18 @@ function handlePracticeModeChange() {
 function handleScaleHandsChange() {
   state.generationSettings.scaleHands =
     scaleHandsSelectElement.value as ScaleHands;
+
+  if (state.generationSettings.scaleHands !== "together") {
+    state.generationSettings.scaleMotion = "parallel";
+  }
+
+  saveStoredSettings();
+  resetPromptQueue();
+}
+
+function handleScaleMotionChange() {
+  state.generationSettings.scaleMotion =
+    scaleMotionSelectElement.value as ScaleMotion;
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -1522,6 +1574,17 @@ function getDisplayedPromptSlot(
   appState: AppState,
 ): PromptSlot {
   if (appState.generationSettings.practiceMode === "scales") {
+    if (
+      appState.generationSettings.scaleHands === "together" &&
+      appState.generationSettings.scaleMotion === "contrary"
+    ) {
+      return {
+        duration: prompt.duration,
+        trebleKeys: prompt.trebleKeys,
+        bassKeys: prompt.bassKeys,
+      };
+    }
+
     const displayedTrebleKeys = [
       ...(prompt.trebleKeys ?? []),
       ...(prompt.bassKeys ?? []),
@@ -1620,9 +1683,13 @@ function getDisplayedKeySignature(appState: AppState) {
 }
 
 function getPromptMidiNotes(prompt: PromptSlot) {
-  return [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])].map(
-    keyToMidiNoteNumber,
-  );
+  return [
+    ...new Set(
+      [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])].map(
+        keyToMidiNoteNumber,
+      ),
+    ),
+  ];
 }
 
 function getHeldOverlayPresentation(

@@ -6,6 +6,7 @@ const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 export type PracticeMode = "random-notes" | "scales" | "triads";
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
+export type ScaleMotion = "parallel" | "contrary";
 export type NoteSourceMode = "chromatic" | "in-scale";
 export type AccidentalSpellingMode = "sharps" | "flats";
 export type RenderingPreference = "preferred" | "alternate";
@@ -69,6 +70,7 @@ export type GenerationSettings = {
   practiceMode: PracticeMode;
   scaleHands: ScaleHands;
   scaleOctaves: ScaleOctaves;
+  scaleMotion: ScaleMotion;
   rangeStart: string;
   rangeEnd: string;
   noteSourceMode: NoteSourceMode;

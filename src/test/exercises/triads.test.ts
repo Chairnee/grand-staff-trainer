@@ -10,6 +10,7 @@ function createTriadSettings(
     practiceMode: "triads",
     scaleHands: "treble",
     scaleOctaves: 1,
+    scaleMotion: "parallel",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",

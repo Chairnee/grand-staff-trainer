@@ -174,6 +174,31 @@ body {
   z-index: 2;
 }
 
+.midi-debug-controls {
+  margin-bottom: calc(10px * var(--stage-scale));
+}
+
+.midi-debug-button {
+  padding: calc(6px * var(--stage-scale)) calc(10px * var(--stage-scale));
+  border: 1px solid rgba(70, 52, 28, 0.18);
+  border-radius: calc(10px * var(--stage-scale));
+  background: #fffdf7;
+  color: #3e2f1c;
+  font: inherit;
+  cursor: pointer;
+}
+
+.midi-debug-button:hover {
+  background: #f5ede0;
+}
+
+.midi-debug-content {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+  line-height: inherit;
+}
+
 .midi-debug[hidden] {
   display: none;
 }
