@@ -503,14 +503,18 @@ export function getDescendingScaleStartingOctave(
     scaleType,
     renderingPreference,
   ).toLowerCase();
-  const minimumTopMidiNote =
-    scaleHands === "treble"
-      ? keyToMidiNoteNumber("c/3")
-      : keyToMidiNoteNumber("f#/3");
-  const maximumTopMidiNote =
-    scaleHands === "treble"
-      ? keyToMidiNoteNumber("b/4")
-      : keyToMidiNoteNumber("c/4");
+
+  if (scaleHands === "treble") {
+    const highestComfortableTopMidiNote = keyToMidiNoteNumber("f#/6");
+    const candidateTopMidiNote = keyToMidiNoteNumber(`${renderedTonic}/6`);
+    const topTonicOctave =
+      candidateTopMidiNote <= highestComfortableTopMidiNote ? 6 : 5;
+
+    return topTonicOctave - scaleOctaves;
+  }
+
+  const minimumTopMidiNote = keyToMidiNoteNumber("f#/3");
+  const maximumTopMidiNote = keyToMidiNoteNumber("f#/4");
   const candidateOctaves = [0, 1, 2, 3, 4, 5];
   const rankedCandidates = candidateOctaves.map((startingOctave) => {
     const topTonicMidiNote = keyToMidiNoteNumber(
@@ -541,11 +545,11 @@ export function getDescendingScaleStartingOctave(
     return right.startingOctave - left.startingOctave;
   });
 
-  return rankedCandidates[0]?.startingOctave ?? getScaleStartingOctave(
-    tonic,
-    scaleType,
-    renderingPreference,
-  );
+  const fallbackStartingOctave =
+    rankedCandidates[0]?.startingOctave ??
+    getScaleStartingOctave(tonic, scaleType, renderingPreference);
+
+  return fallbackStartingOctave;
 }
 
 export function getTriadStartingOctave(

@@ -246,7 +246,7 @@ describe("scale positioning helpers", () => {
         1,
         "treble",
       ),
-    ).toBe(3);
+    ).toBe(5);
     expect(
       getDescendingScaleStartingOctave(
         "C",
@@ -262,7 +262,23 @@ describe("scale positioning helpers", () => {
         2,
         "treble",
       ),
-    ).toBe(2);
+    ).toBe(3);
+    expect(
+      getDescendingScaleStartingOctave(
+        "G",
+        "major",
+        1,
+        "treble",
+      ),
+    ).toBe(4);
+    expect(
+      getDescendingScaleStartingOctave(
+        "F#",
+        "major",
+        1,
+        "bass",
+      ),
+    ).toBe(3);
   });
 
   it("builds ascending keys without dropping backward across octaves", () => {

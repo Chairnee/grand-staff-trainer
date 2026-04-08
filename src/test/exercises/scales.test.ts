@@ -140,21 +140,21 @@ describe("createScalePracticeQueue", () => {
     );
 
     expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
-      "c/4",
-      "b/3",
-      "a/3",
-      "g/3",
-      "f/3",
-      "e/3",
-      "d/3",
-      "c/3",
-      "d/3",
-      "e/3",
-      "f/3",
-      "g/3",
-      "a/3",
-      "b/3",
-      "c/4",
+      "c/6",
+      "b/5",
+      "a/5",
+      "g/5",
+      "f/5",
+      "e/5",
+      "d/5",
+      "c/5",
+      "d/5",
+      "e/5",
+      "f/5",
+      "g/5",
+      "a/5",
+      "b/5",
+      "c/6",
     ]);
   });
 
