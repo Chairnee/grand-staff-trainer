@@ -6,7 +6,7 @@ Primary features:
 2. [Exercise panel](exercise-panel)
 3. [Keyboard display panel](keyboard-display-panel)
 
-[An example image of the Grand Staff Trainer layout.](referenceImg/main.png)
+![An example image of the Grand Staff Trainer layout.](referenceImg/main.png)
 
 ## Input Naming Panel
 
