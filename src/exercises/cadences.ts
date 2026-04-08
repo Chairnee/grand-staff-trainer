@@ -1,7 +1,7 @@
 import {
+  getCadenceStartingOctave,
   type GenerationSettings,
   getScaleNoteNames,
-  getTriadStartingOctave,
   keyToMidiNoteNumber,
   type ScaleHands,
 } from "../theory/music";
@@ -19,7 +19,7 @@ type Inversion = (typeof INVERSION_SEQUENCE)[number];
 export function createCadencePracticeQueue(
   generationSettings: GenerationSettings,
 ) {
-  const trebleStartingOctave = getTriadStartingOctave(
+  const trebleStartingOctave = getCadenceStartingOctave(
     generationSettings.tonic,
     generationSettings.triadType,
     generationSettings.renderingPreference,

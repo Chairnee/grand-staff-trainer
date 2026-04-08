@@ -469,6 +469,22 @@ export function getTriadStartingOctave(
   );
 }
 
+export function getCadenceStartingOctave(
+  tonic: Tonic,
+  triadType: TriadType,
+  renderingPreference: RenderingPreference = "preferred",
+) {
+  const renderedTonic = getSupportedTonicForScaleType(
+    tonic,
+    triadType === "major" ? "major" : "natural-minor",
+    renderingPreference,
+  );
+
+  return isTrebleCadenceStartWithinUpperLimit(renderedTonic.toLowerCase())
+    ? 4
+    : 3;
+}
+
 export function getAscendingScaleKeys(
   tonic: Tonic,
   scaleType: ScaleType,
@@ -967,6 +983,26 @@ function isTrebleScaleStartWithinUpperLimit(noteName: string) {
   }
 
   if (["g", "a", "b"].includes(baseLetter)) {
+    return false;
+  }
+
+  throw new Error(`Unsupported tonic note name: ${noteName}`);
+}
+
+function isTrebleCadenceStartWithinUpperLimit(noteName: string) {
+  const baseLetter = noteName.charAt(0).toLowerCase();
+  const accidentalOffset = getAccidentalOffsetForNoteName(noteName);
+  const allowedBaseLetters = ["c", "d", "e"];
+
+  if (allowedBaseLetters.includes(baseLetter)) {
+    return true;
+  }
+
+  if (baseLetter === "f" || baseLetter === "g") {
+    return accidentalOffset <= 1;
+  }
+
+  if (["a", "b"].includes(baseLetter)) {
     return false;
   }
 

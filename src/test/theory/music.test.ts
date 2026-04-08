@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getCadenceStartingOctave,
   type GenerationSettings,
   getAscendingScaleKeys,
   getDerivedKeySignature,
@@ -217,6 +218,13 @@ describe("scale positioning helpers", () => {
     expect(getScaleStartingOctave("Gb")).toBe(3);
     expect(getScaleStartingOctave("B")).toBe(3);
     expect(getScaleStartingOctave("Gb", "natural-minor")).toBe(4);
+  });
+
+  it("uses the higher cadence treble starting octave limit through G sharp", () => {
+    expect(getCadenceStartingOctave("F#", "major")).toBe(4);
+    expect(getCadenceStartingOctave("G#", "minor")).toBe(4);
+    expect(getCadenceStartingOctave("Ab", "minor")).toBe(4);
+    expect(getCadenceStartingOctave("A", "minor")).toBe(3);
   });
 
   it("builds ascending keys without dropping backward across octaves", () => {
