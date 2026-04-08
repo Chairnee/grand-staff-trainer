@@ -65,6 +65,7 @@ const STAGE_HEIGHT = 720;
 const STAGE_HORIZONTAL_PADDING = 0;
 const STAGE_VERTICAL_PADDING = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
+const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
 const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
 const SCALE_TOP_VISIBLE_MIDI_NOTE = 90;
@@ -349,7 +350,8 @@ const scaleTypeSelect =
   document.querySelector<HTMLSelectElement>("#scale-type-select");
 const triadTypeField =
   document.querySelector<HTMLLabelElement>("#triad-type-field");
-const triadTypeLabel = document.querySelector<HTMLSpanElement>("#triad-type-label");
+const triadTypeLabel =
+  document.querySelector<HTMLSpanElement>("#triad-type-label");
 const triadTypeSelect =
   document.querySelector<HTMLSelectElement>("#triad-type-select");
 const settingsExerciseToggle = document.querySelector<HTMLInputElement>(
@@ -933,7 +935,8 @@ function formatScaleTypeLabelForDisplay(scaleType: ScaleType) {
 
 function getExerciseSummaryText(generationSettings: GenerationSettings) {
   if (generationSettings.practiceMode === "scales") {
-    const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
+    const renderedTonic =
+      getScaleRenderingOptions(generationSettings).active.tonic;
     const scaleLabel = formatCompactScaleLabel(
       renderedTonic,
       generationSettings.scaleType,
@@ -950,7 +953,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.practiceMode === "triads") {
-    const renderedTonic = getTriadRenderingOptions(generationSettings).active.tonic;
+    const renderedTonic =
+      getTriadRenderingOptions(generationSettings).active.tonic;
     const triadLabel = formatCompactTriadLabel(
       renderedTonic,
       generationSettings.triadType,
@@ -964,7 +968,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.practiceMode === "cadences") {
-    const renderedTonic = getCadenceRenderingOptions(generationSettings).active.tonic;
+    const renderedTonic =
+      getCadenceRenderingOptions(generationSettings).active.tonic;
     const cadenceLabel = formatCompactCadenceLabel(
       renderedTonic,
       generationSettings.triadType,
@@ -975,7 +980,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.noteSourceMode === "in-scale") {
-    const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
+    const renderedTonic =
+      getScaleRenderingOptions(generationSettings).active.tonic;
     const scaleLabel = formatCompactScaleLabel(
       renderedTonic,
       generationSettings.scaleType,
@@ -1695,7 +1701,10 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         getStemDirectionForPromptSource("bass", bassDisplayedStaff),
       );
 
-      if (trebleDisplayedStaff === "treble" && bassDisplayedStaff === "treble") {
+      if (
+        trebleDisplayedStaff === "treble" &&
+        bassDisplayedStaff === "treble"
+      ) {
         trebleNote = trebleHandNote;
         trebleSecondaryNote = bassHandNote;
         bassNote = createRest("bass", displayedPrompt.duration);
@@ -2446,8 +2455,7 @@ function drawPromptAnnotation(
   fixedY: number | undefined,
   context: ReturnType<Renderer["getContext"]>,
 ) {
-  const anchorX =
-    anchorNote.getAbsoluteX() + anchorNote.getGlyphWidth() / 2;
+  const anchorX = anchorNote.getAbsoluteX() + anchorNote.getGlyphWidth() / 2;
   const noteYs = anchorNote.getYs();
   const stemExtents = anchorNote.getStemExtents();
   const topNoteY = Math.min(...noteYs, stemExtents.topY);
@@ -2459,9 +2467,7 @@ function drawPromptAnnotation(
       : Math.min(stave.getYForBottomText(1.5), bottomNoteY + 16));
 
   context.save();
-  context
-    .setFont(undefined, 13, "normal", "normal")
-    .setFillStyle("#000");
+  context.setFont(undefined, 13, "normal", "normal").setFillStyle("#000");
   const textWidth = context.measureText(text).width;
   context.fillText(text, anchorX - textWidth / 2, textY);
   context.restore();
@@ -2493,7 +2499,8 @@ function getPromptAnnotationYPositions(
     ];
     const laneInstructions = promptAnnotationDrawInstructions.filter(
       (instruction) =>
-        instruction.anchorStaff === staff && instruction.placement === placement,
+        instruction.anchorStaff === staff &&
+        instruction.placement === placement,
     );
     const anchorNotes = laneInstructions
       .map((instruction) =>
@@ -2514,7 +2521,13 @@ function getPromptAnnotationYPositions(
         anchorNotes[0],
         anchorNotes,
       );
-      yPositions.set(laneKey, stave.getYForTopText(safeTopTextLine));
+      yPositions.set(
+        laneKey,
+        Math.min(
+          stave.getYForTopText(STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE),
+          stave.getYForTopText(safeTopTextLine),
+        ),
+      );
       continue;
     }
 
@@ -2840,10 +2853,7 @@ function getSafeBottomTextLineForNotes(
   const targetBottomTextY = bottomMostOccupiedY + noteBottomPadding;
   let line = 1;
 
-  while (
-    line < 12 &&
-    stave.getYForBottomText(line + 0.5) < targetBottomTextY
-  ) {
+  while (line < 12 && stave.getYForBottomText(line + 0.5) < targetBottomTextY) {
     line += 0.5;
   }
 
@@ -3034,4 +3044,3 @@ function saveStoredSettings() {
     // Ignore storage issues and continue without persistence.
   }
 }
-
