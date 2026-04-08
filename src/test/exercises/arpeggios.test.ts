@@ -100,6 +100,43 @@ describe("createArpeggioPracticeQueue", () => {
     ]);
   });
 
+  it("creates a descending treble arpeggio from a comfortable top note and returns upward", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "c/6",
+      "g/5",
+      "e/5",
+      "c/5",
+      "e/5",
+      "g/5",
+      "c/6",
+    ]);
+  });
+
+  it("creates a descending bass arpeggio from a comfortable top note and returns upward", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        scaleHands: "bass",
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.bassKeys?.[0] ?? null)).toEqual([
+      "c/4",
+      "g/3",
+      "e/3",
+      "c/3",
+      "e/3",
+      "g/3",
+      "c/4",
+    ]);
+  });
+
   it("keeps the shared start intact for B major shown as Cb major in contrary motion", () => {
     const queue = createArpeggioPracticeQueue(
       createArpeggioSettings({

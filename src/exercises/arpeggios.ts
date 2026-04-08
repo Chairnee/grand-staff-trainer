@@ -1,5 +1,6 @@
 import {
   type GenerationSettings,
+  getDescendingScaleStartingOctave,
   getTriadNoteNames,
   getTriadStartingOctave,
   keyToMidiNoteNumber,
@@ -9,7 +10,14 @@ import type { PromptSlot } from "./types";
 
 export function createArpeggioPracticeQueue(
   generationSettings: GenerationSettings,
-) {
+): PromptSlot[] {
+  if (
+    generationSettings.scaleHands !== "together" &&
+    generationSettings.scaleDirection === "descending"
+  ) {
+    return createDescendingSingleHandArpeggioPracticeQueue(generationSettings);
+  }
+
   if (
     generationSettings.scaleHands === "together" &&
     generationSettings.scaleMotion === "contrary"
@@ -44,9 +52,63 @@ export function createArpeggioPracticeQueue(
   return [...ascendingPrompts, ...descendingPrompts];
 }
 
+function createDescendingSingleHandArpeggioPracticeQueue(
+  generationSettings: GenerationSettings,
+): PromptSlot[] {
+  const scaleHands = generationSettings.scaleHands;
+
+  if (scaleHands === "together") {
+    throw new Error("Descending single-hand arpeggios require a single hand.");
+  }
+
+  const descendingStartingOctave = getDescendingScaleStartingOctave(
+    generationSettings.tonic,
+    generationSettings.triadType === "major" ? "major" : "natural-minor",
+    generationSettings.scaleOctaves,
+    scaleHands,
+    generationSettings.renderingPreference,
+  );
+  const descendingKeys = getAscendingArpeggioKeys(
+    generationSettings,
+    descendingStartingOctave,
+  ).reverse();
+  const ascendingKeys = getAscendingArpeggioKeys(
+    generationSettings,
+    descendingStartingOctave,
+  ).slice(1);
+
+  if (scaleHands === "treble") {
+    const prompts: PromptSlot[] = [
+      ...descendingKeys.map((key) => ({
+        duration: "q" as const,
+        trebleKeys: [key],
+      })),
+      ...ascendingKeys.map((key) => ({
+        duration: "q" as const,
+        trebleKeys: [key],
+      })),
+    ];
+
+    return prompts;
+  }
+
+  const prompts: PromptSlot[] = [
+    ...descendingKeys.map((key) => ({
+      duration: "q" as const,
+      bassKeys: [key],
+    })),
+    ...ascendingKeys.map((key) => ({
+      duration: "q" as const,
+      bassKeys: [key],
+    })),
+  ];
+
+  return prompts;
+}
+
 function createContraryMotionArpeggioPracticeQueue(
   generationSettings: GenerationSettings,
-) {
+): PromptSlot[] {
   const sharedStartingOctave =
     getContraryMotionArpeggioStartingOctave(generationSettings);
   const trebleAscendingKeys = getAscendingArpeggioKeys(

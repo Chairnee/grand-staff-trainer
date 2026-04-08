@@ -752,8 +752,9 @@ function renderSettingsDrawer() {
   const isTogetherMotionMode =
     (isScalesMode || isArpeggiosMode) &&
     state.generationSettings.scaleHands === "together";
-  const isSingleHandScalesMode =
-    isScalesMode && state.generationSettings.scaleHands !== "together";
+  const isSingleHandDirectionMode =
+    (isScalesMode || isArpeggiosMode) &&
+    state.generationSettings.scaleHands !== "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
     scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
@@ -765,7 +766,7 @@ function renderSettingsDrawer() {
   scaleMotionFieldElement.hidden =
     !areExerciseSettingsVisible || !isTogetherMotionMode;
   scaleDirectionFieldElement.hidden =
-    !areExerciseSettingsVisible || !isSingleHandScalesMode;
+    !areExerciseSettingsVisible || !isSingleHandDirectionMode;
   scaleOctavesFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode || isCadencesMode;
   rangeStartFieldElement.hidden =
@@ -1047,7 +1048,7 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
       return `${capitalizeWord(generationSettings.scaleMotion)} | ${arpeggioLabel} | ${octaveLabel}`;
     }
 
-    return `${capitalizeWord(generationSettings.scaleHands)} | ${arpeggioLabel} | ${octaveLabel}`;
+    return `${capitalizeWord(generationSettings.scaleDirection)} | ${arpeggioLabel} | ${octaveLabel}`;
   }
 
   if (generationSettings.practiceMode === "cadences") {
@@ -2158,6 +2159,19 @@ function getDisplayedPromptSlot(
   appState: AppState,
 ): PromptSlot {
   if (appState.generationSettings.practiceMode === "arpeggios") {
+    if (appState.generationSettings.scaleHands !== "together") {
+      return {
+        isPlayable: prompt.isPlayable,
+        duration: prompt.duration,
+        trebleKeys: prompt.trebleKeys,
+        bassKeys: prompt.bassKeys,
+        trebleRestVisible: prompt.trebleRestVisible,
+        bassRestVisible: prompt.bassRestVisible,
+        annotations: prompt.annotations,
+        accidentalOverrides: prompt.accidentalOverrides,
+      };
+    }
+
     if (
       appState.generationSettings.scaleHands === "together" &&
       appState.generationSettings.scaleMotion === "contrary"
@@ -2590,7 +2604,9 @@ function getExactArpeggioOverlayPresentation(
   }
 
   const displayedStaff =
-    appState.generationSettings.scaleHands === "together"
+    appState.generationSettings.scaleHands === "bass"
+      ? "bass"
+      : appState.generationSettings.scaleHands === "together"
       ? getTogetherScaleDisplayedStaff(appState, "bass", exactBassKey)
       : getClefForKey(exactBassKey);
 
