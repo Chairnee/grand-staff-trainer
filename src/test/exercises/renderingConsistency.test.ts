@@ -27,6 +27,7 @@ function createGenerationSettings(
     scaleHands: "together",
     scaleOctaves: 2,
     scaleMotion: "parallel",
+    scaleDirection: "ascending",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",
@@ -68,23 +69,59 @@ describe("exercise rendering consistency", () => {
 
     for (const tonic of getAllTonics()) {
       for (const scaleType of scaleTypes) {
-        const generationSettings = createGenerationSettings({
+        for (const scaleHands of ["treble", "bass"] as const) {
+          for (const scaleDirection of ["ascending", "descending"] as const) {
+            const generationSettings = createGenerationSettings({
+              practiceMode: "scales",
+              tonic,
+              scaleType,
+              scaleHands,
+              scaleDirection,
+            });
+            const allowedNoteNames = getScaleNoteNames(
+              tonic,
+              scaleType,
+              "preferred",
+            );
+            const actualNoteNames = getPromptNoteNames(
+              createScalePracticeQueue(generationSettings),
+            );
+            const unexpectedNoteNames = getUnexpectedNoteNames(
+              actualNoteNames,
+              allowedNoteNames,
+            );
+
+            if (unexpectedNoteNames.length > 0) {
+              leaks.push(
+                `${tonic} ${scaleType} ${scaleHands} ${scaleDirection}: ${unexpectedNoteNames.join(", ")}`,
+              );
+            }
+          }
+        }
+
+        const togetherGenerationSettings = createGenerationSettings({
           practiceMode: "scales",
           tonic,
           scaleType,
+          scaleHands: "together",
+          scaleDirection: "ascending",
         });
-        const allowedNoteNames = getScaleNoteNames(tonic, scaleType, "preferred");
-        const actualNoteNames = getPromptNoteNames(
-          createScalePracticeQueue(generationSettings),
+        const togetherAllowedNoteNames = getScaleNoteNames(
+          tonic,
+          scaleType,
+          "preferred",
         );
-        const unexpectedNoteNames = getUnexpectedNoteNames(
-          actualNoteNames,
-          allowedNoteNames,
+        const togetherActualNoteNames = getPromptNoteNames(
+          createScalePracticeQueue(togetherGenerationSettings),
+        );
+        const togetherUnexpectedNoteNames = getUnexpectedNoteNames(
+          togetherActualNoteNames,
+          togetherAllowedNoteNames,
         );
 
-        if (unexpectedNoteNames.length > 0) {
+        if (togetherUnexpectedNoteNames.length > 0) {
           leaks.push(
-            `${tonic} ${scaleType}: ${unexpectedNoteNames.join(", ")}`,
+            `${tonic} ${scaleType} together: ${togetherUnexpectedNoteNames.join(", ")}`,
           );
         }
       }
@@ -209,33 +246,41 @@ describe("exercise rendering consistency", () => {
 
     for (const tonic of getAllTonics()) {
       for (const scaleType of scaleTypes) {
-        const generationSettings = createGenerationSettings({
-          practiceMode: "scales",
-          tonic,
-          scaleType,
-          renderingPreference: "alternate",
-        });
-        const renderingOptions = getScaleRenderingOptions(generationSettings);
+        for (const scaleHands of ["treble", "bass"] as const) {
+          for (const scaleDirection of ["ascending", "descending"] as const) {
+            const generationSettings = createGenerationSettings({
+              practiceMode: "scales",
+              tonic,
+              scaleType,
+              scaleHands,
+              scaleDirection,
+              renderingPreference: "alternate",
+            });
+            const renderingOptions = getScaleRenderingOptions(generationSettings);
 
-        if (!renderingOptions.alternate) {
-          continue;
-        }
+            if (!renderingOptions.alternate) {
+              continue;
+            }
 
-        const renderedTonic = renderingOptions.active.tonic.toLowerCase();
-        const allowedNoteNames = getScaleNoteNamesForRenderedTonicName(
-          renderedTonic,
-          scaleType,
-        );
-        const actualNoteNames = getPromptNoteNames(
-          createScalePracticeQueue(generationSettings),
-        );
-        const unexpectedNoteNames = getUnexpectedNoteNames(
-          actualNoteNames,
-          allowedNoteNames,
-        );
+            const renderedTonic = renderingOptions.active.tonic.toLowerCase();
+            const allowedNoteNames = getScaleNoteNamesForRenderedTonicName(
+              renderedTonic,
+              scaleType,
+            );
+            const actualNoteNames = getPromptNoteNames(
+              createScalePracticeQueue(generationSettings),
+            );
+            const unexpectedNoteNames = getUnexpectedNoteNames(
+              actualNoteNames,
+              allowedNoteNames,
+            );
 
-        if (unexpectedNoteNames.length > 0) {
-          leaks.push(`${tonic} ${scaleType} scales: ${unexpectedNoteNames.join(", ")}`);
+            if (unexpectedNoteNames.length > 0) {
+              leaks.push(
+                `${tonic} ${scaleType} ${scaleHands} ${scaleDirection} scales: ${unexpectedNoteNames.join(", ")}`,
+              );
+            }
+          }
         }
       }
 

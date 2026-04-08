@@ -11,6 +11,7 @@ function createGenerationSettings(
     scaleHands: "together",
     scaleOctaves: 2,
     scaleMotion: "parallel",
+    scaleDirection: "ascending",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",

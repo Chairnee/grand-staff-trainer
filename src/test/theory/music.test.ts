@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getCadenceStartingOctave,
+  getDescendingScaleStartingOctave,
   getAllTonics,
   type GenerationSettings,
   getAscendingScaleKeys,
@@ -23,6 +24,7 @@ function createGenerationSettings(
     scaleHands: "treble",
     scaleOctaves: 1,
     scaleMotion: "parallel",
+    scaleDirection: "ascending",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",
@@ -234,6 +236,33 @@ describe("scale positioning helpers", () => {
     expect(getCadenceStartingOctave("G#", "minor")).toBe(4);
     expect(getCadenceStartingOctave("Ab", "minor")).toBe(4);
     expect(getCadenceStartingOctave("A", "minor")).toBe(3);
+  });
+
+  it("chooses descending single-hand scale starts within the comfort bands", () => {
+    expect(
+      getDescendingScaleStartingOctave(
+        "C",
+        "major",
+        1,
+        "treble",
+      ),
+    ).toBe(3);
+    expect(
+      getDescendingScaleStartingOctave(
+        "C",
+        "major",
+        1,
+        "bass",
+      ),
+    ).toBe(3);
+    expect(
+      getDescendingScaleStartingOctave(
+        "Ab",
+        "natural-minor",
+        2,
+        "treble",
+      ),
+    ).toBe(2);
   });
 
   it("builds ascending keys without dropping backward across octaves", () => {

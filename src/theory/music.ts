@@ -12,6 +12,7 @@ export type PracticeMode =
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type ScaleMotion = "parallel" | "contrary";
+export type ScaleDirection = "ascending" | "descending";
 export type NoteSourceMode = "chromatic" | "in-scale";
 export type AccidentalSpellingMode = "sharps" | "flats";
 export type RenderingPreference = "preferred" | "alternate";
@@ -76,6 +77,7 @@ export type GenerationSettings = {
   scaleHands: ScaleHands;
   scaleOctaves: ScaleOctaves;
   scaleMotion: ScaleMotion;
+  scaleDirection: ScaleDirection;
   rangeStart: string;
   rangeEnd: string;
   noteSourceMode: NoteSourceMode;
@@ -487,6 +489,63 @@ export function getScaleStartingOctave(
   return isTrebleScaleStartWithinUpperLimit(renderedTonic.toLowerCase())
     ? 4
     : 3;
+}
+
+export function getDescendingScaleStartingOctave(
+  tonic: Tonic,
+  scaleType: ScaleType,
+  scaleOctaves: ScaleOctaves,
+  scaleHands: Exclude<ScaleHands, "together">,
+  renderingPreference: RenderingPreference = "preferred",
+) {
+  const renderedTonic = getSupportedTonicForScaleType(
+    tonic,
+    scaleType,
+    renderingPreference,
+  ).toLowerCase();
+  const minimumTopMidiNote =
+    scaleHands === "treble"
+      ? keyToMidiNoteNumber("c/3")
+      : keyToMidiNoteNumber("f#/3");
+  const maximumTopMidiNote =
+    scaleHands === "treble"
+      ? keyToMidiNoteNumber("b/4")
+      : keyToMidiNoteNumber("c/4");
+  const candidateOctaves = [0, 1, 2, 3, 4, 5];
+  const rankedCandidates = candidateOctaves.map((startingOctave) => {
+    const topTonicMidiNote = keyToMidiNoteNumber(
+      `${renderedTonic}/${startingOctave + scaleOctaves}`,
+    );
+    const lowOverflow = Math.max(0, minimumTopMidiNote - topTonicMidiNote);
+    const highOverflow = Math.max(0, topTonicMidiNote - maximumTopMidiNote);
+    const overflow = lowOverflow + highOverflow;
+
+    return {
+      startingOctave,
+      overflow,
+    };
+  });
+  const validCandidates = rankedCandidates.filter(
+    (candidate) => candidate.overflow === 0,
+  );
+
+  if (validCandidates.length > 0) {
+    return Math.max(...validCandidates.map((candidate) => candidate.startingOctave));
+  }
+
+  rankedCandidates.sort((left, right) => {
+    if (left.overflow !== right.overflow) {
+      return left.overflow - right.overflow;
+    }
+
+    return right.startingOctave - left.startingOctave;
+  });
+
+  return rankedCandidates[0]?.startingOctave ?? getScaleStartingOctave(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
 }
 
 export function getTriadStartingOctave(

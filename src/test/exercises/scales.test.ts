@@ -11,6 +11,7 @@ function createScaleSettings(
     scaleHands: "treble",
     scaleOctaves: 1,
     scaleMotion: "parallel",
+    scaleDirection: "ascending",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",
@@ -129,5 +130,58 @@ describe("createScalePracticeQueue", () => {
       trebleKeys: ["db/4"],
       bassKeys: ["bb/3"],
     });
+  });
+
+  it("creates a descending treble scale with a comfortable starting note and returns upward", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "c/4",
+      "b/3",
+      "a/3",
+      "g/3",
+      "f/3",
+      "e/3",
+      "d/3",
+      "c/3",
+      "d/3",
+      "e/3",
+      "f/3",
+      "g/3",
+      "a/3",
+      "b/3",
+      "c/4",
+    ]);
+  });
+
+  it("creates a descending bass scale with a comfortable starting note and returns upward", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        scaleHands: "bass",
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.bassKeys?.[0] ?? null)).toEqual([
+      "c/4",
+      "b/3",
+      "a/3",
+      "g/3",
+      "f/3",
+      "e/3",
+      "d/3",
+      "c/3",
+      "d/3",
+      "e/3",
+      "f/3",
+      "g/3",
+      "a/3",
+      "b/3",
+      "c/4",
+    ]);
   });
 });

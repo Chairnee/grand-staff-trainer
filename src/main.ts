@@ -43,9 +43,11 @@ import {
   getTriadRenderingOptions,
   type KeySignature,
   keyToMidiNoteNumber,
+  midiNoteNumberToKey,
   type NoteSourceMode,
   type PracticeMode,
   type RenderingPreference,
+  type ScaleDirection,
   type ScaleHands,
   type ScaleMotion,
   type ScaleOctaves,
@@ -112,6 +114,7 @@ type AppState = {
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   midi: MidiState;
+  simulatedHeldNotes: number[];
   heldOverlayHands: Map<number, "treble" | "bass">;
 };
 
@@ -222,6 +225,13 @@ app.innerHTML = `
           <option value="contrary">Contrary</option>
         </select>
       </label>
+      <label id="scale-direction-field" class="settings-field" hidden>
+        <span>Direction</span>
+        <select id="scale-direction-select">
+          <option value="ascending">Ascending</option>
+          <option value="descending">Descending</option>
+        </select>
+      </label>
       <label id="scale-octaves-field" class="settings-field" hidden>
         <span>Octaves</span>
         <select id="scale-octaves-select">
@@ -322,6 +332,12 @@ const scaleMotionField = document.querySelector<HTMLLabelElement>(
 const scaleMotionSelect = document.querySelector<HTMLSelectElement>(
   "#scale-motion-select",
 );
+const scaleDirectionField = document.querySelector<HTMLLabelElement>(
+  "#scale-direction-field",
+);
+const scaleDirectionSelect = document.querySelector<HTMLSelectElement>(
+  "#scale-direction-select",
+);
 const scaleOctavesField = document.querySelector<HTMLLabelElement>(
   "#scale-octaves-field",
 );
@@ -392,6 +408,8 @@ if (
   !scaleHandsSelect ||
   !scaleMotionField ||
   !scaleMotionSelect ||
+  !scaleDirectionField ||
+  !scaleDirectionSelect ||
   !scaleOctavesField ||
   !scaleOctavesSelect ||
   !rangeStartField ||
@@ -436,6 +454,8 @@ const scaleHandsFieldElement = scaleHandsField;
 const scaleHandsSelectElement = scaleHandsSelect;
 const scaleMotionFieldElement = scaleMotionField;
 const scaleMotionSelectElement = scaleMotionSelect;
+const scaleDirectionFieldElement = scaleDirectionField;
+const scaleDirectionSelectElement = scaleDirectionSelect;
 const scaleOctavesFieldElement = scaleOctavesField;
 const scaleOctavesSelectElement = scaleOctavesSelect;
 const rangeStartFieldElement = rangeStartField;
@@ -475,6 +495,7 @@ const initialGenerationSettings: GenerationSettings = {
   scaleHands: "together",
   scaleOctaves: 2,
   scaleMotion: "parallel",
+  scaleDirection: "ascending",
   rangeStart: DEFAULT_RANGE_START,
   rangeEnd: DEFAULT_RANGE_END,
   noteSourceMode: "in-scale",
@@ -517,6 +538,7 @@ const state: AppState = {
     lastEvent: null,
     errorMessage: null,
   },
+  simulatedHeldNotes: [],
   heldOverlayHands: new Map(),
 };
 
@@ -545,6 +567,7 @@ settingsKeyboardToggleElement.addEventListener(
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
 scaleMotionSelectElement.addEventListener("change", handleScaleMotionChange);
+scaleDirectionSelectElement.addEventListener("change", handleScaleDirectionChange);
 scaleOctavesSelectElement.addEventListener("change", handleScaleOctavesChange);
 rangeStartSelectElement.addEventListener("change", handleRangeStartChange);
 rangeEndSelectElement.addEventListener("change", handleRangeEndChange);
@@ -565,6 +588,8 @@ if (state.promptQueue.length === 0) {
 renderApp();
 
 function renderApp() {
+  const displayedHeldNotes = getDisplayedHeldNotes(state);
+  const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
   const stageScale = getStageScale();
   document.documentElement.style.setProperty(
     "--stage-scale",
@@ -581,11 +606,11 @@ function renderApp() {
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
-  notationElement.dataset.midiHeldKeys = state.midi.heldKeys.join(",");
+  notationElement.dataset.midiHeldKeys = displayedHeldKeys.join(",");
   notationElement.title = [
     `MIDI: ${state.midi.status}`,
     `Device: ${state.midi.deviceName ?? "none"}`,
-    `Held: ${state.midi.heldKeys.join(", ") || "none"}`,
+    `Held: ${displayedHeldKeys.join(", ") || "none"}`,
   ].join("\n");
   practiceAreaElement.dataset.exerciseVisible = String(state.isExerciseVisible);
   practiceAreaElement.dataset.keyboardVisible = String(state.isKeyboardVisible);
@@ -604,6 +629,27 @@ function renderApp() {
   renderKeyboard();
 }
 
+function getDisplayedHeldNotes(appState: AppState) {
+  return [...new Set([...appState.midi.heldNotes, ...appState.simulatedHeldNotes])]
+    .sort((left, right) => left - right);
+}
+
+function getDisplayedAnalysisHeldNotes(appState: AppState) {
+  return [
+    ...new Set([
+      ...appState.midi.analysisHeldNotes,
+      ...appState.simulatedHeldNotes,
+    ]),
+  ].sort((left, right) => left - right);
+}
+
+function getDisplayedHeldKeys(
+  appState: AppState,
+  heldNotes = getDisplayedHeldNotes(appState),
+) {
+  return heldNotes.map((noteNumber) => midiNoteNumberToKey(noteNumber, "sharps"));
+}
+
 function handleWindowResize() {
   renderApp();
 }
@@ -615,10 +661,10 @@ function handleMidiStateChange(midiState: MidiState) {
 }
 
 function syncHeldOverlayHands() {
-  const physicallyHeldNotes = new Set(state.midi.heldNotes);
+  const activeHeldNotes = new Set(getDisplayedHeldNotes(state));
 
   for (const heldOverlayNoteNumber of state.heldOverlayHands.keys()) {
-    if (!physicallyHeldNotes.has(heldOverlayNoteNumber)) {
+    if (!activeHeldNotes.has(heldOverlayNoteNumber)) {
       state.heldOverlayHands.delete(heldOverlayNoteNumber);
     }
   }
@@ -683,6 +729,7 @@ function renderSettingsDrawer() {
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
   scaleHandsSelectElement.value = state.generationSettings.scaleHands;
   scaleMotionSelectElement.value = state.generationSettings.scaleMotion;
+  scaleDirectionSelectElement.value = state.generationSettings.scaleDirection;
   scaleOctavesSelectElement.value =
     state.generationSettings.scaleOctaves.toString();
   noteSourceSelectElement.value = state.generationSettings.noteSourceMode;
@@ -698,6 +745,8 @@ function renderSettingsDrawer() {
   const isCadencesMode = state.generationSettings.practiceMode === "cadences";
   const isTogetherScalesMode =
     isScalesMode && state.generationSettings.scaleHands === "together";
+  const isSingleHandScalesMode =
+    isScalesMode && state.generationSettings.scaleHands !== "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
     scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
@@ -708,6 +757,8 @@ function renderSettingsDrawer() {
     !areExerciseSettingsVisible || isRandomNotesMode;
   scaleMotionFieldElement.hidden =
     !areExerciseSettingsVisible || !isTogetherScalesMode;
+  scaleDirectionFieldElement.hidden =
+    !areExerciseSettingsVisible || !isSingleHandScalesMode;
   scaleOctavesFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode || isCadencesMode;
   rangeStartFieldElement.hidden =
@@ -738,6 +789,11 @@ function renderMidiDebug() {
   midiDebugElement.hidden = !state.isDebugVisible;
 
   const currentPrompt = state.promptQueue[state.currentPromptIndex] ?? null;
+  const displayedHeldNotes = getDisplayedHeldNotes(state);
+  const displayedAnalysisHeldNotes = getDisplayedAnalysisHeldNotes(state);
+  const simulatedHeldKeys = state.simulatedHeldNotes.map((noteNumber) =>
+    midiNoteNumberToKey(noteNumber, "sharps"),
+  );
   const expectedMidiNotes = currentPrompt
     ? getPromptMidiNotes(currentPrompt)
     : [];
@@ -751,6 +807,7 @@ function renderMidiDebug() {
     `Practice mode: ${state.generationSettings.practiceMode}`,
     `Scale hands: ${state.generationSettings.scaleHands}`,
     `Scale motion: ${state.generationSettings.scaleMotion}`,
+    `Scale direction: ${state.generationSettings.scaleDirection}`,
     `Scale octaves: ${state.generationSettings.scaleOctaves}`,
     `Note source: ${state.generationSettings.noteSourceMode}`,
     `Accidental spelling: ${state.generationSettings.accidentalSpellingMode}`,
@@ -760,13 +817,22 @@ function renderMidiDebug() {
     `Attempt window: ${state.attemptWindowMs}ms`,
     `Key signature: ${getDerivedKeySignature(state.generationSettings)}`,
     `Range: ${formatKeyLabel(state.generationSettings.rangeStart)} to ${formatKeyLabel(state.generationSettings.rangeEnd)}`,
-    `Held keys: ${state.midi.heldKeys.join(", ") || "none"}`,
+    `Held keys: ${getDisplayedHeldKeys(state, displayedHeldNotes).join(", ") || "none"}`,
     `Held notes: ${
-      state.midi.heldNotes.map((note) => note.toString()).join(", ") || "none"
+      displayedHeldNotes.map((note) => note.toString()).join(", ") || "none"
     }`,
-    `Analysis held keys: ${state.midi.analysisHeldKeys.join(", ") || "none"}`,
+    `Simulated held keys: ${simulatedHeldKeys.join(", ") || "none"}`,
+    `Simulated held notes: ${
+      state.simulatedHeldNotes.map((note) => note.toString()).join(", ") ||
+      "none"
+    }`,
+    `Analysis held keys: ${
+      displayedAnalysisHeldNotes
+        .map((note) => midiNoteNumberToKey(note, "sharps"))
+        .join(", ") || "none"
+    }`,
     `Analysis held notes: ${
-      state.midi.analysisHeldNotes.map((note) => note.toString()).join(", ") ||
+      displayedAnalysisHeldNotes.map((note) => note.toString()).join(", ") ||
       "none"
     }`,
     `Last event: ${lastEvent}`,
@@ -945,7 +1011,7 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
       return `${capitalizeWord(generationSettings.scaleMotion)} | ${scaleLabel} | ${octaveLabel}`;
     }
 
-    return `${capitalizeWord(generationSettings.scaleHands)} | ${scaleLabel} | ${octaveLabel}`;
+    return `${capitalizeWord(generationSettings.scaleDirection)} | ${scaleLabel} | ${octaveLabel}`;
   }
 
   if (generationSettings.practiceMode === "triads") {
@@ -1076,7 +1142,7 @@ function renderKeyboard() {
       state.isExerciseVisible && currentPrompt
         ? getPromptMidiNotes(currentPrompt)
         : [],
-    heldNotes: state.midi.heldNotes,
+    heldNotes: getDisplayedHeldNotes(state),
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
   });
@@ -1090,7 +1156,7 @@ function renderInputName() {
     return;
   }
 
-  const analysis = analyzeHeldInput(state.midi.analysisHeldNotes);
+  const analysis = analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
 
   renderInputNameDisplay(inputNameDisplayElement, analysis);
 }
@@ -1161,6 +1227,8 @@ function handlePromptAttempt() {
     return;
   }
 
+  state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt);
+  syncHeldOverlayHands();
   const attempt = createFakeAttempt(currentPrompt);
 
   processPromptAttempt(currentPrompt, attempt);
@@ -1214,6 +1282,8 @@ function handleScaleHandsChange() {
 
   if (state.generationSettings.scaleHands !== "together") {
     state.generationSettings.scaleMotion = "parallel";
+  } else {
+    state.generationSettings.scaleDirection = "ascending";
   }
 
   saveStoredSettings();
@@ -1223,6 +1293,13 @@ function handleScaleHandsChange() {
 function handleScaleMotionChange() {
   state.generationSettings.scaleMotion =
     scaleMotionSelectElement.value as ScaleMotion;
+  saveStoredSettings();
+  resetPromptQueue();
+}
+
+function handleScaleDirectionChange() {
+  state.generationSettings.scaleDirection =
+    scaleDirectionSelectElement.value as ScaleDirection;
   saveStoredSettings();
   resetPromptQueue();
 }
@@ -1435,6 +1512,7 @@ function resetPromptQueue() {
 
   pendingAttemptMidiNotes.clear();
   state.heldOverlayHands.clear();
+  state.simulatedHeldNotes = [];
   state.promptQueue = createPromptQueue(
     PROMPT_QUEUE_LENGTH,
     state.generationSettings,
@@ -1562,11 +1640,38 @@ function getTogetherScaleDisplayedStaff(
   sourceHand: "treble" | "bass",
   key: string,
 ) {
-  if (appState.generationSettings.practiceMode === "arpeggios") {
+  if (
+    appState.generationSettings.practiceMode === "arpeggios" ||
+    appState.generationSettings.practiceMode === "scales"
+  ) {
+    if (appState.generationSettings.practiceMode === "scales") {
+      return getDisplayedScaleStaff(appState, sourceHand, key);
+    }
+
     return sourceHand === "treble" ? "treble" : getClefForKey(key);
   }
 
-  if (appState.generationSettings.scaleMotion === "contrary") {
+  return getClefForKey(key);
+}
+
+function getDisplayedScaleStaff(
+  appState: AppState,
+  sourceHand: "treble" | "bass",
+  key: string,
+) {
+  if (
+    appState.generationSettings.scaleHands === "together" &&
+    appState.generationSettings.scaleMotion === "contrary"
+  ) {
+    return sourceHand;
+  }
+
+  const leadingHand =
+    appState.generationSettings.scaleDirection === "descending"
+      ? "bass"
+      : "treble";
+
+  if (sourceHand === leadingHand) {
     return sourceHand;
   }
 
@@ -1832,9 +1937,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         currentSecondaryPromptNotes.push(bassSecondaryNote);
       }
 
-      for (const heldNoteNumber of [...appState.midi.heldNotes].sort(
-        (left, right) => left - right,
-      )) {
+      for (const heldNoteNumber of getDisplayedHeldNotes(appState)) {
         const heldOverlayPresentation = getHeldOverlayPresentation(
           appState,
           prompt,
@@ -2069,23 +2172,33 @@ function getDisplayedPromptSlot(
     }
 
     const displayedTrebleKeys = [
-      ...(prompt.trebleKeys ?? []),
-      ...(prompt.bassKeys ?? []),
+      ...(prompt.trebleKeys ?? []).filter(
+        (key) => getDisplayedScaleStaff(appState, "treble", key) === "treble",
+      ),
+      ...(prompt.bassKeys ?? []).filter(
+        (key) => getDisplayedScaleStaff(appState, "bass", key) === "treble",
+      ),
     ]
-      .filter((key) => getClefForKey(key) === "treble")
       .sort(compareKeysByMidiNumber);
     const displayedBassKeys = [
-      ...(prompt.trebleKeys ?? []),
-      ...(prompt.bassKeys ?? []),
+      ...(prompt.trebleKeys ?? []).filter(
+        (key) => getDisplayedScaleStaff(appState, "treble", key) === "bass",
+      ),
+      ...(prompt.bassKeys ?? []).filter(
+        (key) => getDisplayedScaleStaff(appState, "bass", key) === "bass",
+      ),
     ]
-      .filter((key) => getClefForKey(key) === "bass")
       .sort(compareKeysByMidiNumber);
 
     return {
+      isPlayable: prompt.isPlayable,
       duration: prompt.duration,
       trebleKeys:
         displayedTrebleKeys.length > 0 ? displayedTrebleKeys : undefined,
       bassKeys: displayedBassKeys.length > 0 ? displayedBassKeys : undefined,
+      trebleRestVisible: prompt.trebleRestVisible,
+      bassRestVisible: prompt.bassRestVisible,
+      annotations: prompt.annotations,
     };
   }
 
@@ -2186,6 +2299,18 @@ function getHeldOverlayPresentation(
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
+  if (appState.generationSettings.practiceMode === "scales") {
+    const scaleExactMatch = getExactScaleOverlayPresentation(
+      appState,
+      prompt,
+      heldNoteNumber,
+    );
+
+    if (scaleExactMatch) {
+      return scaleExactMatch;
+    }
+  }
+
   if (appState.generationSettings.practiceMode === "arpeggios") {
     const arpeggioExactMatch = getExactArpeggioOverlayPresentation(
       prompt,
@@ -2256,6 +2381,26 @@ function assignHeldOverlayHand(
     assignedHand = "treble";
   } else if (exactBassDisplayKey) {
     assignedHand = "bass";
+  } else if (appState.generationSettings.practiceMode === "scales") {
+    const scaleDisplayCandidates = getScaleDisplayCandidates(
+      appState,
+      prompt,
+      heldNoteNumber,
+      displayedKeySignature,
+    );
+
+    if (scaleDisplayCandidates.length > 0) {
+      assignedHand = scaleDisplayCandidates.reduce((bestCandidate, candidate) =>
+        candidate.score < bestCandidate.score ? candidate : bestCandidate,
+      ).hand;
+    } else {
+      const literalKey = getHeldOverlayKey(
+        { duration: prompt.duration },
+        heldNoteNumber,
+        displayedKeySignature,
+      );
+      assignedHand = getClefForKey(literalKey);
+    }
   } else if (appState.generationSettings.scaleHands === "together") {
     const specialContextCandidates = getSpecialNotationCandidates(
       prompt,
@@ -2401,6 +2546,83 @@ function getExactArpeggioOverlayPresentation(
     key: exactBassKey,
     clef: displayedStaff,
   };
+}
+
+function getExactScaleOverlayPresentation(
+  appState: AppState,
+  prompt: PromptSlot,
+  heldNoteNumber: number,
+) {
+  const exactTrebleKey = getMatchedDisplayedPromptKey(
+    prompt.trebleKeys,
+    prompt.displayedTrebleKeys,
+    heldNoteNumber,
+  );
+
+  if (exactTrebleKey) {
+    const displayedStaff = getDisplayedScaleStaff(
+      appState,
+      "treble",
+      exactTrebleKey,
+    );
+
+    return {
+      hand: displayedStaff,
+      key: exactTrebleKey,
+      clef: displayedStaff,
+    };
+  }
+
+  const exactBassKey = getMatchedDisplayedPromptKey(
+    prompt.bassKeys,
+    prompt.displayedBassKeys,
+    heldNoteNumber,
+  );
+
+  if (!exactBassKey) {
+    return null;
+  }
+
+  const displayedStaff = getDisplayedScaleStaff(appState, "bass", exactBassKey);
+
+  return {
+    hand: displayedStaff,
+    key: exactBassKey,
+    clef: displayedStaff,
+  };
+}
+
+function getScaleDisplayCandidates(
+  appState: AppState,
+  prompt: PromptSlot,
+  heldNoteNumber: number,
+  displayedKeySignature: KeySignature | null,
+) {
+  const literalKey = getHeldOverlayKey(
+    { duration: prompt.duration },
+    heldNoteNumber,
+    displayedKeySignature,
+  );
+  const candidates: Array<{
+    hand: "treble" | "bass";
+    score: number;
+  }> = [];
+
+  if ((prompt.trebleKeys?.length ?? 0) > 0) {
+    candidates.push({
+      hand: getDisplayedScaleStaff(appState, "treble", literalKey),
+      score: getClosestPromptDistance(prompt.trebleKeys, heldNoteNumber),
+    });
+  }
+
+  if ((prompt.bassKeys?.length ?? 0) > 0) {
+    candidates.push({
+      hand: getDisplayedScaleStaff(appState, "bass", literalKey),
+      score: getClosestPromptDistance(prompt.bassKeys, heldNoteNumber),
+    });
+  }
+
+  return candidates;
 }
 
 function getMatchedDisplayedPromptKey(

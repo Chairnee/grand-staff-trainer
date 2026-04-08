@@ -11,6 +11,7 @@ function createCadenceSettings(
     scaleHands: "treble",
     scaleOctaves: 1,
     scaleMotion: "parallel",
+    scaleDirection: "ascending",
     rangeStart: "c/2",
     rangeEnd: "c/6",
     noteSourceMode: "in-scale",

@@ -1,4 +1,5 @@
 import {
+  getDescendingScaleStartingOctave,
   type GenerationSettings,
   getAscendingScaleKeys,
   getScaleNoteNames,
@@ -16,6 +17,13 @@ export function createScalePracticeQueue(
     generationSettings.scaleMotion === "contrary"
   ) {
     return createContraryMotionScalePracticeQueue(generationSettings);
+  }
+
+  if (
+    generationSettings.scaleHands !== "together" &&
+    generationSettings.scaleDirection === "descending"
+  ) {
+    return createDescendingSingleHandScalePracticeQueue(generationSettings);
   }
 
   const trebleStartingOctave = getScaleStartingOctave(
@@ -49,6 +57,56 @@ export function createScalePracticeQueue(
   );
 
   return [...ascendingPrompts, ...descendingPrompts.slice(0, -1)];
+}
+
+function createDescendingSingleHandScalePracticeQueue(
+  generationSettings: GenerationSettings,
+) : PromptSlot[] {
+  const scaleHands = generationSettings.scaleHands;
+
+  if (scaleHands === "together") {
+    throw new Error("Descending single-hand scales require a single hand.");
+  }
+
+  const descendingStartingOctave = getDescendingScaleStartingOctave(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+    generationSettings.scaleOctaves,
+    scaleHands,
+    generationSettings.renderingPreference,
+  );
+  const descendingKeys = getAscendingScaleKeys(
+    generationSettings.tonic,
+    generationSettings.scaleType,
+    descendingStartingOctave,
+    generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
+  ).reverse();
+  const ascendingKeys = [...descendingKeys].slice(0, -1).reverse();
+
+  if (scaleHands === "treble") {
+    return [
+      ...descendingKeys.map((key) => ({
+        duration: "q" as const,
+        trebleKeys: [key],
+      })),
+      ...ascendingKeys.map((key) => ({
+        duration: "q" as const,
+        trebleKeys: [key],
+      })),
+    ];
+  }
+
+  return [
+    ...descendingKeys.map((key) => ({
+      duration: "q" as const,
+      bassKeys: [key],
+    })),
+    ...ascendingKeys.map((key) => ({
+      duration: "q" as const,
+      bassKeys: [key],
+    })),
+  ];
 }
 
 function createContraryMotionScalePracticeQueue(
