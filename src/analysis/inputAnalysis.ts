@@ -1205,7 +1205,9 @@ function formatSemitoneCount(semitoneDistance: number) {
   return `${semitoneDistance} ${semitoneDistance === 1 ? "semitone" : "semitones"}`;
 }
 
-function formatAddedChordLonghand(addLabel: "add2" | "add4" | "add9" | "add11") {
+function formatAddedChordLonghand(
+  addLabel: "add2" | "add4" | "add9" | "add11",
+) {
   const addLabelByLonghand: Record<typeof addLabel, string> = {
     add2: "add 2",
     add4: "add 4",

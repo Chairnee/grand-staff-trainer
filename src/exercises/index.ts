@@ -1,10 +1,10 @@
 import type { GenerationSettings } from "../theory/music";
+import { createArpeggioPracticeQueue } from "./arpeggios";
+import { createCadencePracticeQueue } from "./cadences";
 import {
   createRandomNotePromptQueue,
   fillRandomNotePromptQueue,
 } from "./randomNotes";
-import { createArpeggioPracticeQueue } from "./arpeggios";
-import { createCadencePracticeQueue } from "./cadences";
 import { createScalePracticeQueue } from "./scales";
 import { createTriadPracticeQueue } from "./triads";
 import type { ExerciseNotationProfile, PromptSlot } from "./types";

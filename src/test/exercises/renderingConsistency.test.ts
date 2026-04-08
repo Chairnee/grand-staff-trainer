@@ -6,6 +6,7 @@ import { createScalePracticeQueue } from "../../exercises/scales";
 import { createTriadPracticeQueue } from "../../exercises/triads";
 import type { PromptSlot } from "../../exercises/types";
 import {
+  type GenerationSettings,
   getAllTonics,
   getCadenceRenderingOptions,
   getScaleNoteNames,
@@ -13,7 +14,6 @@ import {
   getScaleRenderingOptions,
   getTriadNoteNames,
   getTriadRenderingOptions,
-  type GenerationSettings,
   type ScaleType,
   type Tonic,
   type TriadType,
@@ -42,7 +42,10 @@ function createGenerationSettings(
 
 function getPromptNoteNames(promptQueue: PromptSlot[]) {
   return promptQueue
-    .flatMap((prompt) => [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])])
+    .flatMap((prompt) => [
+      ...(prompt.trebleKeys ?? []),
+      ...(prompt.bassKeys ?? []),
+    ])
     .map((key) => key.split("/")[0] ?? "");
 }
 
@@ -167,7 +170,11 @@ describe("exercise rendering consistency", () => {
           tonic,
           triadType,
         });
-        const allowedNoteNames = getTriadNoteNames(tonic, triadType, "preferred");
+        const allowedNoteNames = getTriadNoteNames(
+          tonic,
+          triadType,
+          "preferred",
+        );
         const actualNoteNames = getPromptNoteNames(
           createTriadPracticeQueue(generationSettings),
         );
@@ -177,7 +184,9 @@ describe("exercise rendering consistency", () => {
         );
 
         if (unexpectedNoteNames.length > 0) {
-          leaks.push(`${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`);
+          leaks.push(
+            `${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`,
+          );
         }
       }
     }
@@ -196,7 +205,11 @@ describe("exercise rendering consistency", () => {
           tonic,
           triadType,
         });
-        const allowedNoteNames = getTriadNoteNames(tonic, triadType, "preferred");
+        const allowedNoteNames = getTriadNoteNames(
+          tonic,
+          triadType,
+          "preferred",
+        );
         const actualNoteNames = getPromptNoteNames(
           createArpeggioPracticeQueue(generationSettings),
         );
@@ -229,7 +242,9 @@ describe("exercise rendering consistency", () => {
           scaleOctaves: 1,
         });
         const renderedTonic =
-          getCadenceRenderingOptions(generationSettings).active.tonic.toLowerCase();
+          getCadenceRenderingOptions(
+            generationSettings,
+          ).active.tonic.toLowerCase();
         const allowedNoteNames =
           triadType === "major"
             ? getScaleNoteNamesForRenderedTonicName(renderedTonic, "major")
@@ -252,7 +267,9 @@ describe("exercise rendering consistency", () => {
         );
 
         if (unexpectedNoteNames.length > 0) {
-          leaks.push(`${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`);
+          leaks.push(
+            `${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`,
+          );
         }
       }
     }
@@ -282,7 +299,8 @@ describe("exercise rendering consistency", () => {
               scaleDirection,
               renderingPreference: "alternate",
             });
-            const renderingOptions = getScaleRenderingOptions(generationSettings);
+            const renderingOptions =
+              getScaleRenderingOptions(generationSettings);
 
             if (!renderingOptions.alternate) {
               continue;
@@ -291,9 +309,9 @@ describe("exercise rendering consistency", () => {
             const renderedTonic = renderingOptions.active.tonic.toLowerCase();
             const allowedNoteNames =
               getAllowedScaleExerciseNoteNamesForRenderedTonic(
-              renderedTonic,
-              scaleType,
-            );
+                renderedTonic,
+                scaleType,
+              );
             const actualNoteNames = getPromptNoteNames(
               createScalePracticeQueue(generationSettings),
             );
@@ -326,12 +344,15 @@ describe("exercise rendering consistency", () => {
           continue;
         }
 
-        const triadRenderedTonic = triadRenderingOptions.active.tonic.toLowerCase();
-        const triadScaleType = triadType === "major" ? "major" : "natural-minor";
-        const triadRenderedScaleNoteNames = getScaleNoteNamesForRenderedTonicName(
-          triadRenderedTonic,
-          triadScaleType,
-        );
+        const triadRenderedTonic =
+          triadRenderingOptions.active.tonic.toLowerCase();
+        const triadScaleType =
+          triadType === "major" ? "major" : "natural-minor";
+        const triadRenderedScaleNoteNames =
+          getScaleNoteNamesForRenderedTonicName(
+            triadRenderedTonic,
+            triadScaleType,
+          );
         const triadAllowedNoteNames = [
           triadRenderedScaleNoteNames[0],
           triadRenderedScaleNoteNames[2],
@@ -346,7 +367,9 @@ describe("exercise rendering consistency", () => {
         );
 
         if (triadUnexpectedNoteNames.length > 0) {
-          leaks.push(`${tonic} ${triadType} triads: ${triadUnexpectedNoteNames.join(", ")}`);
+          leaks.push(
+            `${tonic} ${triadType} triads: ${triadUnexpectedNoteNames.join(", ")}`,
+          );
         }
 
         const arpeggioGenerationSettings = createGenerationSettings({
@@ -408,7 +431,10 @@ describe("exercise rendering consistency", () => {
           cadenceRenderingOptions.active.tonic.toLowerCase();
         const cadenceAllowedNoteNames =
           triadType === "major"
-            ? getScaleNoteNamesForRenderedTonicName(cadenceRenderedTonic, "major")
+            ? getScaleNoteNamesForRenderedTonicName(
+                cadenceRenderedTonic,
+                "major",
+              )
             : new Set([
                 ...getScaleNoteNamesForRenderedTonicName(
                   cadenceRenderedTonic,

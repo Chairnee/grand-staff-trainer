@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import type { GenerationSettings } from "../../theory/music";
 import { createTriadPracticeQueue } from "../../exercises/triads";
+import type { GenerationSettings } from "../../theory/music";
 
 function createTriadSettings(
   overrides: Partial<GenerationSettings> = {},

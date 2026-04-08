@@ -534,7 +534,9 @@ export function getDescendingScaleStartingOctave(
   );
 
   if (validCandidates.length > 0) {
-    return Math.max(...validCandidates.map((candidate) => candidate.startingOctave));
+    return Math.max(
+      ...validCandidates.map((candidate) => candidate.startingOctave),
+    );
   }
 
   rankedCandidates.sort((left, right) => {
@@ -718,8 +720,10 @@ export function getTonicReadabilityOptionsForScaleType(
         candidateTonic.toLowerCase(),
         scaleType,
       );
-      const keySignatureAccidentalCount =
-        getReadabilityAccidentalCount(keySignature, scaleNoteNames);
+      const keySignatureAccidentalCount = getReadabilityAccidentalCount(
+        keySignature,
+        scaleNoteNames,
+      );
       const doubleAccidentalCount = countDoubleAccidentals(scaleNoteNames);
 
       return {

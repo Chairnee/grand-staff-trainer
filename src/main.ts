@@ -11,6 +11,7 @@ import {
   StaveNote,
   Voice,
 } from "vexflow";
+import { analyzeHeldInput } from "./analysis/inputAnalysis";
 import { renderInputNameDisplay } from "./display/inputName";
 import { renderKeyboardDisplay } from "./display/keyboard";
 import {
@@ -18,8 +19,7 @@ import {
   fillExercisePromptQueue,
   getExerciseNotationProfile,
 } from "./exercises";
-import type { PromptSlot } from "./exercises/types";
-import { analyzeHeldInput } from "./analysis/inputAnalysis";
+import type { PromptAccidentalOverride, PromptSlot } from "./exercises/types";
 import { connectMidi, type MidiState } from "./midi";
 import {
   type AccidentalSpellingMode,
@@ -30,12 +30,12 @@ import {
   getAllTonics,
   getArpeggioRenderingNotice,
   getArpeggioRenderingOptions,
+  getCadenceRenderingNotice,
+  getCadenceRenderingOptions,
   getClefForKey,
   getDerivedKeySignature,
   getHeldOverlayKey,
   getPracticalTonic,
-  getCadenceRenderingNotice,
-  getCadenceRenderingOptions,
   getRenderedAccidentalForKey,
   getScaleRenderingNotice,
   getScaleRenderingOptions,
@@ -567,7 +567,10 @@ settingsKeyboardToggleElement.addEventListener(
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
 scaleMotionSelectElement.addEventListener("change", handleScaleMotionChange);
-scaleDirectionSelectElement.addEventListener("change", handleScaleDirectionChange);
+scaleDirectionSelectElement.addEventListener(
+  "change",
+  handleScaleDirectionChange,
+);
 scaleOctavesSelectElement.addEventListener("change", handleScaleOctavesChange);
 rangeStartSelectElement.addEventListener("change", handleRangeStartChange);
 rangeEndSelectElement.addEventListener("change", handleRangeEndChange);
@@ -630,8 +633,9 @@ function renderApp() {
 }
 
 function getDisplayedHeldNotes(appState: AppState) {
-  return [...new Set([...appState.midi.heldNotes, ...appState.simulatedHeldNotes])]
-    .sort((left, right) => left - right);
+  return [
+    ...new Set([...appState.midi.heldNotes, ...appState.simulatedHeldNotes]),
+  ].sort((left, right) => left - right);
 }
 
 function getDisplayedAnalysisHeldNotes(appState: AppState) {
@@ -647,7 +651,9 @@ function getDisplayedHeldKeys(
   appState: AppState,
   heldNotes = getDisplayedHeldNotes(appState),
 ) {
-  return heldNotes.map((noteNumber) => midiNoteNumberToKey(noteNumber, "sharps"));
+  return heldNotes.map((noteNumber) =>
+    midiNoteNumberToKey(noteNumber, "sharps"),
+  );
 }
 
 function handleWindowResize() {
@@ -1593,6 +1599,7 @@ function createPromptStaveNote(
   displayedKeySignature: KeySignature | null,
   inlineClefChangeBefore?: "treble" | "bass",
   stemDirection?: 1 | -1,
+  accidentalOverrides?: PromptAccidentalOverride[],
 ) {
   const note = new StaveNote({
     clef,
@@ -1609,7 +1616,12 @@ function createPromptStaveNote(
   }
 
   for (const [index, key] of keys.entries()) {
-    const accidental = getRenderedAccidentalForKey(key, displayedKeySignature);
+    const accidentalOverride = accidentalOverrides?.find(
+      (override) => override.key === key,
+    );
+    const accidental =
+      accidentalOverride?.accidental ??
+      getRenderedAccidentalForKey(key, displayedKeySignature);
 
     if (accidental) {
       note.addModifier(new Accidental(accidental), index);
@@ -1833,6 +1845,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         displayedKeySignature,
         undefined,
         getStemDirectionForPromptSource("treble", trebleDisplayedStaff),
+        displayedPrompt.accidentalOverrides,
       );
       const bassHandNote = createPromptStaveNote(
         bassDisplayedStaff,
@@ -1841,6 +1854,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         displayedKeySignature,
         undefined,
         getStemDirectionForPromptSource("bass", bassDisplayedStaff),
+        displayedPrompt.accidentalOverrides,
       );
 
       if (
@@ -1880,6 +1894,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
               treblePromptSourceHand,
               displayedPrompt.trebleDisplayedClef ?? "treble",
             ),
+            displayedPrompt.accidentalOverrides,
           )
         : createRest(
             displayedPrompt.trebleDisplayedClef ?? "treble",
@@ -1898,6 +1913,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
               displayedPrompt.bassDisplayedClef ?? "bass",
               (displayedPrompt.bassDisplayedClef ?? "bass") !== "bass",
             ),
+            displayedPrompt.accidentalOverrides,
           )
         : createRest(
             displayedPrompt.bassDisplayedClef ?? "bass",
@@ -2153,6 +2169,7 @@ function getDisplayedPromptSlot(
       trebleRestVisible: prompt.trebleRestVisible,
       bassRestVisible: prompt.bassRestVisible,
       annotations: prompt.annotations,
+      accidentalOverrides: prompt.accidentalOverrides,
     };
   }
 
@@ -2168,6 +2185,7 @@ function getDisplayedPromptSlot(
         bassKeys: prompt.bassKeys,
         trebleRestVisible: prompt.trebleRestVisible,
         bassRestVisible: prompt.bassRestVisible,
+        accidentalOverrides: prompt.accidentalOverrides,
       };
     }
 
@@ -2178,8 +2196,7 @@ function getDisplayedPromptSlot(
       ...(prompt.bassKeys ?? []).filter(
         (key) => getDisplayedScaleStaff(appState, "bass", key) === "treble",
       ),
-    ]
-      .sort(compareKeysByMidiNumber);
+    ].sort(compareKeysByMidiNumber);
     const displayedBassKeys = [
       ...(prompt.trebleKeys ?? []).filter(
         (key) => getDisplayedScaleStaff(appState, "treble", key) === "bass",
@@ -2187,8 +2204,7 @@ function getDisplayedPromptSlot(
       ...(prompt.bassKeys ?? []).filter(
         (key) => getDisplayedScaleStaff(appState, "bass", key) === "bass",
       ),
-    ]
-      .sort(compareKeysByMidiNumber);
+    ].sort(compareKeysByMidiNumber);
 
     return {
       isPlayable: prompt.isPlayable,
@@ -2199,6 +2215,7 @@ function getDisplayedPromptSlot(
       trebleRestVisible: prompt.trebleRestVisible,
       bassRestVisible: prompt.bassRestVisible,
       annotations: prompt.annotations,
+      accidentalOverrides: prompt.accidentalOverrides,
     };
   }
 
@@ -2209,6 +2226,7 @@ function getDisplayedPromptSlot(
     bassKeys: prompt.displayedBassKeys ?? prompt.bassKeys,
     trebleRestVisible: prompt.trebleRestVisible,
     bassRestVisible: prompt.bassRestVisible,
+    accidentalOverrides: prompt.accidentalOverrides,
     trebleDisplayedClef: prompt.trebleDisplayedClef,
     bassDisplayedClef: prompt.bassDisplayedClef,
     trebleOttavaStart: prompt.trebleOttavaStart,
@@ -2390,8 +2408,9 @@ function assignHeldOverlayHand(
     );
 
     if (scaleDisplayCandidates.length > 0) {
-      assignedHand = scaleDisplayCandidates.reduce((bestCandidate, candidate) =>
-        candidate.score < bestCandidate.score ? candidate : bestCandidate,
+      assignedHand = scaleDisplayCandidates.reduce(
+        (bestCandidate, candidate) =>
+          candidate.score < bestCandidate.score ? candidate : bestCandidate,
       ).hand;
     } else {
       const literalKey = getHeldOverlayKey(

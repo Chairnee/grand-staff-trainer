@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  getCadenceStartingOctave,
-  getDescendingScaleStartingOctave,
-  getAllTonics,
   type GenerationSettings,
+  getAllTonics,
   getAscendingScaleKeys,
+  getCadenceStartingOctave,
   getDerivedKeySignature,
+  getDescendingScaleStartingOctave,
   getHeldOverlayKey,
   getRenderedAccidentalForKey,
   getScaleNoteNames,
@@ -239,46 +239,13 @@ describe("scale positioning helpers", () => {
   });
 
   it("chooses descending single-hand scale starts within the comfort bands", () => {
+    expect(getDescendingScaleStartingOctave("C", "major", 1, "treble")).toBe(5);
+    expect(getDescendingScaleStartingOctave("C", "major", 1, "bass")).toBe(3);
     expect(
-      getDescendingScaleStartingOctave(
-        "C",
-        "major",
-        1,
-        "treble",
-      ),
-    ).toBe(5);
-    expect(
-      getDescendingScaleStartingOctave(
-        "C",
-        "major",
-        1,
-        "bass",
-      ),
+      getDescendingScaleStartingOctave("Ab", "natural-minor", 2, "treble"),
     ).toBe(3);
-    expect(
-      getDescendingScaleStartingOctave(
-        "Ab",
-        "natural-minor",
-        2,
-        "treble",
-      ),
-    ).toBe(3);
-    expect(
-      getDescendingScaleStartingOctave(
-        "G",
-        "major",
-        1,
-        "treble",
-      ),
-    ).toBe(4);
-    expect(
-      getDescendingScaleStartingOctave(
-        "F#",
-        "major",
-        1,
-        "bass",
-      ),
-    ).toBe(3);
+    expect(getDescendingScaleStartingOctave("G", "major", 1, "treble")).toBe(4);
+    expect(getDescendingScaleStartingOctave("F#", "major", 1, "bass")).toBe(3);
   });
 
   it("builds ascending keys without dropping backward across octaves", () => {

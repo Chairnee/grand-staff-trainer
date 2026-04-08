@@ -4,6 +4,11 @@ export type PromptAnnotation = {
   text: string;
 };
 
+export type PromptAccidentalOverride = {
+  key: string;
+  accidental: string;
+};
+
 export type PromptSlot = {
   duration: string;
   isPlayable?: boolean;
@@ -12,6 +17,7 @@ export type PromptSlot = {
   trebleRestVisible?: boolean;
   bassRestVisible?: boolean;
   annotations?: PromptAnnotation[];
+  accidentalOverrides?: PromptAccidentalOverride[];
   displayedTrebleKeys?: string[];
   displayedBassKeys?: string[];
   trebleDisplayedClef?: "treble" | "bass";

@@ -1,16 +1,16 @@
 import {
-  getAscendingScaleKeysForRenderedTonicName,
-  getDescendingScaleStartingOctave,
   type GenerationSettings,
   getAscendingScaleKeys,
+  getAscendingScaleKeysForRenderedTonicName,
+  getDescendingScaleStartingOctave,
+  getScaleNoteNames,
   getScaleStartingOctave,
   getSupportedTonicForScaleType,
   keyToMidiNoteNumber,
-  getScaleNoteNames,
   type ScaleHands,
   type ScaleType,
 } from "../theory/music";
-import type { PromptSlot } from "./types";
+import type { PromptAccidentalOverride, PromptSlot } from "./types";
 
 function getDescendingMotionScaleType(scaleType: ScaleType): ScaleType {
   return scaleType === "melodic-minor" ? "natural-minor" : scaleType;
@@ -104,13 +104,27 @@ export function createScalePracticeQueue(
     bassDescendingKeys,
     generationSettings.scaleHands,
   );
+  applyMelodicMinorDescentCourtesyAccidentalsForHand(
+    generationSettings,
+    descendingPrompts,
+    "treble",
+    trebleDescendingKeys,
+    [...trebleAscendingKeys.slice(0, -1)].reverse(),
+  );
+  applyMelodicMinorDescentCourtesyAccidentalsForHand(
+    generationSettings,
+    descendingPrompts,
+    "bass",
+    bassDescendingKeys,
+    [...bassAscendingKeys.slice(0, -1)].reverse(),
+  );
 
   return [...ascendingPrompts, ...descendingPrompts.slice(0, -1)];
 }
 
 function createDescendingSingleHandScalePracticeQueue(
   generationSettings: GenerationSettings,
-) : PromptSlot[] {
+): PromptSlot[] {
   const scaleHands = generationSettings.scaleHands;
 
   if (scaleHands === "together") {
@@ -129,6 +143,11 @@ function createDescendingSingleHandScalePracticeQueue(
     getDescendingMotionScaleType(generationSettings.scaleType),
     descendingStartingOctave,
   ).reverse();
+  const ascendingReferenceKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    generationSettings.scaleType,
+    descendingStartingOctave,
+  ).reverse();
   const ascendingKeys = getExerciseMovementScaleKeys(
     generationSettings,
     generationSettings.scaleType,
@@ -136,7 +155,7 @@ function createDescendingSingleHandScalePracticeQueue(
   ).slice(1);
 
   if (scaleHands === "treble") {
-    return [
+    const prompts = [
       ...descendingKeys.map((key) => ({
         duration: "q" as const,
         trebleKeys: [key],
@@ -146,9 +165,19 @@ function createDescendingSingleHandScalePracticeQueue(
         trebleKeys: [key],
       })),
     ];
+
+    applyMelodicMinorDescentCourtesyAccidentalsForHand(
+      generationSettings,
+      prompts,
+      "treble",
+      descendingKeys,
+      ascendingReferenceKeys,
+    );
+
+    return prompts;
   }
 
-  return [
+  const prompts = [
     ...descendingKeys.map((key) => ({
       duration: "q" as const,
       bassKeys: [key],
@@ -158,12 +187,23 @@ function createDescendingSingleHandScalePracticeQueue(
       bassKeys: [key],
     })),
   ];
+
+  applyMelodicMinorDescentCourtesyAccidentalsForHand(
+    generationSettings,
+    prompts,
+    "bass",
+    descendingKeys,
+    ascendingReferenceKeys,
+  );
+
+  return prompts;
 }
 
 function createContraryMotionScalePracticeQueue(
   generationSettings: GenerationSettings,
 ) {
-  const sharedStartingOctave = getContraryMotionStartingOctave(generationSettings);
+  const sharedStartingOctave =
+    getContraryMotionStartingOctave(generationSettings);
   const trebleAscendingKeys = getExerciseMovementScaleKeys(
     generationSettings,
     generationSettings.scaleType,
@@ -195,6 +235,34 @@ function createContraryMotionScalePracticeQueue(
     trebleDescendingKeys,
     bassAscendingKeys,
     "together",
+  );
+  applyMelodicMinorDescentCourtesyAccidentalsForHand(
+    generationSettings,
+    outwardPrompts,
+    "bass",
+    bassDescendingKeys,
+    [
+      ...getExerciseMovementScaleKeys(
+        generationSettings,
+        generationSettings.scaleType,
+        sharedStartingOctave - generationSettings.scaleOctaves,
+      ),
+    ].reverse(),
+  );
+  applyMelodicMinorDescentCourtesyAccidentalsForHand(
+    generationSettings,
+    inwardPrompts,
+    "treble",
+    trebleDescendingKeys,
+    [
+      ...getExerciseMovementScaleKeys(
+        generationSettings,
+        generationSettings.scaleType,
+        sharedStartingOctave,
+      )
+        .reverse()
+        .slice(1),
+    ],
   );
 
   return [...outwardPrompts, ...inwardPrompts.slice(0, -1)];
@@ -282,4 +350,79 @@ function createScalePromptsForHands(
       bassKeys: [bassKey],
     };
   });
+}
+
+function applyMelodicMinorDescentCourtesyAccidentalsForHand(
+  generationSettings: GenerationSettings,
+  prompts: PromptSlot[],
+  hand: "treble" | "bass",
+  descendingKeys: string[],
+  ascendingReferenceKeys: string[],
+) {
+  if (generationSettings.scaleType !== "melodic-minor") {
+    return;
+  }
+
+  for (const [index, descendingKey] of descendingKeys.entries()) {
+    const prompt = prompts[index];
+
+    if (!prompt || !descendingKey) {
+      continue;
+    }
+
+    if (hand === "treble" && !prompt.trebleKeys?.includes(descendingKey)) {
+      continue;
+    }
+
+    if (hand === "bass" && !prompt.bassKeys?.includes(descendingKey)) {
+      continue;
+    }
+
+    const override = getMelodicMinorCourtesyAccidentalOverride(
+      descendingKey,
+      ascendingReferenceKeys[index],
+    );
+
+    if (!override) {
+      continue;
+    }
+
+    prompt.accidentalOverrides = [
+      ...(prompt.accidentalOverrides ?? []),
+      override,
+    ];
+  }
+}
+
+function getMelodicMinorCourtesyAccidentalOverride(
+  descendingKey: string | undefined,
+  ascendingMelodicReferenceKey: string | undefined,
+): PromptAccidentalOverride | null {
+  if (!descendingKey || !ascendingMelodicReferenceKey) {
+    return null;
+  }
+
+  const descendingActualAccidental = getActualAccidentalFromKey(descendingKey);
+  const referenceActualAccidental = getActualAccidentalFromKey(
+    ascendingMelodicReferenceKey,
+  );
+
+  if (descendingActualAccidental === referenceActualAccidental) {
+    return null;
+  }
+
+  return {
+    key: descendingKey,
+    accidental: descendingActualAccidental || "n",
+  };
+}
+
+function getActualAccidentalFromKey(key: string) {
+  const [noteName] = key.split("/");
+
+  if (!noteName) {
+    return "";
+  }
+
+  return noteName.slice(1);
 }

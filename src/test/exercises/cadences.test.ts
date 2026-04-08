@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import type { GenerationSettings } from "../../theory/music";
 import { createCadencePracticeQueue } from "../../exercises/cadences";
+import type { GenerationSettings } from "../../theory/music";
 
 function createCadenceSettings(
   overrides: Partial<GenerationSettings> = {},
@@ -49,7 +48,9 @@ describe("createCadencePracticeQueue", () => {
       ["g/4", "c/5", "e/5"],
       null,
     ]);
-    expect(queue.map((prompt) => prompt.annotations?.[0]?.text ?? null)).toEqual([
+    expect(
+      queue.map((prompt) => prompt.annotations?.[0]?.text ?? null),
+    ).toEqual([
       "I",
       "IV",
       "I",

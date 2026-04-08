@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import type { GenerationSettings } from "../../theory/music";
 import { createArpeggioPracticeQueue } from "../../exercises/arpeggios";
+import type { GenerationSettings } from "../../theory/music";
 
 function createArpeggioSettings(
   overrides: Partial<GenerationSettings> = {},

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import type { GenerationSettings } from "../../theory/music";
 import { createScalePracticeQueue } from "../../exercises/scales";
+import type { GenerationSettings } from "../../theory/music";
 
 function createScaleSettings(
   overrides: Partial<GenerationSettings> = {},
@@ -211,6 +210,42 @@ describe("createScalePracticeQueue", () => {
     ]);
   });
 
+  it("adds courtesy accidentals to the first descending sixth and seventh in melodic minor", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        tonic: "A",
+        scaleType: "melodic-minor",
+      }),
+    );
+
+    const courtesyPrompts = queue
+      .filter((prompt) => prompt.accidentalOverrides)
+      .map((prompt) => prompt.accidentalOverrides);
+
+    expect(courtesyPrompts).toEqual([
+      [{ key: "g/4", accidental: "n" }],
+      [{ key: "f/4", accidental: "n" }],
+    ]);
+  });
+
+  it("adds courtesy flat accidentals when melodic minor descends back into the key signature", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        tonic: "Bb",
+        scaleType: "melodic-minor",
+      }),
+    );
+
+    const courtesyPrompts = queue
+      .filter((prompt) => prompt.accidentalOverrides)
+      .map((prompt) => prompt.accidentalOverrides);
+
+    expect(courtesyPrompts).toEqual([
+      [{ key: "ab/4", accidental: "b" }],
+      [{ key: "gb/4", accidental: "b" }],
+    ]);
+  });
+
   it("uses natural minor on the descending leg and melodic minor on the return in reverse practice", () => {
     const queue = createScalePracticeQueue(
       createScaleSettings({
@@ -236,6 +271,28 @@ describe("createScalePracticeQueue", () => {
       "d#/6",
       "e#/6",
       "f#/6",
+    ]);
+  });
+
+  it("adds melodic-minor descent courtesy accidentals to the treble hand in contrary motion", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        tonic: "A",
+        scaleType: "melodic-minor",
+        scaleHands: "together",
+        scaleMotion: "contrary",
+      }),
+    );
+
+    const courtesyPrompts = queue
+      .filter((prompt) => prompt.accidentalOverrides)
+      .map((prompt) => prompt.accidentalOverrides);
+
+    expect(courtesyPrompts).toEqual([
+      [{ key: "g/3", accidental: "n" }],
+      [{ key: "f/3", accidental: "n" }],
+      [{ key: "g/4", accidental: "n" }],
+      [{ key: "f/4", accidental: "n" }],
     ]);
   });
 });

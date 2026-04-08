@@ -1,6 +1,6 @@
 import {
-  getCadenceStartingOctave,
   type GenerationSettings,
+  getCadenceStartingOctave,
   getScaleNoteNamesForRenderedTonicName,
   getSupportedTonicForScaleType,
   keyToMidiNoteNumber,
@@ -12,8 +12,7 @@ const CADENCE_PATTERN = ["I", "IV", "I", "V", "I"] as const;
 const INVERSION_SEQUENCE = ["root", "first", "second"] as const;
 const SECOND_INVERSION_CYCLE_START_INDEX =
   CADENCE_PATTERN.length * (INVERSION_SEQUENCE.length - 1);
-const SECOND_CYCLE_FINAL_CHORD_INDEX =
-  CADENCE_PATTERN.length * 2 - 1;
+const SECOND_CYCLE_FINAL_CHORD_INDEX = CADENCE_PATTERN.length * 2 - 1;
 const HIGHEST_SAFE_SECOND_CYCLE_BASS_TOP_KEY = "e/4";
 
 type CadenceDegree = (typeof CADENCE_PATTERN)[number];
@@ -80,9 +79,8 @@ function createCadencePromptsForHands(
   bassChords: string[][],
   scaleHands: ScaleHands,
 ): PromptSlot[] {
-  const shouldRephraseFinalBassCycle = shouldRephraseFinalBassCycleToTreble(
-    bassChords,
-  );
+  const shouldRephraseFinalBassCycle =
+    shouldRephraseFinalBassCycleToTreble(bassChords);
 
   return trebleChords.flatMap((trebleKeys, index) => {
     const bassKeys = bassChords[index];
@@ -116,7 +114,8 @@ function createCadencePromptsForHands(
         duration: cadenceChordDuration,
         bassKeys,
         bassDisplayedClef:
-          shouldRephraseFinalBassCycle && index >= SECOND_INVERSION_CYCLE_START_INDEX
+          shouldRephraseFinalBassCycle &&
+          index >= SECOND_INVERSION_CYCLE_START_INDEX
             ? "treble"
             : undefined,
         annotations,
@@ -135,7 +134,8 @@ function createCadencePromptsForHands(
       trebleKeys,
       bassKeys,
       bassDisplayedClef:
-        shouldRephraseFinalBassCycle && index >= SECOND_INVERSION_CYCLE_START_INDEX
+        shouldRephraseFinalBassCycle &&
+        index >= SECOND_INVERSION_CYCLE_START_INDEX
           ? "treble"
           : undefined,
       annotations,
@@ -259,15 +259,18 @@ function createVoiceLedCadenceChord(
           }
 
           const score =
-            Math.abs(firstVoiceMidiNoteNumber - (referenceMidiNoteNumbers[0] ?? 0)) +
-            Math.abs(secondVoiceMidiNoteNumber - (referenceMidiNoteNumbers[1] ?? 0)) +
-            Math.abs(thirdVoiceMidiNoteNumber - (referenceMidiNoteNumbers[2] ?? 0));
+            Math.abs(
+              firstVoiceMidiNoteNumber - (referenceMidiNoteNumbers[0] ?? 0),
+            ) +
+            Math.abs(
+              secondVoiceMidiNoteNumber - (referenceMidiNoteNumbers[1] ?? 0),
+            ) +
+            Math.abs(
+              thirdVoiceMidiNoteNumber - (referenceMidiNoteNumbers[2] ?? 0),
+            );
           const range = thirdVoiceMidiNoteNumber - firstVoiceMidiNoteNumber;
 
-          if (
-            score < bestScore ||
-            (score === bestScore && range < bestRange)
-          ) {
+          if (score < bestScore || (score === bestScore && range < bestRange)) {
             bestScore = score;
             bestRange = range;
             bestChord = [firstVoice, secondVoice, thirdVoice];
@@ -309,11 +312,12 @@ function getCadenceChordNoteNames(
       ? dominantScaleNoteNames
       : baseScaleNoteNames;
 
-  const degreeIndicesByChord: Record<CadenceDegree, [number, number, number]> = {
-    I: [0, 2, 4],
-    IV: [3, 5, 0],
-    V: [4, 6, 1],
-  };
+  const degreeIndicesByChord: Record<CadenceDegree, [number, number, number]> =
+    {
+      I: [0, 2, 4],
+      IV: [3, 5, 0],
+      V: [4, 6, 1],
+    };
   const degreeIndices = degreeIndicesByChord[degree];
   const chordNoteNames = degreeIndices.map((index) => noteNames[index]);
 
@@ -371,7 +375,9 @@ function getPermutations<T>(items: readonly T[]): T[][] {
   }
 
   return items.flatMap((item, index) => {
-    const remainingItems = items.filter((_, remainingIndex) => remainingIndex !== index);
+    const remainingItems = items.filter(
+      (_, remainingIndex) => remainingIndex !== index,
+    );
 
     return getPermutations(remainingItems).map((permutation) => [
       item,
@@ -432,8 +438,7 @@ function createCadenceBoundaryRestPrompt(scaleHands: ScaleHands): PromptSlot {
   return {
     duration: "h",
     isPlayable: false,
-    trebleRestVisible:
-      scaleHands === "treble" || scaleHands === "together",
+    trebleRestVisible: scaleHands === "treble" || scaleHands === "together",
     bassRestVisible: scaleHands === "bass" || scaleHands === "together",
   };
 }
