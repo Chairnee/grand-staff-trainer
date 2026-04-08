@@ -147,7 +147,7 @@ describe("createCadencePracticeQueue", () => {
     });
   });
 
-  it("keeps the last bass cadence cycle in bass clef when the final tonic tops out on the second ledger line", () => {
+  it("keeps the last bass cadence cycle in bass clef when the second cycle closes at or below E#4", () => {
     const queue = createCadencePracticeQueue(
       createCadenceSettings({
         tonic: "C",
@@ -160,7 +160,32 @@ describe("createCadencePracticeQueue", () => {
     expect(queue[16]?.bassDisplayedClef).toBeUndefined();
   });
 
-  it("rephrases the last bass cadence cycle into treble clef when the final tonic rises above the second ledger line", () => {
+  it("keeps D major in bass clef when the second cycle closes below the rephrasing threshold", () => {
+    const queue = createCadencePracticeQueue(
+      createCadenceSettings({
+        tonic: "D",
+        scaleHands: "together",
+      }),
+    );
+
+    expect(queue[16]?.bassKeys).toEqual(["a/3", "d/4", "f#/4"]);
+    expect(queue[16]?.bassDisplayedClef).toBeUndefined();
+  });
+
+  it("keeps E major in bass clef when the second cycle closes at E4", () => {
+    const queue = createCadencePracticeQueue(
+      createCadenceSettings({
+        tonic: "E",
+        scaleHands: "together",
+      }),
+    );
+
+    expect(queue[10]?.bassKeys).toEqual(["g#/3", "b/3", "e/4"]);
+    expect(queue[12]?.bassDisplayedClef).toBeUndefined();
+    expect(queue[16]?.bassDisplayedClef).toBeUndefined();
+  });
+
+  it("rephrases the last bass cadence cycle into treble clef when the second cycle closes above E#4", () => {
     const queue = createCadencePracticeQueue(
       createCadenceSettings({
         tonic: "F",

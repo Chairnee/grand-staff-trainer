@@ -11,7 +11,9 @@ const CADENCE_PATTERN = ["I", "IV", "I", "V", "I"] as const;
 const INVERSION_SEQUENCE = ["root", "first", "second"] as const;
 const SECOND_INVERSION_CYCLE_START_INDEX =
   CADENCE_PATTERN.length * (INVERSION_SEQUENCE.length - 1);
-const SECOND_LEDGER_LINE_ABOVE_BASS_MIDI_NOTE = keyToMidiNoteNumber("e/4");
+const SECOND_CYCLE_FINAL_CHORD_INDEX =
+  CADENCE_PATTERN.length * 2 - 1;
+const HIGHEST_SAFE_SECOND_CYCLE_BASS_TOP_KEY = "e/4";
 
 type CadenceDegree = (typeof CADENCE_PATTERN)[number];
 type Inversion = (typeof INVERSION_SEQUENCE)[number];
@@ -376,17 +378,47 @@ function getPermutations<T>(items: readonly T[]): T[][] {
 }
 
 function shouldRephraseFinalBassCycleToTreble(bassChords: string[][]) {
-  const finalSecondInversionTonicChord = bassChords.at(-1);
+  const finalSecondCycleTonicChord = bassChords[SECOND_CYCLE_FINAL_CHORD_INDEX];
 
-  if (!finalSecondInversionTonicChord) {
+  if (!finalSecondCycleTonicChord) {
     return false;
   }
 
-  const highestMidiNoteNumber = Math.max(
-    ...finalSecondInversionTonicChord.map(keyToMidiNoteNumber),
+  const highestDiatonicPosition = Math.max(
+    ...finalSecondCycleTonicChord.map(getDiatonicStaffPosition),
   );
 
-  return highestMidiNoteNumber > SECOND_LEDGER_LINE_ABOVE_BASS_MIDI_NOTE;
+  return (
+    highestDiatonicPosition >
+    getDiatonicStaffPosition(HIGHEST_SAFE_SECOND_CYCLE_BASS_TOP_KEY)
+  );
+}
+
+function getDiatonicStaffPosition(key: string) {
+  const match = /^([a-gA-G])([#b]*?)\/(\d+)$/.exec(key);
+
+  if (!match) {
+    throw new Error(`Invalid cadence key: ${key}`);
+  }
+
+  const [, noteLetter, , octaveString] = match;
+  const noteLetterOffsets: Record<string, number> = {
+    c: 0,
+    d: 1,
+    e: 2,
+    f: 3,
+    g: 4,
+    a: 5,
+    b: 6,
+  };
+  const octave = Number.parseInt(octaveString, 10);
+  const diatonicOffset = noteLetterOffsets[noteLetter.toLowerCase()];
+
+  if (diatonicOffset === undefined) {
+    throw new Error(`Invalid cadence note letter: ${noteLetter}`);
+  }
+
+  return octave * 7 + diatonicOffset;
 }
 
 function isFinalChordOfCadenceCycle(index: number) {
