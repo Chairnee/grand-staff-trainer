@@ -6,7 +6,7 @@ import {
 import { createCadencePracticeQueue } from "./cadences";
 import { createScalePracticeQueue } from "./scales";
 import { createTriadPracticeQueue } from "./triads";
-import type { PromptSlot } from "./types";
+import type { ExerciseNotationProfile, PromptSlot } from "./types";
 
 export function createExercisePromptQueue(
   length: number,
@@ -56,4 +56,21 @@ export function fillExercisePromptQueue(
     generationSettings,
     generatedNotePool,
   );
+}
+
+export function getExerciseNotationProfile(
+  generationSettings: GenerationSettings,
+): ExerciseNotationProfile | null {
+  if (
+    generationSettings.practiceMode === "scales" ||
+    generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "cadences"
+  ) {
+    return {
+      timeSignature: "C",
+      beatsPerMeasure: 4,
+    };
+  }
+
+  return null;
 }

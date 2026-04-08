@@ -16,6 +16,7 @@ import { renderKeyboardDisplay } from "./display/keyboard";
 import {
   createExercisePromptQueue,
   fillExercisePromptQueue,
+  getExerciseNotationProfile,
 } from "./exercises";
 import type { PromptSlot } from "./exercises/types";
 import { analyzeHeldInput } from "./analysis/inputAnalysis";
@@ -97,6 +98,7 @@ type AttemptResult = "correct" | "incorrect" | null;
 type AppState = {
   promptQueue: PromptSlot[];
   currentPromptIndex: number;
+  currentMeasureOffsetBeats: number;
   lastAttemptResult: AttemptResult;
   attemptFeedbackCount: number;
   attemptWindowMs: number;
@@ -485,6 +487,7 @@ const initialPromptQueue = createPromptQueue(PROMPT_QUEUE_LENGTH, {
 const state: AppState = {
   promptQueue: [...initialPromptQueue],
   currentPromptIndex: 0,
+  currentMeasureOffsetBeats: 0,
   lastAttemptResult: null,
   attemptFeedbackCount: 0,
   attemptWindowMs: initialStoredSettings.attemptWindowMs,
@@ -1359,6 +1362,17 @@ function consumeCurrentPrompt() {
     state.generationSettings.practiceMode === "cadences"
   ) {
     if (consumedPrompt) {
+      const notationProfile = getExerciseNotationProfile(
+        state.generationSettings,
+      );
+
+      if (notationProfile) {
+        state.currentMeasureOffsetBeats =
+          (state.currentMeasureOffsetBeats +
+            getDurationBeats(consumedPrompt.duration)) %
+          notationProfile.beatsPerMeasure;
+      }
+
       state.promptQueue.push(consumedPrompt);
     }
 
@@ -1388,6 +1402,7 @@ function resetPromptQueue() {
     state.generationSettings,
   );
   state.currentPromptIndex = 0;
+  state.currentMeasureOffsetBeats = 0;
   renderApp();
 }
 
@@ -1543,6 +1558,9 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const trebleStave = new Stave(staveX, staveTopY, staveWidth);
   const bassStave = new Stave(staveX, bassStaveY, staveWidth);
   const displayedKeySignature = getDisplayedKeySignature(appState);
+  const exerciseNotationProfile = getExerciseNotationProfile(
+    appState.generationSettings,
+  );
 
   trebleStave.addClef("treble");
   bassStave.addClef("bass");
@@ -1550,6 +1568,11 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   if (displayedKeySignature) {
     trebleStave.addKeySignature(displayedKeySignature);
     bassStave.addKeySignature(displayedKeySignature);
+  }
+
+  if (exerciseNotationProfile) {
+    trebleStave.addTimeSignature(exerciseNotationProfile.timeSignature);
+    bassStave.addTimeSignature(exerciseNotationProfile.timeSignature);
   }
 
   trebleStave.setContext(context).draw();
@@ -1783,6 +1806,18 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
 
   trebleVoice.draw(context, trebleStave);
   bassVoice.draw(context, bassStave);
+
+  if (exerciseNotationProfile) {
+    drawMeasureBarlines(
+      appState.promptQueue,
+      trebleNotes,
+      trebleStave,
+      bassStave,
+      context,
+      appState.currentMeasureOffsetBeats,
+      exerciseNotationProfile.beatsPerMeasure,
+    );
+  }
 
   for (const instruction of secondaryPromptDrawInstructions) {
     const anchorTickable =
@@ -2318,6 +2353,88 @@ function createHeldInputOverlayNote(
   note.renderOptions.drawStem = false;
 
   return note;
+}
+
+function drawMeasureBarlines(
+  promptQueue: PromptSlot[],
+  anchorNotes: StaveNote[],
+  trebleStave: Stave,
+  bassStave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+  startingMeasureOffsetBeats: number,
+  beatsPerMeasure: number,
+) {
+  if (beatsPerMeasure <= 0) {
+    return;
+  }
+
+  let beatsInCurrentMeasure = startingMeasureOffsetBeats;
+
+  for (const [index, prompt] of promptQueue.entries()) {
+    beatsInCurrentMeasure += getDurationBeats(prompt.duration);
+
+    if (
+      beatsInCurrentMeasure < beatsPerMeasure ||
+      index >= promptQueue.length - 1
+    ) {
+      continue;
+    }
+
+    const currentAnchorNote = anchorNotes[index];
+    const nextAnchorNote = anchorNotes[index + 1];
+
+    if (!currentAnchorNote || !nextAnchorNote) {
+      break;
+    }
+
+    const barlineX = getMeasureBarlineX(currentAnchorNote, nextAnchorNote);
+
+    if (!Number.isFinite(barlineX)) {
+      continue;
+    }
+
+    drawGrandStaffBarline(barlineX, trebleStave, bassStave, context);
+    beatsInCurrentMeasure %= beatsPerMeasure;
+  }
+}
+
+function getDurationBeats(duration: string) {
+  const normalizedDuration = duration.replace("r", "");
+  const beatsByDuration: Record<string, number> = {
+    w: 4,
+    h: 2,
+    q: 1,
+    "8": 0.5,
+    "16": 0.25,
+    "32": 0.125,
+  };
+
+  return beatsByDuration[normalizedDuration] ?? 1;
+}
+
+function getMeasureBarlineX(currentNote: StaveNote, nextNote: StaveNote) {
+  const currentX = currentNote.getAbsoluteX();
+  const nextX = nextNote.getAbsoluteX();
+
+  return currentX + (nextX - currentX) / 2;
+}
+
+function drawGrandStaffBarline(
+  x: number,
+  trebleStave: Stave,
+  bassStave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+) {
+  const topY = trebleStave.getYForLine(0);
+  const bottomY = bassStave.getYForLine(bassStave.getNumLines() - 1);
+
+  context.save();
+  context.setStrokeStyle("#000").setLineWidth(1);
+  context.beginPath();
+  context.moveTo(x, topY);
+  context.lineTo(x, bottomY);
+  context.stroke();
+  context.restore();
 }
 
 function drawHeldOverlayNote(

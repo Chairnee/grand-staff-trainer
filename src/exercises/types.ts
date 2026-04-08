@@ -9,3 +9,8 @@ export type PromptSlot = {
   trebleOttavaStart?: boolean;
   trebleOttavaEnd?: boolean;
 };
+
+export type ExerciseNotationProfile = {
+  timeSignature: string;
+  beatsPerMeasure: number;
+};
