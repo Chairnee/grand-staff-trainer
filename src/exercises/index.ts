@@ -3,6 +3,7 @@ import {
   createRandomNotePromptQueue,
   fillRandomNotePromptQueue,
 } from "./randomNotes";
+import { createArpeggioPracticeQueue } from "./arpeggios";
 import { createCadencePracticeQueue } from "./cadences";
 import { createScalePracticeQueue } from "./scales";
 import { createTriadPracticeQueue } from "./triads";
@@ -19,6 +20,10 @@ export function createExercisePromptQueue(
 
   if (generationSettings.practiceMode === "triads") {
     return createTriadPracticeQueue(generationSettings);
+  }
+
+  if (generationSettings.practiceMode === "arpeggios") {
+    return createArpeggioPracticeQueue(generationSettings);
   }
 
   if (generationSettings.practiceMode === "cadences") {
@@ -46,6 +51,10 @@ export function fillExercisePromptQueue(
     return;
   }
 
+  if (generationSettings.practiceMode === "arpeggios") {
+    return;
+  }
+
   if (generationSettings.practiceMode === "cadences") {
     return;
   }
@@ -64,6 +73,7 @@ export function getExerciseNotationProfile(
   if (
     generationSettings.practiceMode === "scales" ||
     generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "arpeggios" ||
     generationSettings.practiceMode === "cadences"
   ) {
     return {

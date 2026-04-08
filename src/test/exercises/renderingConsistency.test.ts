@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createArpeggioPracticeQueue } from "../../exercises/arpeggios";
 import { createCadencePracticeQueue } from "../../exercises/cadences";
 import { createScalePracticeQueue } from "../../exercises/scales";
 import { createTriadPracticeQueue } from "../../exercises/triads";
@@ -114,6 +115,37 @@ describe("exercise rendering consistency", () => {
 
         if (unexpectedNoteNames.length > 0) {
           leaks.push(`${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`);
+        }
+      }
+    }
+
+    expect(leaks).toEqual([]);
+  });
+
+  it("keeps arpeggio exercises inside the chosen rendered arpeggio spelling", () => {
+    const leaks: string[] = [];
+    const triadTypes: TriadType[] = ["major", "minor"];
+
+    for (const tonic of getAllTonics()) {
+      for (const triadType of triadTypes) {
+        const generationSettings = createGenerationSettings({
+          practiceMode: "arpeggios",
+          tonic,
+          triadType,
+        });
+        const allowedNoteNames = getTriadNoteNames(tonic, triadType, "preferred");
+        const actualNoteNames = getPromptNoteNames(
+          createArpeggioPracticeQueue(generationSettings),
+        );
+        const unexpectedNoteNames = getUnexpectedNoteNames(
+          actualNoteNames,
+          allowedNoteNames,
+        );
+
+        if (unexpectedNoteNames.length > 0) {
+          leaks.push(
+            `${tonic} ${triadType} arpeggios: ${unexpectedNoteNames.join(", ")}`,
+          );
         }
       }
     }
@@ -243,6 +275,46 @@ describe("exercise rendering consistency", () => {
 
         if (triadUnexpectedNoteNames.length > 0) {
           leaks.push(`${tonic} ${triadType} triads: ${triadUnexpectedNoteNames.join(", ")}`);
+        }
+
+        const arpeggioGenerationSettings = createGenerationSettings({
+          practiceMode: "arpeggios",
+          tonic,
+          triadType,
+          renderingPreference: "alternate",
+        });
+        const arpeggioRenderingOptions = getTriadRenderingOptions(
+          arpeggioGenerationSettings,
+        );
+
+        if (arpeggioRenderingOptions.alternate) {
+          const arpeggioRenderedTonic =
+            arpeggioRenderingOptions.active.tonic.toLowerCase();
+          const arpeggioScaleType =
+            triadType === "major" ? "major" : "natural-minor";
+          const arpeggioRenderedScaleNoteNames =
+            getScaleNoteNamesForRenderedTonicName(
+              arpeggioRenderedTonic,
+              arpeggioScaleType,
+            );
+          const arpeggioAllowedNoteNames = [
+            arpeggioRenderedScaleNoteNames[0],
+            arpeggioRenderedScaleNoteNames[2],
+            arpeggioRenderedScaleNoteNames[4],
+          ].filter((noteName): noteName is string => Boolean(noteName));
+          const arpeggioActualNoteNames = getPromptNoteNames(
+            createArpeggioPracticeQueue(arpeggioGenerationSettings),
+          );
+          const arpeggioUnexpectedNoteNames = getUnexpectedNoteNames(
+            arpeggioActualNoteNames,
+            arpeggioAllowedNoteNames,
+          );
+
+          if (arpeggioUnexpectedNoteNames.length > 0) {
+            leaks.push(
+              `${tonic} ${triadType} arpeggios: ${arpeggioUnexpectedNoteNames.join(", ")}`,
+            );
+          }
         }
 
         const cadenceGenerationSettings = createGenerationSettings({

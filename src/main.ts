@@ -28,6 +28,8 @@ import {
   formatKeyLabel,
   type GenerationSettings,
   getAllTonics,
+  getArpeggioRenderingNotice,
+  getArpeggioRenderingOptions,
   getClefForKey,
   getDerivedKeySignature,
   getHeldOverlayKey,
@@ -201,6 +203,7 @@ app.innerHTML = `
           <option value="random-notes">Random notes</option>
           <option value="scales">Scales</option>
           <option value="triads">Triads</option>
+          <option value="arpeggios">Arpeggios</option>
           <option value="cadences">Cadences</option>
         </select>
       </label>
@@ -691,6 +694,7 @@ function renderSettingsDrawer() {
     state.generationSettings.practiceMode === "random-notes";
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
+  const isArpeggiosMode = state.generationSettings.practiceMode === "arpeggios";
   const isCadencesMode = state.generationSettings.practiceMode === "cadences";
   const isTogetherScalesMode =
     isScalesMode && state.generationSettings.scaleHands === "together";
@@ -713,10 +717,13 @@ function renderSettingsDrawer() {
   tonicFieldElement.hidden = !areExerciseSettingsVisible;
   scaleTypeFieldElement.hidden = !areExerciseSettingsVisible || !isScalesMode;
   triadTypeFieldElement.hidden =
-    !areExerciseSettingsVisible || (!isTriadsMode && !isCadencesMode);
+    !areExerciseSettingsVisible ||
+    (!isTriadsMode && !isArpeggiosMode && !isCadencesMode);
   triadTypeLabelElement.textContent = isCadencesMode
     ? "Cadence type"
-    : "Triad type";
+    : isArpeggiosMode
+      ? "Arpeggio type"
+      : "Triad type";
   noteSourceFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   accidentalSpellingFieldElement.hidden =
@@ -825,6 +832,19 @@ function renderExerciseNotice() {
       }
 
       exerciseNotice = getTriadRenderingNotice(state.generationSettings);
+    } else if (state.generationSettings.practiceMode === "arpeggios") {
+      const renderingOptions = getArpeggioRenderingOptions(
+        state.generationSettings,
+      );
+      const arpeggioLabel = `${state.generationSettings.triadType} arpeggios`;
+
+      if (renderingOptions.alternate) {
+        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${arpeggioLabel}`;
+        exerciseNoticeButtonActionText = "Swap";
+        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${arpeggioLabel}.`;
+      }
+
+      exerciseNotice = getArpeggioRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.practiceMode === "cadences") {
       const renderingOptions = getCadenceRenderingOptions(
         state.generationSettings,
@@ -911,6 +931,71 @@ function renderExerciseSummary() {
   exerciseSummaryElement.append(summaryChip);
 }
 
+function getExerciseSummaryText(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    const scaleLabel = formatCompactScaleLabel(
+      generationSettings.tonic,
+      generationSettings.scaleType,
+    );
+    const octaveLabel = `${generationSettings.scaleOctaves} ${
+      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
+    }`;
+
+    if (generationSettings.scaleHands === "together") {
+      return `${capitalizeWord(generationSettings.scaleMotion)} | ${scaleLabel} | ${octaveLabel}`;
+    }
+
+    return `${capitalizeWord(generationSettings.scaleHands)} | ${scaleLabel} | ${octaveLabel}`;
+  }
+
+  if (generationSettings.practiceMode === "triads") {
+    const triadLabel = formatCompactTriadLabel(
+      generationSettings.tonic,
+      generationSettings.triadType,
+    );
+    const handsLabel = capitalizeWord(generationSettings.scaleHands);
+    const octaveLabel = `${generationSettings.scaleOctaves} ${
+      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
+    }`;
+
+    return `${handsLabel} | ${triadLabel} | ${octaveLabel}`;
+  }
+
+  if (generationSettings.practiceMode === "arpeggios") {
+    const arpeggioLabel = formatCompactArpeggioLabel(
+      generationSettings.tonic,
+      generationSettings.triadType,
+    );
+    const handsLabel = capitalizeWord(generationSettings.scaleHands);
+    const octaveLabel = `${generationSettings.scaleOctaves} ${
+      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
+    }`;
+
+    return `${handsLabel} | ${arpeggioLabel} | ${octaveLabel}`;
+  }
+
+  if (generationSettings.practiceMode === "cadences") {
+    const cadenceLabel = formatCompactCadenceLabel(
+      generationSettings.tonic,
+      generationSettings.triadType,
+    );
+    const handsLabel = capitalizeWord(generationSettings.scaleHands);
+
+    return `${handsLabel} | ${cadenceLabel}`;
+  }
+
+  if (generationSettings.noteSourceMode === "in-scale") {
+    const scaleLabel = formatCompactScaleLabel(
+      generationSettings.tonic,
+      generationSettings.scaleType,
+    );
+
+    return `Random notes | ${scaleLabel}`;
+  }
+
+  return "Random notes | Chromatic";
+}
+
 function handleExerciseRenderingToggle() {
   state.generationSettings.renderingPreference = getToggledRenderingPreference(
     state.generationSettings.renderingPreference,
@@ -931,58 +1016,6 @@ function formatScaleTypeLabelForDisplay(scaleType: ScaleType) {
   }
 
   return scaleType.replaceAll("-", " ");
-}
-
-function getExerciseSummaryText(generationSettings: GenerationSettings) {
-  if (generationSettings.practiceMode === "scales") {
-    const scaleLabel = formatCompactScaleLabel(
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
-    const octaveLabel = `${generationSettings.scaleOctaves} ${
-      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
-    }`;
-
-    if (generationSettings.scaleHands === "together") {
-      return `${capitalizeWord(generationSettings.scaleMotion)} · ${scaleLabel} · ${octaveLabel}`;
-    }
-
-    return `${capitalizeWord(generationSettings.scaleHands)} · ${scaleLabel} · ${octaveLabel}`;
-  }
-
-  if (generationSettings.practiceMode === "triads") {
-    const triadLabel = formatCompactTriadLabel(
-      generationSettings.tonic,
-      generationSettings.triadType,
-    );
-    const handsLabel = capitalizeWord(generationSettings.scaleHands);
-    const octaveLabel = `${generationSettings.scaleOctaves} ${
-      generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
-    }`;
-
-    return `${handsLabel} · ${triadLabel} · ${octaveLabel}`;
-  }
-
-  if (generationSettings.practiceMode === "cadences") {
-    const cadenceLabel = formatCompactCadenceLabel(
-      generationSettings.tonic,
-      generationSettings.triadType,
-    );
-    const handsLabel = capitalizeWord(generationSettings.scaleHands);
-
-    return `${handsLabel} · ${cadenceLabel}`;
-  }
-
-  if (generationSettings.noteSourceMode === "in-scale") {
-    const scaleLabel = formatCompactScaleLabel(
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
-
-    return `Random notes · ${scaleLabel}`;
-  }
-
-  return "Random notes · Chromatic";
 }
 
 function formatCompactScaleLabel(tonic: Tonic, scaleType: ScaleType) {
@@ -1007,6 +1040,10 @@ function formatCompactTriadLabel(tonic: Tonic, triadType: TriadType) {
 
 function formatCompactCadenceLabel(tonic: Tonic, triadType: TriadType) {
   return triadType === "major" ? `${tonic}M cadences` : `${tonic}m cadences`;
+}
+
+function formatCompactArpeggioLabel(tonic: Tonic, triadType: TriadType) {
+  return triadType === "major" ? `${tonic}M arpeggios` : `${tonic}m arpeggios`;
 }
 
 function capitalizeWord(text: string) {
@@ -1357,6 +1394,7 @@ function consumeCurrentPrompt() {
   if (
     state.generationSettings.practiceMode === "scales" ||
     state.generationSettings.practiceMode === "triads" ||
+    state.generationSettings.practiceMode === "arpeggios" ||
     state.generationSettings.practiceMode === "cadences"
   ) {
     if (consumedPrompt) {
@@ -1524,6 +1562,10 @@ function getTogetherScaleDisplayedStaff(
   sourceHand: "treble" | "bass",
   key: string,
 ) {
+  if (appState.generationSettings.practiceMode === "arpeggios") {
+    return sourceHand === "treble" ? "treble" : getClefForKey(key);
+  }
+
   if (appState.generationSettings.scaleMotion === "contrary") {
     return sourceHand;
   }
@@ -1538,12 +1580,14 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const defaultTopVisibleMidiNote =
     appState.generationSettings.practiceMode === "scales" ||
     appState.generationSettings.practiceMode === "triads" ||
+    appState.generationSettings.practiceMode === "arpeggios" ||
     appState.generationSettings.practiceMode === "cadences"
       ? SCALE_TOP_VISIBLE_MIDI_NOTE
       : DEFAULT_TOP_VISIBLE_MIDI_NOTE;
   const defaultBottomVisibleMidiNote =
     appState.generationSettings.practiceMode === "scales" ||
     appState.generationSettings.practiceMode === "triads" ||
+    appState.generationSettings.practiceMode === "arpeggios" ||
     appState.generationSettings.practiceMode === "cadences"
       ? SCALE_BOTTOM_VISIBLE_MIDI_NOTE
       : DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
@@ -1656,7 +1700,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     let bassSecondaryNote: StaveNote | null = null;
 
     if (
-      appState.generationSettings.practiceMode === "scales" &&
+      (appState.generationSettings.practiceMode === "scales" ||
+        appState.generationSettings.practiceMode === "arpeggios") &&
       appState.generationSettings.scaleHands === "together"
     ) {
       const actualTrebleKey = prompt.trebleKeys?.[0];
@@ -1714,6 +1759,11 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
           trebleDisplayedStaff === "bass" ? trebleHandNote : bassHandNote;
       }
     } else {
+      const treblePromptSourceHand =
+        appState.generationSettings.practiceMode === "arpeggios" &&
+        appState.generationSettings.scaleHands === "bass"
+          ? "bass"
+          : "treble";
       trebleNote = displayedPrompt.trebleKeys
         ? createPromptStaveNote(
             displayedPrompt.trebleDisplayedClef ?? "treble",
@@ -1722,7 +1772,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
             displayedKeySignature,
             undefined,
             getStemDirectionForPromptSource(
-              "treble",
+              treblePromptSourceHand,
               displayedPrompt.trebleDisplayedClef ?? "treble",
             ),
           )
@@ -1980,6 +2030,29 @@ function getDisplayedPromptSlot(
   prompt: PromptSlot,
   appState: AppState,
 ): PromptSlot {
+  if (appState.generationSettings.practiceMode === "arpeggios") {
+    const displayedTrebleKeys = [
+      ...(prompt.trebleKeys ?? []),
+      ...(prompt.bassKeys ?? []).filter(
+        (key) => getClefForKey(key) === "treble",
+      ),
+    ].sort(compareKeysByMidiNumber);
+    const displayedBassKeys = (prompt.bassKeys ?? [])
+      .filter((key) => getClefForKey(key) === "bass")
+      .sort(compareKeysByMidiNumber);
+
+    return {
+      isPlayable: prompt.isPlayable,
+      duration: prompt.duration,
+      trebleKeys:
+        displayedTrebleKeys.length > 0 ? displayedTrebleKeys : undefined,
+      bassKeys: displayedBassKeys.length > 0 ? displayedBassKeys : undefined,
+      trebleRestVisible: prompt.trebleRestVisible,
+      bassRestVisible: prompt.bassRestVisible,
+      annotations: prompt.annotations,
+    };
+  }
+
   if (appState.generationSettings.practiceMode === "scales") {
     if (
       appState.generationSettings.scaleHands === "together" &&
@@ -2113,6 +2186,17 @@ function getHeldOverlayPresentation(
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
+  if (appState.generationSettings.practiceMode === "arpeggios") {
+    const arpeggioExactMatch = getExactArpeggioOverlayPresentation(
+      prompt,
+      heldNoteNumber,
+    );
+
+    if (arpeggioExactMatch) {
+      return arpeggioExactMatch;
+    }
+  }
+
   const exactTrebleDisplayKey = getMatchedDisplayedPromptKey(
     prompt.trebleKeys,
     prompt.displayedTrebleKeys,
@@ -2279,6 +2363,43 @@ function getPresentationForAssignedHand(
     hand: "bass" as const,
     key: literalKey,
     clef: "bass" as const,
+  };
+}
+
+function getExactArpeggioOverlayPresentation(
+  prompt: PromptSlot,
+  heldNoteNumber: number,
+) {
+  const exactTrebleKey = getMatchedDisplayedPromptKey(
+    prompt.trebleKeys,
+    prompt.displayedTrebleKeys,
+    heldNoteNumber,
+  );
+
+  if (exactTrebleKey) {
+    return {
+      hand: "treble" as const,
+      key: exactTrebleKey,
+      clef: "treble" as const,
+    };
+  }
+
+  const exactBassKey = getMatchedDisplayedPromptKey(
+    prompt.bassKeys,
+    prompt.displayedBassKeys,
+    heldNoteNumber,
+  );
+
+  if (!exactBassKey) {
+    return null;
+  }
+
+  const displayedStaff = getClefForKey(exactBassKey);
+
+  return {
+    hand: displayedStaff,
+    key: exactBassKey,
+    clef: displayedStaff,
   };
 }
 

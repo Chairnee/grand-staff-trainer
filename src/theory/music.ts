@@ -3,7 +3,12 @@ import type { PromptSlot } from "../exercises/types";
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
-export type PracticeMode = "random-notes" | "scales" | "triads" | "cadences";
+export type PracticeMode =
+  | "random-notes"
+  | "scales"
+  | "triads"
+  | "arpeggios"
+  | "cadences";
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type ScaleMotion = "parallel" | "contrary";
@@ -243,6 +248,7 @@ export function getRenderedAccidentalForKey(
 export function getDerivedKeySignature(generationSettings: GenerationSettings) {
   if (
     generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "arpeggios" ||
     generationSettings.practiceMode === "cadences"
   ) {
     return getTriadRenderingOptions(generationSettings).active.keySignature;
@@ -302,7 +308,9 @@ export function getExerciseRenderingOptionsForScaleType(
   const alternateOption = options[1] ?? null;
 
   if (!preferredOption) {
-    throw new Error(`Could not determine rendering options for tonic ${tonic}.`);
+    throw new Error(
+      `Could not determine rendering options for tonic ${tonic}.`,
+    );
   }
 
   return {
@@ -319,7 +327,8 @@ export function getExerciseRenderingOptionsForScaleType(
 export function getScaleRenderingOverride(
   generationSettings: GenerationSettings,
 ): ScaleRenderingOverride | null {
-  const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
+  const renderedTonic =
+    getScaleRenderingOptions(generationSettings).active.tonic;
 
   if (renderedTonic === generationSettings.tonic) {
     return null;
@@ -394,7 +403,8 @@ export function getScaleRenderingOptions(
 export function getTriadRenderingOverride(
   generationSettings: GenerationSettings,
 ): TriadRenderingOverride | null {
-  const renderedTonic = getTriadRenderingOptions(generationSettings).active.tonic;
+  const renderedTonic =
+    getTriadRenderingOptions(generationSettings).active.tonic;
 
   if (renderedTonic === generationSettings.tonic) {
     return null;
@@ -431,6 +441,18 @@ export function getCadenceRenderingNotice(
   return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} cadences are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} cadences for readability.`;
 }
 
+export function getArpeggioRenderingNotice(
+  generationSettings: GenerationSettings,
+) {
+  const renderingOverride = getTriadRenderingOverride(generationSettings);
+
+  if (!renderingOverride) {
+    return null;
+  }
+
+  return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} arpeggios are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} arpeggios for readability.`;
+}
+
 export function getTriadRenderingOptions(
   generationSettings: GenerationSettings,
 ) {
@@ -442,6 +464,12 @@ export function getTriadRenderingOptions(
 }
 
 export function getCadenceRenderingOptions(
+  generationSettings: GenerationSettings,
+) {
+  return getTriadRenderingOptions(generationSettings);
+}
+
+export function getArpeggioRenderingOptions(
   generationSettings: GenerationSettings,
 ) {
   return getTriadRenderingOptions(generationSettings);
@@ -501,7 +529,11 @@ export function getAscendingScaleKeys(
     scaleType,
     renderingPreference,
   );
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType, renderingPreference);
+  const scaleNoteNames = getScaleNoteNames(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
   const ascendingNoteNames = Array.from({ length: scaleOctaves }).flatMap(
     () => {
       return scaleNoteNames;
@@ -546,7 +578,11 @@ export function getNotesInScale(
 ) {
   const startMidiNoteNumber = keyToMidiNoteNumber(rangeStart);
   const endMidiNoteNumber = keyToMidiNoteNumber(rangeEnd);
-  const scaleNoteNames = getScaleNoteNames(tonic, scaleType, renderingPreference);
+  const scaleNoteNames = getScaleNoteNames(
+    tonic,
+    scaleType,
+    renderingPreference,
+  );
   const notesInKey: Array<{ key: string; midiNoteNumber: number }> = [];
 
   for (
@@ -598,7 +634,10 @@ export function getTonicReadabilityOptionsForScaleType(
 
   return candidateTonics
     .map((candidateTonic) => {
-      const keySignature = getKeySignatureForScaleType(candidateTonic, scaleType);
+      const keySignature = getKeySignatureForScaleType(
+        candidateTonic,
+        scaleType,
+      );
       const scaleNoteNames = getScaleNoteNamesForRenderedTonic(
         candidateTonic.toLowerCase(),
         scaleType,
@@ -638,7 +677,8 @@ function getCandidateTonicsForScaleType(tonic: Tonic, scaleType: ScaleType) {
     new Set<Tonic>([...MAJOR_TONICS, ...MINOR_TONICS, tonic]),
   );
   const candidateTonics = supportedTonics.filter(
-    (candidateTonic) => getPitchClassForTonic(candidateTonic) === targetPitchClass,
+    (candidateTonic) =>
+      getPitchClassForTonic(candidateTonic) === targetPitchClass,
   );
 
   return candidateTonics.length > 0 ? candidateTonics : [tonic];
@@ -688,7 +728,10 @@ export function getScaleNoteNamesForRenderedTonicName(
   tonicNoteName: string,
   scaleType: ScaleType,
 ) {
-  return getScaleNoteNamesForRenderedTonic(tonicNoteName.toLowerCase(), scaleType);
+  return getScaleNoteNamesForRenderedTonic(
+    tonicNoteName.toLowerCase(),
+    scaleType,
+  );
 }
 
 export function getTriadNoteNames(
@@ -752,7 +795,10 @@ export function getAscendingTriadPositions(
       const firstInversion = [
         rootPosition[1],
         rootPosition[2],
-        findNextTriadKeyAtOrAbove(rootNoteName, firstInversionBassMidiNoteNumber),
+        findNextTriadKeyAtOrAbove(
+          rootNoteName,
+          firstInversionBassMidiNoteNumber,
+        ),
       ];
       const secondInversionBassMidiNoteNumber = keyToMidiNoteNumber(
         firstInversion[1] ?? "",
@@ -766,11 +812,7 @@ export function getAscendingTriadPositions(
         ),
       ];
 
-      ascendingPositions.push(
-        rootPosition,
-        firstInversion,
-        secondInversion,
-      );
+      ascendingPositions.push(rootPosition, firstInversion, secondInversion);
       continue;
     }
 
@@ -1061,7 +1103,10 @@ function getAccidentalText(accidentalOffset: number) {
   return "";
 }
 
-function findNextTriadKeyAtOrAbove(noteName: string, minimumMidiNoteNumber: number) {
+function findNextTriadKeyAtOrAbove(
+  noteName: string,
+  minimumMidiNoteNumber: number,
+) {
   let octave = Math.floor(minimumMidiNoteNumber / 12) - 1;
   let key = `${noteName}/${octave}`;
   let midiNoteNumber = keyToMidiNoteNumber(key);
