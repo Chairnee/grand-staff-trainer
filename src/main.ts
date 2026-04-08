@@ -203,11 +203,11 @@ app.innerHTML = `
       <label class="settings-field">
         <span>Practice mode</span>
         <select id="practice-mode-select">
-          <option value="random-notes">Random notes</option>
           <option value="scales">Scales</option>
           <option value="triads">Triads</option>
           <option value="arpeggios">Arpeggios</option>
           <option value="cadences">Cadences</option>
+          <option value="random-notes">Random notes</option>
         </select>
       </label>
       <label id="scale-hands-field" class="settings-field" hidden>
@@ -491,7 +491,7 @@ let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
-  practiceMode: "scales",
+  practiceMode: "triads",
   scaleHands: "together",
   scaleOctaves: 2,
   scaleMotion: "parallel",
@@ -3371,9 +3371,9 @@ function loadStoredSettings(): {
         generationSettings,
         attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
         isDebugVisible: false,
-        isExerciseVisible: false,
-        isInputNameVisible: false,
-        isKeyboardVisible: false,
+        isExerciseVisible: true,
+        isInputNameVisible: true,
+        isKeyboardVisible: true,
       };
     }
 
@@ -3403,11 +3403,11 @@ function loadStoredSettings(): {
       isInputNameVisible:
         typeof parsedSettings?.isInputNameVisible === "boolean"
           ? parsedSettings.isInputNameVisible
-          : false,
+          : true,
       isKeyboardVisible:
         typeof parsedSettings?.isKeyboardVisible === "boolean"
           ? parsedSettings.isKeyboardVisible
-          : false,
+          : true,
     };
   } catch {
     const generationSettings = {
@@ -3420,9 +3420,9 @@ function loadStoredSettings(): {
       generationSettings,
       attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
       isDebugVisible: false,
-      isExerciseVisible: false,
-      isInputNameVisible: false,
-      isKeyboardVisible: false,
+      isExerciseVisible: true,
+      isInputNameVisible: true,
+      isKeyboardVisible: true,
     };
   }
 }
