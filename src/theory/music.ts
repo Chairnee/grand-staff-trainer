@@ -680,6 +680,13 @@ function getScaleNoteNamesForRenderedTonic(
   });
 }
 
+export function getScaleNoteNamesForRenderedTonicName(
+  tonicNoteName: string,
+  scaleType: ScaleType,
+) {
+  return getScaleNoteNamesForRenderedTonic(tonicNoteName.toLowerCase(), scaleType);
+}
+
 export function getTriadNoteNames(
   tonic: Tonic,
   triadType: TriadType,

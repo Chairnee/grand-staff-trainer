@@ -237,4 +237,24 @@ describe("createCadencePracticeQueue", () => {
     expect(queue[0]?.trebleKeys).toEqual(["a/3", "c/4", "e/4"]);
     expect(queue[3]?.trebleKeys).toEqual(["g#/3", "b/3", "e/4"]);
   });
+
+  it("keeps the preferred rendered tonic spelling throughout Ab minor cadences", () => {
+    const queue = createCadencePracticeQueue(
+      createCadenceSettings({
+        tonic: "Ab",
+        triadType: "minor",
+      }),
+    );
+
+    expect(queue[0]?.trebleKeys).toEqual(["g#/4", "b/4", "d#/5"]);
+    expect(queue[1]?.trebleKeys).toEqual(["g#/4", "c#/5", "e/5"]);
+    expect(queue[3]?.trebleKeys).toContain("f##/4");
+    expect(queue[3]?.trebleKeys).toContain("a#/4");
+    expect(queue[3]?.trebleKeys).toContain("d#/5");
+    expect(
+      queue
+        .flatMap((prompt) => prompt.trebleKeys ?? [])
+        .some((key) => /^[a-g](?:b|bb)\//.test(key)),
+    ).toBe(false);
+  });
 });

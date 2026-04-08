@@ -1,7 +1,8 @@
 import {
   getCadenceStartingOctave,
   type GenerationSettings,
-  getScaleNoteNames,
+  getScaleNoteNamesForRenderedTonicName,
+  getSupportedTonicForScaleType,
   keyToMidiNoteNumber,
   type ScaleHands,
 } from "../theory/music";
@@ -287,19 +288,21 @@ function getCadenceChordNoteNames(
   generationSettings: GenerationSettings,
   degree: CadenceDegree,
 ) {
-  const baseScaleNoteNames = getScaleNoteNames(
+  const baseScaleType =
+    generationSettings.triadType === "major" ? "major" : "natural-minor";
+  const renderedTonic = getSupportedTonicForScaleType(
     generationSettings.tonic,
-    generationSettings.triadType === "major" ? "major" : "natural-minor",
+    baseScaleType,
     generationSettings.renderingPreference,
+  ).toLowerCase();
+  const baseScaleNoteNames = getScaleNoteNamesForRenderedTonicName(
+    renderedTonic,
+    baseScaleType,
   );
   const dominantScaleNoteNames =
     generationSettings.triadType === "major"
       ? baseScaleNoteNames
-      : getScaleNoteNames(
-          generationSettings.tonic,
-          "harmonic-minor",
-          generationSettings.renderingPreference,
-        );
+      : getScaleNoteNamesForRenderedTonicName(renderedTonic, "harmonic-minor");
 
   const noteNames =
     degree === "V" && generationSettings.triadType === "minor"
