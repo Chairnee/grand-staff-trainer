@@ -5,7 +5,7 @@ import {
   keyToMidiNoteNumber,
   type ScaleHands,
 } from "../theory/music";
-import type { PromptSlot } from "./types";
+import type { PromptAnnotation, PromptSlot } from "./types";
 
 const CADENCE_PATTERN = ["I", "IV", "I", "V", "I"] as const;
 const INVERSION_SEQUENCE = ["root", "first", "second"] as const;
@@ -76,15 +76,19 @@ function createCadencePromptsForHands(
 ): PromptSlot[] {
   return trebleChords.map((trebleKeys, index) => {
     const bassKeys = bassChords[index];
+    const degree = CADENCE_PATTERN[index % CADENCE_PATTERN.length];
 
     if (!bassKeys) {
       throw new Error("Could not find matching bass cadence chord.");
     }
 
+    const annotations = createCadenceAnnotations(scaleHands, degree);
+
     if (scaleHands === "treble") {
       return {
         duration: "q",
         trebleKeys,
+        annotations,
       };
     }
 
@@ -92,6 +96,7 @@ function createCadencePromptsForHands(
       return {
         duration: "q",
         bassKeys,
+        annotations,
       };
     }
 
@@ -99,8 +104,22 @@ function createCadencePromptsForHands(
       duration: "q",
       trebleKeys,
       bassKeys,
+      annotations,
     };
   });
+}
+
+function createCadenceAnnotations(
+  scaleHands: ScaleHands,
+  degree: CadenceDegree,
+): PromptAnnotation[] {
+  return [
+    {
+      staff: scaleHands === "bass" ? "bass" : "treble",
+      placement: "above",
+      text: degree,
+    },
+  ];
 }
 
 function createCadenceChord(

@@ -1604,6 +1604,12 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const currentSecondaryPromptNotes: StaveNote[] = [];
   const currentTrebleHeldOverlayNotes: StaveNote[] = [];
   const currentBassHeldOverlayNotes: StaveNote[] = [];
+  const promptAnnotationDrawInstructions: Array<{
+    text: string;
+    placement: "above" | "below";
+    anchorStaff: "treble" | "bass";
+    index: number;
+  }> = [];
   const secondaryPromptDrawInstructions: Array<{
     note: StaveNote;
     anchorStaff: "treble" | "bass";
@@ -1785,6 +1791,15 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       });
     }
 
+    for (const annotation of prompt.annotations ?? []) {
+      promptAnnotationDrawInstructions.push({
+        text: annotation.text,
+        placement: annotation.placement,
+        anchorStaff: annotation.staff,
+        index,
+      });
+    }
+
     trebleNotes.push(trebleNote);
     bassNotes.push(bassNote);
   }
@@ -1816,6 +1831,36 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
       context,
       appState.currentMeasureOffsetBeats,
       exerciseNotationProfile.beatsPerMeasure,
+    );
+  }
+
+  const promptAnnotationYPositions = getPromptAnnotationYPositions(
+    promptAnnotationDrawInstructions,
+    trebleNotes,
+    bassNotes,
+    trebleStave,
+    bassStave,
+  );
+
+  for (const instruction of promptAnnotationDrawInstructions) {
+    const anchorTickable =
+      instruction.anchorStaff === "treble"
+        ? trebleNotes[instruction.index]
+        : bassNotes[instruction.index];
+
+    if (!anchorTickable) {
+      continue;
+    }
+
+    drawPromptAnnotation(
+      instruction.text,
+      anchorTickable,
+      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
+      instruction.placement,
+      promptAnnotationYPositions.get(
+        `${instruction.anchorStaff}:${instruction.placement}`,
+      ),
+      context,
     );
   }
 
@@ -2355,6 +2400,96 @@ function createHeldInputOverlayNote(
   return note;
 }
 
+function drawPromptAnnotation(
+  text: string,
+  anchorNote: StaveNote,
+  stave: Stave,
+  placement: "above" | "below",
+  fixedY: number | undefined,
+  context: ReturnType<Renderer["getContext"]>,
+) {
+  const anchorX =
+    anchorNote.getAbsoluteX() + anchorNote.getGlyphWidth() / 2;
+  const noteYs = anchorNote.getYs();
+  const stemExtents = anchorNote.getStemExtents();
+  const topNoteY = Math.min(...noteYs, stemExtents.topY);
+  const bottomNoteY = Math.max(...noteYs, stemExtents.baseY);
+  const textY =
+    fixedY ??
+    (placement === "above"
+      ? Math.max(stave.getYForTopText(1.5), topNoteY - 12)
+      : Math.min(stave.getYForBottomText(1.5), bottomNoteY + 16));
+
+  context.save();
+  context
+    .setFont(undefined, 13, "normal", "normal")
+    .setFillStyle("#000");
+  const textWidth = context.measureText(text).width;
+  context.fillText(text, anchorX - textWidth / 2, textY);
+  context.restore();
+}
+
+function getPromptAnnotationYPositions(
+  promptAnnotationDrawInstructions: Array<{
+    text: string;
+    placement: "above" | "below";
+    anchorStaff: "treble" | "bass";
+    index: number;
+  }>,
+  trebleNotes: StaveNote[],
+  bassNotes: StaveNote[],
+  trebleStave: Stave,
+  bassStave: Stave,
+) {
+  const yPositions = new Map<string, number>();
+  const laneKeys = new Set(
+    promptAnnotationDrawInstructions.map(
+      (instruction) => `${instruction.anchorStaff}:${instruction.placement}`,
+    ),
+  );
+
+  for (const laneKey of laneKeys) {
+    const [staff, placement] = laneKey.split(":") as [
+      "treble" | "bass",
+      "above" | "below",
+    ];
+    const laneInstructions = promptAnnotationDrawInstructions.filter(
+      (instruction) =>
+        instruction.anchorStaff === staff && instruction.placement === placement,
+    );
+    const anchorNotes = laneInstructions
+      .map((instruction) =>
+        staff === "treble"
+          ? trebleNotes[instruction.index]
+          : bassNotes[instruction.index],
+      )
+      .filter((note): note is StaveNote => Boolean(note));
+
+    if (anchorNotes.length === 0) {
+      continue;
+    }
+
+    const stave = staff === "treble" ? trebleStave : bassStave;
+
+    if (placement === "above") {
+      const safeTopTextLine = getSafeTopTextLineForNotes(
+        anchorNotes[0],
+        anchorNotes,
+      );
+      yPositions.set(laneKey, stave.getYForTopText(safeTopTextLine));
+      continue;
+    }
+
+    const safeBottomTextLine = getSafeBottomTextLineForNotes(
+      anchorNotes[0],
+      anchorNotes,
+    );
+    yPositions.set(laneKey, stave.getYForBottomText(safeBottomTextLine));
+  }
+
+  return yPositions;
+}
+
 function drawMeasureBarlines(
   promptQueue: PromptSlot[],
   anchorNotes: StaveNote[],
@@ -2643,6 +2778,33 @@ function getSafeTopTextLineForNotes(
     line < 12 &&
     stave.getYForTopText(line + 0.5) > targetTopTextY &&
     stave.getYForTopText(line + 0.5) >= minimumVisibleY
+  ) {
+    line += 0.5;
+  }
+
+  return line;
+}
+
+function getSafeBottomTextLineForNotes(
+  referenceNote: StaveNote,
+  notes: StaveNote[],
+) {
+  const stave = referenceNote.checkStave();
+  const noteBottomPadding = 12;
+  const bottomMostOccupiedY = Math.max(
+    ...notes.map((note) => {
+      const stemBaseY = note.getStemExtents().baseY;
+      const noteHeadBottomY = Math.max(...note.getYs());
+
+      return Math.max(stemBaseY, noteHeadBottomY);
+    }),
+  );
+  const targetBottomTextY = bottomMostOccupiedY + noteBottomPadding;
+  let line = 1;
+
+  while (
+    line < 12 &&
+    stave.getYForBottomText(line + 0.5) < targetBottomTextY
   ) {
     line += 0.5;
   }

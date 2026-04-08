@@ -45,6 +45,23 @@ describe("createCadencePracticeQueue", () => {
       ["g/4", "b/4", "d/5"],
       ["g/4", "c/5", "e/5"],
     ]);
+    expect(queue.map((prompt) => prompt.annotations?.[0]?.text)).toEqual([
+      "I",
+      "IV",
+      "I",
+      "V",
+      "I",
+      "I",
+      "IV",
+      "I",
+      "V",
+      "I",
+      "I",
+      "IV",
+      "I",
+      "V",
+      "I",
+    ]);
   });
 
   it("keeps together-hand cadences one octave apart", () => {
@@ -58,12 +75,54 @@ describe("createCadencePracticeQueue", () => {
       duration: "q",
       trebleKeys: ["c/4", "e/4", "g/4"],
       bassKeys: ["c/3", "e/3", "g/3"],
+      annotations: [
+        {
+          staff: "treble",
+          placement: "above",
+          text: "I",
+        },
+      ],
     });
     expect(queue[3]).toEqual({
       duration: "q",
       trebleKeys: ["b/3", "d/4", "g/4"],
       bassKeys: ["b/2", "d/3", "g/3"],
+      annotations: [
+        {
+          staff: "treble",
+          placement: "above",
+          text: "V",
+        },
+      ],
     });
+  });
+
+  it("places cadence annotations on the visible staff", () => {
+    const trebleQueue = createCadencePracticeQueue(
+      createCadenceSettings({
+        scaleHands: "treble",
+      }),
+    );
+    const bassQueue = createCadencePracticeQueue(
+      createCadenceSettings({
+        scaleHands: "bass",
+      }),
+    );
+
+    expect(trebleQueue[0]?.annotations).toEqual([
+      {
+        staff: "treble",
+        placement: "above",
+        text: "I",
+      },
+    ]);
+    expect(bassQueue[0]?.annotations).toEqual([
+      {
+        staff: "bass",
+        placement: "above",
+        text: "I",
+      },
+    ]);
   });
 
   it("uses a raised leading tone for the dominant chord in minor cadences", () => {
