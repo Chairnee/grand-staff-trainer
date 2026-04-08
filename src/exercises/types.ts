@@ -6,8 +6,11 @@ export type PromptAnnotation = {
 
 export type PromptSlot = {
   duration: string;
+  isPlayable?: boolean;
   trebleKeys?: string[];
   bassKeys?: string[];
+  trebleRestVisible?: boolean;
+  bassRestVisible?: boolean;
   annotations?: PromptAnnotation[];
   displayedTrebleKeys?: string[];
   displayedBassKeys?: string[];

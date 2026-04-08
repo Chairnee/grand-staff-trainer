@@ -1376,6 +1376,8 @@ function consumeCurrentPrompt() {
       state.promptQueue.push(consumedPrompt);
     }
 
+    advancePastNonPlayablePrompts();
+
     renderApp();
     return;
   }
@@ -1403,7 +1405,34 @@ function resetPromptQueue() {
   );
   state.currentPromptIndex = 0;
   state.currentMeasureOffsetBeats = 0;
+  advancePastNonPlayablePrompts();
   renderApp();
+}
+
+function advancePastNonPlayablePrompts() {
+  const notationProfile = getExerciseNotationProfile(state.generationSettings);
+  let safetyCounter = 0;
+
+  while (
+    state.promptQueue[0]?.isPlayable === false &&
+    safetyCounter < state.promptQueue.length
+  ) {
+    const skippedPrompt = state.promptQueue.shift();
+
+    if (!skippedPrompt) {
+      break;
+    }
+
+    if (notationProfile) {
+      state.currentMeasureOffsetBeats =
+        (state.currentMeasureOffsetBeats +
+          getDurationBeats(skippedPrompt.duration)) %
+        notationProfile.beatsPerMeasure;
+    }
+
+    state.promptQueue.push(skippedPrompt);
+    safetyCounter += 1;
+  }
 }
 
 function clampAttemptWindowMs(value: number) {
@@ -1699,6 +1728,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         : createRest(
             displayedPrompt.trebleDisplayedClef ?? "treble",
             displayedPrompt.duration,
+            displayedPrompt.trebleRestVisible,
           );
       bassNote = displayedPrompt.bassKeys
         ? createPromptStaveNote(
@@ -1716,6 +1746,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         : createRest(
             displayedPrompt.bassDisplayedClef ?? "bass",
             displayedPrompt.duration,
+            displayedPrompt.bassRestVisible,
           );
     }
 
@@ -1954,9 +1985,12 @@ function getDisplayedPromptSlot(
       appState.generationSettings.scaleMotion === "contrary"
     ) {
       return {
+        isPlayable: prompt.isPlayable,
         duration: prompt.duration,
         trebleKeys: prompt.trebleKeys,
         bassKeys: prompt.bassKeys,
+        trebleRestVisible: prompt.trebleRestVisible,
+        bassRestVisible: prompt.bassRestVisible,
       };
     }
 
@@ -1982,9 +2016,12 @@ function getDisplayedPromptSlot(
   }
 
   return {
+    isPlayable: prompt.isPlayable,
     duration: prompt.duration,
     trebleKeys: prompt.displayedTrebleKeys ?? prompt.trebleKeys,
     bassKeys: prompt.displayedBassKeys ?? prompt.bassKeys,
+    trebleRestVisible: prompt.trebleRestVisible,
+    bassRestVisible: prompt.bassRestVisible,
     trebleDisplayedClef: prompt.trebleDisplayedClef,
     bassDisplayedClef: prompt.bassDisplayedClef,
     trebleOttavaStart: prompt.trebleOttavaStart,
@@ -2013,15 +2050,8 @@ function getStaffClefChangeBefore(
 
   const currentKeys =
     hand === "treble" ? currentPrompt.trebleKeys : currentPrompt.bassKeys;
-  const previousKeys =
-    hand === "treble" ? previousPrompt.trebleKeys : previousPrompt.bassKeys;
 
-  if (
-    !currentKeys ||
-    currentKeys.length === 0 ||
-    !previousKeys ||
-    previousKeys.length === 0
-  ) {
+  if (!currentKeys || currentKeys.length === 0) {
     return undefined;
   }
 
@@ -2043,6 +2073,10 @@ function getStaffClefChangeBefore(
     return "treble";
   }
 
+  if (hand === "bass" && index === 0 && currentClef === "bass") {
+    return undefined;
+  }
+
   return currentClef !== previousClef ? currentClef : undefined;
 }
 
@@ -2058,6 +2092,10 @@ function getDisplayedKeySignature(appState: AppState) {
 }
 
 function getPromptMidiNotes(prompt: PromptSlot) {
+  if (prompt.isPlayable === false) {
+    return [];
+  }
+
   return [
     ...new Set(
       [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])].map(

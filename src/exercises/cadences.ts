@@ -9,6 +9,9 @@ import type { PromptAnnotation, PromptSlot } from "./types";
 
 const CADENCE_PATTERN = ["I", "IV", "I", "V", "I"] as const;
 const INVERSION_SEQUENCE = ["root", "first", "second"] as const;
+const SECOND_INVERSION_CYCLE_START_INDEX =
+  CADENCE_PATTERN.length * (INVERSION_SEQUENCE.length - 1);
+const SECOND_LEDGER_LINE_ABOVE_BASS_MIDI_NOTE = keyToMidiNoteNumber("e/4");
 
 type CadenceDegree = (typeof CADENCE_PATTERN)[number];
 type Inversion = (typeof INVERSION_SEQUENCE)[number];
@@ -74,9 +77,15 @@ function createCadencePromptsForHands(
   bassChords: string[][],
   scaleHands: ScaleHands,
 ): PromptSlot[] {
-  return trebleChords.map((trebleKeys, index) => {
+  const shouldRephraseFinalBassCycle = shouldRephraseFinalBassCycleToTreble(
+    bassChords,
+  );
+
+  return trebleChords.flatMap((trebleKeys, index) => {
     const bassKeys = bassChords[index];
     const degree = CADENCE_PATTERN[index % CADENCE_PATTERN.length];
+    const isFinalCadenceChord = isFinalChordOfCadenceCycle(index);
+    const cadenceChordDuration = isFinalCadenceChord ? "h" : "q";
 
     if (!bassKeys) {
       throw new Error("Could not find matching bass cadence chord.");
@@ -85,27 +94,56 @@ function createCadencePromptsForHands(
     const annotations = createCadenceAnnotations(scaleHands, degree);
 
     if (scaleHands === "treble") {
-      return {
-        duration: "q",
+      const playablePrompt: PromptSlot = {
+        duration: cadenceChordDuration,
         trebleKeys,
         annotations,
       };
+      const cadenceBoundaryRest = isFinalCadenceChord
+        ? createCadenceBoundaryRestPrompt("treble")
+        : null;
+
+      return cadenceBoundaryRest
+        ? [playablePrompt, cadenceBoundaryRest]
+        : [playablePrompt];
     }
 
     if (scaleHands === "bass") {
-      return {
-        duration: "q",
+      const playablePrompt: PromptSlot = {
+        duration: cadenceChordDuration,
         bassKeys,
+        bassDisplayedClef:
+          shouldRephraseFinalBassCycle && index >= SECOND_INVERSION_CYCLE_START_INDEX
+            ? "treble"
+            : undefined,
         annotations,
       };
+      const cadenceBoundaryRest = isFinalCadenceChord
+        ? createCadenceBoundaryRestPrompt("bass")
+        : null;
+
+      return cadenceBoundaryRest
+        ? [playablePrompt, cadenceBoundaryRest]
+        : [playablePrompt];
     }
 
-    return {
-      duration: "q",
+    const playablePrompt: PromptSlot = {
+      duration: cadenceChordDuration,
       trebleKeys,
       bassKeys,
+      bassDisplayedClef:
+        shouldRephraseFinalBassCycle && index >= SECOND_INVERSION_CYCLE_START_INDEX
+          ? "treble"
+          : undefined,
       annotations,
     };
+    const cadenceBoundaryRest = isFinalCadenceChord
+      ? createCadenceBoundaryRestPrompt("together")
+      : null;
+
+    return cadenceBoundaryRest
+      ? [playablePrompt, cadenceBoundaryRest]
+      : [playablePrompt];
   });
 }
 
@@ -335,4 +373,32 @@ function getPermutations<T>(items: readonly T[]): T[][] {
       ...permutation,
     ]);
   });
+}
+
+function shouldRephraseFinalBassCycleToTreble(bassChords: string[][]) {
+  const finalSecondInversionTonicChord = bassChords.at(-1);
+
+  if (!finalSecondInversionTonicChord) {
+    return false;
+  }
+
+  const highestMidiNoteNumber = Math.max(
+    ...finalSecondInversionTonicChord.map(keyToMidiNoteNumber),
+  );
+
+  return highestMidiNoteNumber > SECOND_LEDGER_LINE_ABOVE_BASS_MIDI_NOTE;
+}
+
+function isFinalChordOfCadenceCycle(index: number) {
+  return index % CADENCE_PATTERN.length === CADENCE_PATTERN.length - 1;
+}
+
+function createCadenceBoundaryRestPrompt(scaleHands: ScaleHands): PromptSlot {
+  return {
+    duration: "h",
+    isPlayable: false,
+    trebleRestVisible:
+      scaleHands === "treble" || scaleHands === "together",
+    bassRestVisible: scaleHands === "bass" || scaleHands === "together",
+  };
 }

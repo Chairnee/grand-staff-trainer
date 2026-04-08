@@ -27,41 +27,73 @@ describe("createCadencePracticeQueue", () => {
   it("creates one full cadence cycle per inversion", () => {
     const queue = createCadencePracticeQueue(createCadenceSettings());
 
-    expect(queue).toHaveLength(15);
-    expect(queue.map((prompt) => prompt.trebleKeys)).toEqual([
+    expect(queue).toHaveLength(18);
+    expect(queue.map((prompt) => prompt.trebleKeys ?? null)).toEqual([
       ["c/4", "e/4", "g/4"],
       ["c/4", "f/4", "a/4"],
       ["c/4", "e/4", "g/4"],
       ["b/3", "d/4", "g/4"],
       ["c/4", "e/4", "g/4"],
+      null,
       ["e/4", "g/4", "c/5"],
       ["f/4", "a/4", "c/5"],
       ["e/4", "g/4", "c/5"],
       ["d/4", "g/4", "b/4"],
       ["e/4", "g/4", "c/5"],
+      null,
       ["g/4", "c/5", "e/5"],
       ["a/4", "c/5", "f/5"],
       ["g/4", "c/5", "e/5"],
       ["g/4", "b/4", "d/5"],
       ["g/4", "c/5", "e/5"],
+      null,
     ]);
-    expect(queue.map((prompt) => prompt.annotations?.[0]?.text)).toEqual([
+    expect(queue.map((prompt) => prompt.annotations?.[0]?.text ?? null)).toEqual([
       "I",
       "IV",
       "I",
       "V",
       "I",
+      null,
       "I",
       "IV",
       "I",
       "V",
       "I",
+      null,
       "I",
       "IV",
       "I",
       "V",
       "I",
+      null,
     ]);
+    expect(queue.map((prompt) => prompt.duration)).toEqual([
+      "q",
+      "q",
+      "q",
+      "q",
+      "h",
+      "h",
+      "q",
+      "q",
+      "q",
+      "q",
+      "h",
+      "h",
+      "q",
+      "q",
+      "q",
+      "q",
+      "h",
+      "h",
+    ]);
+    expect(queue[5]).toEqual({
+      duration: "h",
+      isPlayable: false,
+      trebleRestVisible: true,
+      bassRestVisible: false,
+    });
   });
 
   it("keeps together-hand cadences one octave apart", () => {
@@ -95,6 +127,50 @@ describe("createCadencePracticeQueue", () => {
         },
       ],
     });
+    expect(queue[4]).toEqual({
+      duration: "h",
+      trebleKeys: ["c/4", "e/4", "g/4"],
+      bassKeys: ["c/3", "e/3", "g/3"],
+      annotations: [
+        {
+          staff: "treble",
+          placement: "above",
+          text: "I",
+        },
+      ],
+    });
+    expect(queue[5]).toEqual({
+      duration: "h",
+      isPlayable: false,
+      trebleRestVisible: true,
+      bassRestVisible: true,
+    });
+  });
+
+  it("keeps the last bass cadence cycle in bass clef when the final tonic tops out on the second ledger line", () => {
+    const queue = createCadencePracticeQueue(
+      createCadenceSettings({
+        tonic: "C",
+        scaleHands: "together",
+      }),
+    );
+
+    expect(queue[10]?.bassDisplayedClef).toBeUndefined();
+    expect(queue[16]?.bassKeys).toEqual(["g/3", "c/4", "e/4"]);
+    expect(queue[16]?.bassDisplayedClef).toBeUndefined();
+  });
+
+  it("rephrases the last bass cadence cycle into treble clef when the final tonic rises above the second ledger line", () => {
+    const queue = createCadencePracticeQueue(
+      createCadenceSettings({
+        tonic: "F",
+        scaleHands: "together",
+      }),
+    );
+
+    expect(queue[12]?.bassDisplayedClef).toBe("treble");
+    expect(queue[16]?.bassKeys).toEqual(["c/4", "f/4", "a/4"]);
+    expect(queue[16]?.bassDisplayedClef).toBe("treble");
   });
 
   it("places cadence annotations on the visible staff", () => {
