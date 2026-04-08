@@ -749,8 +749,9 @@ function renderSettingsDrawer() {
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
   const isArpeggiosMode = state.generationSettings.practiceMode === "arpeggios";
   const isCadencesMode = state.generationSettings.practiceMode === "cadences";
-  const isTogetherScalesMode =
-    isScalesMode && state.generationSettings.scaleHands === "together";
+  const isTogetherMotionMode =
+    (isScalesMode || isArpeggiosMode) &&
+    state.generationSettings.scaleHands === "together";
   const isSingleHandScalesMode =
     isScalesMode && state.generationSettings.scaleHands !== "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
@@ -762,7 +763,7 @@ function renderSettingsDrawer() {
   scaleHandsFieldElement.hidden =
     !areExerciseSettingsVisible || isRandomNotesMode;
   scaleMotionFieldElement.hidden =
-    !areExerciseSettingsVisible || !isTogetherScalesMode;
+    !areExerciseSettingsVisible || !isTogetherMotionMode;
   scaleDirectionFieldElement.hidden =
     !areExerciseSettingsVisible || !isSingleHandScalesMode;
   scaleOctavesFieldElement.hidden =
@@ -1038,12 +1039,15 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
       generationSettings.tonic,
       generationSettings.triadType,
     );
-    const handsLabel = capitalizeWord(generationSettings.scaleHands);
     const octaveLabel = `${generationSettings.scaleOctaves} ${
       generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
     }`;
 
-    return `${handsLabel} | ${arpeggioLabel} | ${octaveLabel}`;
+    if (generationSettings.scaleHands === "together") {
+      return `${capitalizeWord(generationSettings.scaleMotion)} | ${arpeggioLabel} | ${octaveLabel}`;
+    }
+
+    return `${capitalizeWord(generationSettings.scaleHands)} | ${arpeggioLabel} | ${octaveLabel}`;
   }
 
   if (generationSettings.practiceMode === "cadences") {
@@ -1660,6 +1664,10 @@ function getTogetherScaleDisplayedStaff(
       return getDisplayedScaleStaff(appState, sourceHand, key);
     }
 
+    if (appState.generationSettings.scaleMotion === "contrary") {
+      return sourceHand;
+    }
+
     return sourceHand === "treble" ? "treble" : getClefForKey(key);
   }
 
@@ -2150,6 +2158,22 @@ function getDisplayedPromptSlot(
   appState: AppState,
 ): PromptSlot {
   if (appState.generationSettings.practiceMode === "arpeggios") {
+    if (
+      appState.generationSettings.scaleHands === "together" &&
+      appState.generationSettings.scaleMotion === "contrary"
+    ) {
+      return {
+        isPlayable: prompt.isPlayable,
+        duration: prompt.duration,
+        trebleKeys: prompt.trebleKeys,
+        bassKeys: prompt.bassKeys,
+        trebleRestVisible: prompt.trebleRestVisible,
+        bassRestVisible: prompt.bassRestVisible,
+        annotations: prompt.annotations,
+        accidentalOverrides: prompt.accidentalOverrides,
+      };
+    }
+
     const displayedTrebleKeys = [
       ...(prompt.trebleKeys ?? []),
       ...(prompt.bassKeys ?? []).filter(
@@ -2331,6 +2355,7 @@ function getHeldOverlayPresentation(
 
   if (appState.generationSettings.practiceMode === "arpeggios") {
     const arpeggioExactMatch = getExactArpeggioOverlayPresentation(
+      appState,
       prompt,
       heldNoteNumber,
     );
@@ -2531,6 +2556,7 @@ function getPresentationForAssignedHand(
 }
 
 function getExactArpeggioOverlayPresentation(
+  appState: AppState,
   prompt: PromptSlot,
   heldNoteNumber: number,
 ) {
@@ -2541,10 +2567,15 @@ function getExactArpeggioOverlayPresentation(
   );
 
   if (exactTrebleKey) {
+    const displayedStaff =
+      appState.generationSettings.scaleHands === "together"
+        ? getTogetherScaleDisplayedStaff(appState, "treble", exactTrebleKey)
+        : "treble";
+
     return {
-      hand: "treble" as const,
+      hand: displayedStaff,
       key: exactTrebleKey,
-      clef: "treble" as const,
+      clef: displayedStaff,
     };
   }
 
@@ -2558,7 +2589,10 @@ function getExactArpeggioOverlayPresentation(
     return null;
   }
 
-  const displayedStaff = getClefForKey(exactBassKey);
+  const displayedStaff =
+    appState.generationSettings.scaleHands === "together"
+      ? getTogetherScaleDisplayedStaff(appState, "bass", exactBassKey)
+      : getClefForKey(exactBassKey);
 
   return {
     hand: displayedStaff,

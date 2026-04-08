@@ -81,6 +81,48 @@ describe("createArpeggioPracticeQueue", () => {
     });
   });
 
+  it("creates contrary-motion together-hand arpeggios from a shared start and returns inward", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+      }),
+    );
+
+    expect(queue).toEqual([
+      { duration: "q", trebleKeys: ["c/4"], bassKeys: ["c/4"] },
+      { duration: "q", trebleKeys: ["e/4"], bassKeys: ["g/3"] },
+      { duration: "q", trebleKeys: ["g/4"], bassKeys: ["e/3"] },
+      { duration: "q", trebleKeys: ["c/5"], bassKeys: ["c/3"] },
+      { duration: "q", trebleKeys: ["g/4"], bassKeys: ["e/3"] },
+      { duration: "q", trebleKeys: ["e/4"], bassKeys: ["g/3"] },
+      { duration: "q", trebleKeys: ["c/4"], bassKeys: ["c/4"] },
+    ]);
+  });
+
+  it("keeps the shared start intact for B major shown as Cb major in contrary motion", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+        tonic: "B",
+        triadType: "major",
+        renderingPreference: "alternate",
+      }),
+    );
+
+    expect(queue[0]).toEqual({
+      duration: "q",
+      trebleKeys: ["cb/4"],
+      bassKeys: ["cb/4"],
+    });
+    expect(queue[1]).toEqual({
+      duration: "q",
+      trebleKeys: ["eb/4"],
+      bassKeys: ["gb/3"],
+    });
+  });
+
   it("uses the rendered tonic spelling for minor arpeggios", () => {
     const queue = createArpeggioPracticeQueue(
       createArpeggioSettings({
