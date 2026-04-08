@@ -31,6 +31,8 @@ import {
   getDerivedKeySignature,
   getHeldOverlayKey,
   getPracticalTonic,
+  getCadenceRenderingNotice,
+  getCadenceRenderingOptions,
   getRenderedAccidentalForKey,
   getScaleRenderingNotice,
   getScaleRenderingOptions,
@@ -196,6 +198,7 @@ app.innerHTML = `
           <option value="random-notes">Random notes</option>
           <option value="scales">Scales</option>
           <option value="triads">Triads</option>
+          <option value="cadences">Cadences</option>
         </select>
       </label>
       <label id="scale-hands-field" class="settings-field" hidden>
@@ -242,7 +245,7 @@ app.innerHTML = `
         </select>
       </label>
       <label id="triad-type-field" class="settings-field" hidden>
-        <span>Triad type</span>
+        <span id="triad-type-label">Triad type</span>
         <select id="triad-type-select">
           <option value="major">Major</option>
           <option value="minor">Minor</option>
@@ -344,6 +347,7 @@ const scaleTypeSelect =
   document.querySelector<HTMLSelectElement>("#scale-type-select");
 const triadTypeField =
   document.querySelector<HTMLLabelElement>("#triad-type-field");
+const triadTypeLabel = document.querySelector<HTMLSpanElement>("#triad-type-label");
 const triadTypeSelect =
   document.querySelector<HTMLSelectElement>("#triad-type-select");
 const settingsExerciseToggle = document.querySelector<HTMLInputElement>(
@@ -394,6 +398,7 @@ if (
   !tonicSelect ||
   !scaleTypeSelect ||
   !triadTypeField ||
+  !triadTypeLabel ||
   !triadTypeSelect ||
   !settingsExerciseToggle ||
   !exerciseSettingsHeading ||
@@ -437,6 +442,7 @@ const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
 const triadTypeFieldElement = triadTypeField;
+const triadTypeLabelElement = triadTypeLabel;
 const triadTypeSelectElement = triadTypeSelect;
 const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
@@ -680,6 +686,7 @@ function renderSettingsDrawer() {
     state.generationSettings.practiceMode === "random-notes";
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
+  const isCadencesMode = state.generationSettings.practiceMode === "cadences";
   const isTogetherScalesMode =
     isScalesMode && state.generationSettings.scaleHands === "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
@@ -693,14 +700,18 @@ function renderSettingsDrawer() {
   scaleMotionFieldElement.hidden =
     !areExerciseSettingsVisible || !isTogetherScalesMode;
   scaleOctavesFieldElement.hidden =
-    !areExerciseSettingsVisible || isRandomNotesMode;
+    !areExerciseSettingsVisible || isRandomNotesMode || isCadencesMode;
   rangeStartFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   rangeEndFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   tonicFieldElement.hidden = !areExerciseSettingsVisible;
   scaleTypeFieldElement.hidden = !areExerciseSettingsVisible || !isScalesMode;
-  triadTypeFieldElement.hidden = !areExerciseSettingsVisible || !isTriadsMode;
+  triadTypeFieldElement.hidden =
+    !areExerciseSettingsVisible || (!isTriadsMode && !isCadencesMode);
+  triadTypeLabelElement.textContent = isCadencesMode
+    ? "Cadence type"
+    : "Triad type";
   noteSourceFieldElement.hidden =
     !areExerciseSettingsVisible || !isRandomNotesMode;
   accidentalSpellingFieldElement.hidden =
@@ -791,7 +802,7 @@ function renderExerciseNotice() {
 
       if (renderingOptions.alternate) {
         exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${scaleLabel}`;
-        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonActionText = "Swap";
         exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${scaleLabel}.`;
       }
 
@@ -804,11 +815,24 @@ function renderExerciseNotice() {
 
       if (renderingOptions.alternate) {
         exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${triadLabel}`;
-        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonActionText = "Swap";
         exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${triadLabel}.`;
       }
 
       exerciseNotice = getTriadRenderingNotice(state.generationSettings);
+    } else if (state.generationSettings.practiceMode === "cadences") {
+      const renderingOptions = getCadenceRenderingOptions(
+        state.generationSettings,
+      );
+      const cadenceLabel = `${state.generationSettings.triadType} cadences`;
+
+      if (renderingOptions.alternate) {
+        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${cadenceLabel}`;
+        exerciseNoticeButtonActionText = "Swap";
+        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${cadenceLabel}.`;
+      }
+
+      exerciseNotice = getCadenceRenderingNotice(state.generationSettings);
     } else if (state.generationSettings.noteSourceMode === "in-scale") {
       const renderingOptions = getScaleRenderingOptions(
         state.generationSettings,
@@ -819,7 +843,7 @@ function renderExerciseNotice() {
 
       if (renderingOptions.alternate) {
         exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${scaleLabel}`;
-        exerciseNoticeButtonActionText = "Swap ↔";
+        exerciseNoticeButtonActionText = "Swap";
         exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${scaleLabel}.`;
       }
 
@@ -936,6 +960,17 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
     return `${handsLabel} · ${triadLabel} · ${octaveLabel}`;
   }
 
+  if (generationSettings.practiceMode === "cadences") {
+    const renderedTonic = getCadenceRenderingOptions(generationSettings).active.tonic;
+    const cadenceLabel = formatCompactCadenceLabel(
+      renderedTonic,
+      generationSettings.triadType,
+    );
+    const handsLabel = capitalizeWord(generationSettings.scaleHands);
+
+    return `${handsLabel} · ${cadenceLabel}`;
+  }
+
   if (generationSettings.noteSourceMode === "in-scale") {
     const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic;
     const scaleLabel = formatCompactScaleLabel(
@@ -967,6 +1002,10 @@ function formatCompactScaleLabel(tonic: Tonic, scaleType: ScaleType) {
 
 function formatCompactTriadLabel(tonic: Tonic, triadType: TriadType) {
   return triadType === "major" ? `${tonic}M triads` : `${tonic}m triads`;
+}
+
+function formatCompactCadenceLabel(tonic: Tonic, triadType: TriadType) {
+  return triadType === "major" ? `${tonic}M cadences` : `${tonic}m cadences`;
 }
 
 function capitalizeWord(text: string) {
@@ -1316,7 +1355,8 @@ function consumeCurrentPrompt() {
 
   if (
     state.generationSettings.practiceMode === "scales" ||
-    state.generationSettings.practiceMode === "triads"
+    state.generationSettings.practiceMode === "triads" ||
+    state.generationSettings.practiceMode === "cadences"
   ) {
     if (consumedPrompt) {
       state.promptQueue.push(consumedPrompt);
@@ -1455,12 +1495,14 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const promptKeys = getPromptQueueKeys(appState.promptQueue);
   const defaultTopVisibleMidiNote =
     appState.generationSettings.practiceMode === "scales" ||
-    appState.generationSettings.practiceMode === "triads"
+    appState.generationSettings.practiceMode === "triads" ||
+    appState.generationSettings.practiceMode === "cadences"
       ? SCALE_TOP_VISIBLE_MIDI_NOTE
       : DEFAULT_TOP_VISIBLE_MIDI_NOTE;
   const defaultBottomVisibleMidiNote =
     appState.generationSettings.practiceMode === "scales" ||
-    appState.generationSettings.practiceMode === "triads"
+    appState.generationSettings.practiceMode === "triads" ||
+    appState.generationSettings.practiceMode === "cadences"
       ? SCALE_BOTTOM_VISIBLE_MIDI_NOTE
       : DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
   const topMidiNoteNumber =
@@ -2675,3 +2717,4 @@ function saveStoredSettings() {
     // Ignore storage issues and continue without persistence.
   }
 }
+

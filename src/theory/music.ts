@@ -3,7 +3,7 @@ import type { PromptSlot } from "../exercises/types";
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
-export type PracticeMode = "random-notes" | "scales" | "triads";
+export type PracticeMode = "random-notes" | "scales" | "triads" | "cadences";
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type ScaleMotion = "parallel" | "contrary";
@@ -237,7 +237,10 @@ export function getRenderedAccidentalForKey(
 }
 
 export function getDerivedKeySignature(generationSettings: GenerationSettings) {
-  if (generationSettings.practiceMode === "triads") {
+  if (
+    generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "cadences"
+  ) {
     return getTriadRenderingOptions(generationSettings).active.keySignature;
   }
 
@@ -412,6 +415,18 @@ export function getTriadRenderingNotice(
   return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} triads are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} triads for readability.`;
 }
 
+export function getCadenceRenderingNotice(
+  generationSettings: GenerationSettings,
+) {
+  const renderingOverride = getTriadRenderingOverride(generationSettings);
+
+  if (!renderingOverride) {
+    return null;
+  }
+
+  return `${renderingOverride.selectedTonic} ${renderingOverride.triadType} cadences are being rendered as ${renderingOverride.renderedTonic} ${renderingOverride.triadType} cadences for readability.`;
+}
+
 export function getTriadRenderingOptions(
   generationSettings: GenerationSettings,
 ) {
@@ -420,6 +435,12 @@ export function getTriadRenderingOptions(
     generationSettings.triadType === "major" ? "major" : "natural-minor",
     generationSettings.renderingPreference,
   );
+}
+
+export function getCadenceRenderingOptions(
+  generationSettings: GenerationSettings,
+) {
+  return getTriadRenderingOptions(generationSettings);
 }
 
 export function getScaleStartingOctave(

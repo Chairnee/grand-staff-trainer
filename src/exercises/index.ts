@@ -3,6 +3,7 @@ import {
   createRandomNotePromptQueue,
   fillRandomNotePromptQueue,
 } from "./randomNotes";
+import { createCadencePracticeQueue } from "./cadences";
 import { createScalePracticeQueue } from "./scales";
 import { createTriadPracticeQueue } from "./triads";
 import type { PromptSlot } from "./types";
@@ -18,6 +19,10 @@ export function createExercisePromptQueue(
 
   if (generationSettings.practiceMode === "triads") {
     return createTriadPracticeQueue(generationSettings);
+  }
+
+  if (generationSettings.practiceMode === "cadences") {
+    return createCadencePracticeQueue(generationSettings);
   }
 
   return createRandomNotePromptQueue(
@@ -38,6 +43,10 @@ export function fillExercisePromptQueue(
   }
 
   if (generationSettings.practiceMode === "triads") {
+    return;
+  }
+
+  if (generationSettings.practiceMode === "cadences") {
     return;
   }
 
