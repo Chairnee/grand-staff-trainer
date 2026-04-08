@@ -426,7 +426,7 @@ describe("getTonicReadabilityOptionsForScaleType", () => {
       ),
     ).toEqual([
       { tonic: "F#", keySignature: "A", cost: 3 },
-      { tonic: "Gb", keySignature: null, cost: 20 },
+      { tonic: "Gb", keySignature: null, cost: 27 },
     ]);
 
     expect(
@@ -439,7 +439,22 @@ describe("getTonicReadabilityOptionsForScaleType", () => {
       ),
     ).toEqual([
       { tonic: "C#", keySignature: "E", cost: 4 },
-      { tonic: "Db", keySignature: null, cost: 10 },
+      { tonic: "Db", keySignature: null, cost: 17 },
+    ]);
+  });
+
+  it("does not let no-signature melodic-minor spellings outrank practical keys", () => {
+    expect(
+      getTonicReadabilityOptionsForScaleType("C#", "melodic-minor").map(
+        (option) => ({
+          tonic: option.tonic,
+          keySignature: option.keySignature,
+          cost: option.cost,
+        }),
+      ),
+    ).toEqual([
+      { tonic: "C#", keySignature: "E", cost: 4 },
+      { tonic: "Db", keySignature: null, cost: 6 },
     ]);
   });
 });

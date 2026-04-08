@@ -184,4 +184,58 @@ describe("createScalePracticeQueue", () => {
       "c/4",
     ]);
   });
+
+  it("uses the classical melodic minor form on the way down in normal scales", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        tonic: "A",
+        scaleType: "melodic-minor",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "a/3",
+      "b/3",
+      "c/4",
+      "d/4",
+      "e/4",
+      "f#/4",
+      "g#/4",
+      "a/4",
+      "g/4",
+      "f/4",
+      "e/4",
+      "d/4",
+      "c/4",
+      "b/3",
+    ]);
+  });
+
+  it("uses natural minor on the descending leg and melodic minor on the return in reverse practice", () => {
+    const queue = createScalePracticeQueue(
+      createScaleSettings({
+        tonic: "F#",
+        scaleType: "melodic-minor",
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "f#/6",
+      "e/6",
+      "d/6",
+      "c#/6",
+      "b/5",
+      "a/5",
+      "g#/5",
+      "f#/5",
+      "g#/5",
+      "a/5",
+      "b/5",
+      "c#/6",
+      "d#/6",
+      "e#/6",
+      "f#/6",
+    ]);
+  });
 });

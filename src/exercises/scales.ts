@@ -1,13 +1,49 @@
 import {
+  getAscendingScaleKeysForRenderedTonicName,
   getDescendingScaleStartingOctave,
   type GenerationSettings,
   getAscendingScaleKeys,
-  getScaleNoteNames,
   getScaleStartingOctave,
-  type ScaleHands,
+  getSupportedTonicForScaleType,
   keyToMidiNoteNumber,
+  getScaleNoteNames,
+  type ScaleHands,
+  type ScaleType,
 } from "../theory/music";
 import type { PromptSlot } from "./types";
+
+function getDescendingMotionScaleType(scaleType: ScaleType): ScaleType {
+  return scaleType === "melodic-minor" ? "natural-minor" : scaleType;
+}
+
+function getExerciseMovementScaleKeys(
+  generationSettings: GenerationSettings,
+  movementScaleType: ScaleType,
+  startingOctave: number,
+) {
+  if (generationSettings.scaleType === "melodic-minor") {
+    const renderedTonic = getSupportedTonicForScaleType(
+      generationSettings.tonic,
+      generationSettings.scaleType,
+      generationSettings.renderingPreference,
+    );
+
+    return getAscendingScaleKeysForRenderedTonicName(
+      renderedTonic,
+      movementScaleType,
+      startingOctave,
+      generationSettings.scaleOctaves,
+    );
+  }
+
+  return getAscendingScaleKeys(
+    generationSettings.tonic,
+    movementScaleType,
+    startingOctave,
+    generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
+  );
+}
 
 export function createScalePracticeQueue(
   generationSettings: GenerationSettings,
@@ -31,28 +67,41 @@ export function createScalePracticeQueue(
     generationSettings.scaleType,
     generationSettings.renderingPreference,
   );
-  const trebleAscendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
+  const trebleAscendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
     generationSettings.scaleType,
     trebleStartingOctave,
-    generationSettings.scaleOctaves,
-    generationSettings.renderingPreference,
   );
-  const bassAscendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
+  const bassAscendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
     generationSettings.scaleType,
     trebleStartingOctave - 1,
-    generationSettings.scaleOctaves,
-    generationSettings.renderingPreference,
   );
+  const descendingScaleType = getDescendingMotionScaleType(
+    generationSettings.scaleType,
+  );
+  const trebleDescendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    descendingScaleType,
+    trebleStartingOctave,
+  )
+    .slice(0, -1)
+    .reverse();
+  const bassDescendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    descendingScaleType,
+    trebleStartingOctave - 1,
+  )
+    .slice(0, -1)
+    .reverse();
   const ascendingPrompts = createScalePromptsForHands(
     trebleAscendingKeys,
     bassAscendingKeys,
     generationSettings.scaleHands,
   );
   const descendingPrompts = createScalePromptsForHands(
-    [...trebleAscendingKeys].slice(0, -1).reverse(),
-    [...bassAscendingKeys].slice(0, -1).reverse(),
+    trebleDescendingKeys,
+    bassDescendingKeys,
     generationSettings.scaleHands,
   );
 
@@ -75,14 +124,16 @@ function createDescendingSingleHandScalePracticeQueue(
     scaleHands,
     generationSettings.renderingPreference,
   );
-  const descendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
+  const descendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    getDescendingMotionScaleType(generationSettings.scaleType),
+    descendingStartingOctave,
+  ).reverse();
+  const ascendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
     generationSettings.scaleType,
     descendingStartingOctave,
-    generationSettings.scaleOctaves,
-    generationSettings.renderingPreference,
-  ).reverse();
-  const ascendingKeys = [...descendingKeys].slice(0, -1).reverse();
+  ).slice(1);
 
   if (scaleHands === "treble") {
     return [
@@ -113,26 +164,38 @@ function createContraryMotionScalePracticeQueue(
   generationSettings: GenerationSettings,
 ) {
   const sharedStartingOctave = getContraryMotionStartingOctave(generationSettings);
-  const trebleAscendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
+  const trebleAscendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
     generationSettings.scaleType,
     sharedStartingOctave,
-    generationSettings.scaleOctaves,
-    generationSettings.renderingPreference,
   );
-  const bassDescendingKeys = getAscendingScaleKeys(
-    generationSettings.tonic,
-    generationSettings.scaleType,
+  const bassDescendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    getDescendingMotionScaleType(generationSettings.scaleType),
     sharedStartingOctave - generationSettings.scaleOctaves,
-    generationSettings.scaleOctaves,
-    generationSettings.renderingPreference,
   ).reverse();
   const outwardPrompts = createScalePromptsForHands(
     trebleAscendingKeys,
     bassDescendingKeys,
     "together",
   );
-  const inwardPrompts = [...outwardPrompts].slice(0, -1).reverse();
+  const trebleDescendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    getDescendingMotionScaleType(generationSettings.scaleType),
+    sharedStartingOctave,
+  )
+    .reverse()
+    .slice(1);
+  const bassAscendingKeys = getExerciseMovementScaleKeys(
+    generationSettings,
+    generationSettings.scaleType,
+    sharedStartingOctave - generationSettings.scaleOctaves,
+  ).slice(1);
+  const inwardPrompts = createScalePromptsForHands(
+    trebleDescendingKeys,
+    bassAscendingKeys,
+    "together",
+  );
 
   return [...outwardPrompts, ...inwardPrompts.slice(0, -1)];
 }
@@ -157,19 +220,15 @@ function getContraryMotionStartingOctave(
   const maximumMidi = keyToMidiNoteNumber("c/6");
 
   const rankedCandidates = candidateOctaves.map((octave) => {
-    const trebleKeys = getAscendingScaleKeys(
-      generationSettings.tonic,
+    const trebleKeys = getExerciseMovementScaleKeys(
+      generationSettings,
       generationSettings.scaleType,
       octave,
-      generationSettings.scaleOctaves,
-      generationSettings.renderingPreference,
     );
-    const bassKeys = getAscendingScaleKeys(
-      generationSettings.tonic,
-      generationSettings.scaleType,
+    const bassKeys = getExerciseMovementScaleKeys(
+      generationSettings,
+      getDescendingMotionScaleType(generationSettings.scaleType),
       octave - generationSettings.scaleOctaves,
-      generationSettings.scaleOctaves,
-      generationSettings.renderingPreference,
     ).reverse();
     const midiNotes = [...trebleKeys, ...bassKeys].map(keyToMidiNoteNumber);
     const lowestMidi = Math.min(...midiNotes);

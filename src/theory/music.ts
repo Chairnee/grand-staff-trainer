@@ -592,10 +592,23 @@ export function getAscendingScaleKeys(
     scaleType,
     renderingPreference,
   );
-  const scaleNoteNames = getScaleNoteNames(
-    tonic,
+  return getAscendingScaleKeysForRenderedTonicName(
+    renderedTonic,
     scaleType,
-    renderingPreference,
+    startingOctave,
+    scaleOctaves,
+  );
+}
+
+export function getAscendingScaleKeysForRenderedTonicName(
+  renderedTonic: string,
+  scaleType: ScaleType,
+  startingOctave: number,
+  scaleOctaves: ScaleOctaves,
+) {
+  const scaleNoteNames = getScaleNoteNamesForRenderedTonicName(
+    renderedTonic,
+    scaleType,
   );
   const ascendingNoteNames = Array.from({ length: scaleOctaves }).flatMap(
     () => {
@@ -706,7 +719,7 @@ export function getTonicReadabilityOptionsForScaleType(
         scaleType,
       );
       const keySignatureAccidentalCount =
-        getKeySignatureAccidentalCount(keySignature);
+        getReadabilityAccidentalCount(keySignature, scaleNoteNames);
       const doubleAccidentalCount = countDoubleAccidentals(scaleNoteNames);
 
       return {
@@ -1079,6 +1092,21 @@ function getKeySignatureAccidentalCount(keySignature: KeySignature | null) {
   }
 
   return Object.keys(getKeySignatureAccidentals(keySignature)).length;
+}
+
+function getReadabilityAccidentalCount(
+  keySignature: KeySignature | null,
+  noteNames: string[],
+) {
+  if (keySignature) {
+    return getKeySignatureAccidentalCount(keySignature);
+  }
+
+  return countExplicitAccidentals(noteNames);
+}
+
+function countExplicitAccidentals(noteNames: string[]) {
+  return noteNames.filter((noteName) => noteName.slice(1).length >= 1).length;
 }
 
 function countDoubleAccidentals(noteNames: string[]) {

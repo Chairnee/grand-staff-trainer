@@ -57,6 +57,34 @@ function getUnexpectedNoteNames(
   ).sort();
 }
 
+function getAllowedScaleExerciseNoteNames(tonic: Tonic, scaleType: ScaleType) {
+  const renderedTonic = getScaleRenderingOptions(
+    createGenerationSettings({
+      tonic,
+      scaleType,
+    }),
+  ).active.tonic.toLowerCase();
+
+  return getAllowedScaleExerciseNoteNamesForRenderedTonic(
+    renderedTonic,
+    scaleType,
+  );
+}
+
+function getAllowedScaleExerciseNoteNamesForRenderedTonic(
+  renderedTonic: string,
+  scaleType: ScaleType,
+) {
+  if (scaleType !== "melodic-minor") {
+    return getScaleNoteNamesForRenderedTonicName(renderedTonic, scaleType);
+  }
+
+  return new Set([
+    ...getScaleNoteNamesForRenderedTonicName(renderedTonic, "melodic-minor"),
+    ...getScaleNoteNamesForRenderedTonicName(renderedTonic, "natural-minor"),
+  ]);
+}
+
 describe("exercise rendering consistency", () => {
   it("keeps scale exercises inside the chosen rendered scale spelling", () => {
     const leaks: string[] = [];
@@ -78,10 +106,9 @@ describe("exercise rendering consistency", () => {
               scaleHands,
               scaleDirection,
             });
-            const allowedNoteNames = getScaleNoteNames(
+            const allowedNoteNames = getAllowedScaleExerciseNoteNames(
               tonic,
               scaleType,
-              "preferred",
             );
             const actualNoteNames = getPromptNoteNames(
               createScalePracticeQueue(generationSettings),
@@ -106,10 +133,9 @@ describe("exercise rendering consistency", () => {
           scaleHands: "together",
           scaleDirection: "ascending",
         });
-        const togetherAllowedNoteNames = getScaleNoteNames(
+        const togetherAllowedNoteNames = getAllowedScaleExerciseNoteNames(
           tonic,
           scaleType,
-          "preferred",
         );
         const togetherActualNoteNames = getPromptNoteNames(
           createScalePracticeQueue(togetherGenerationSettings),
@@ -263,7 +289,8 @@ describe("exercise rendering consistency", () => {
             }
 
             const renderedTonic = renderingOptions.active.tonic.toLowerCase();
-            const allowedNoteNames = getScaleNoteNamesForRenderedTonicName(
+            const allowedNoteNames =
+              getAllowedScaleExerciseNoteNamesForRenderedTonic(
               renderedTonic,
               scaleType,
             );
