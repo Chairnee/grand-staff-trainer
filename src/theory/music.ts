@@ -152,12 +152,16 @@ const ALL_TONICS: Tonic[] = [
   "B",
   "F#",
   "C#",
+  "G#",
+  "D#",
+  "A#",
   "F",
   "Bb",
   "Eb",
   "Ab",
   "Db",
   "Gb",
+  "Cb",
 ];
 const PRACTICAL_TONIC_BY_TONIC: Partial<Record<Tonic, Tonic>> = {
   Cb: "B",

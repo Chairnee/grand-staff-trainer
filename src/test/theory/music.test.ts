@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getCadenceStartingOctave,
+  getAllTonics,
   type GenerationSettings,
   getAscendingScaleKeys,
   getDerivedKeySignature,
@@ -62,6 +63,14 @@ describe("getDerivedKeySignature", () => {
         }),
       ),
     ).toBe("G");
+  });
+});
+
+describe("getAllTonics", () => {
+  it("includes the restored supported enharmonic tonic selections", () => {
+    expect(getAllTonics()).toEqual(
+      expect.arrayContaining(["Cb", "G#", "D#", "A#"]),
+    );
   });
 });
 

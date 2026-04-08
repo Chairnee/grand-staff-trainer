@@ -935,10 +935,8 @@ function formatScaleTypeLabelForDisplay(scaleType: ScaleType) {
 
 function getExerciseSummaryText(generationSettings: GenerationSettings) {
   if (generationSettings.practiceMode === "scales") {
-    const renderedTonic =
-      getScaleRenderingOptions(generationSettings).active.tonic;
     const scaleLabel = formatCompactScaleLabel(
-      renderedTonic,
+      generationSettings.tonic,
       generationSettings.scaleType,
     );
     const octaveLabel = `${generationSettings.scaleOctaves} ${
@@ -953,10 +951,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.practiceMode === "triads") {
-    const renderedTonic =
-      getTriadRenderingOptions(generationSettings).active.tonic;
     const triadLabel = formatCompactTriadLabel(
-      renderedTonic,
+      generationSettings.tonic,
       generationSettings.triadType,
     );
     const handsLabel = capitalizeWord(generationSettings.scaleHands);
@@ -968,10 +964,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.practiceMode === "cadences") {
-    const renderedTonic =
-      getCadenceRenderingOptions(generationSettings).active.tonic;
     const cadenceLabel = formatCompactCadenceLabel(
-      renderedTonic,
+      generationSettings.tonic,
       generationSettings.triadType,
     );
     const handsLabel = capitalizeWord(generationSettings.scaleHands);
@@ -980,10 +974,8 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
   }
 
   if (generationSettings.noteSourceMode === "in-scale") {
-    const renderedTonic =
-      getScaleRenderingOptions(generationSettings).active.tonic;
     const scaleLabel = formatCompactScaleLabel(
-      renderedTonic,
+      generationSettings.tonic,
       generationSettings.scaleType,
     );
 
