@@ -1,5 +1,5 @@
 # Grand Staff Trainer
-Grand Staff Trainer is a customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff. It provides live MIDI input with readable notation and visual feedback to help connect the player's input with real sheet music. There are three primary features and each can be toggled in accordance with the player's preferences.
+Grand Staff Trainer is a customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences.
 
 Primary feature explanations:
 1. [Input naming panel](#input-naming-panel)
@@ -13,7 +13,7 @@ Design philosophy rationale:
 
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
-### Input Naming Panel
+## Input Naming Panel
 The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent about ambiguities as possible, refer to [here](input-analysis) for the design philosophy.
 
 ![An example image of named input.](referenceImg/input_naming.jpg)
@@ -24,7 +24,7 @@ Every analysis consists of three lines:
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
-The input naming panel is capable of analysing the following structures. Please note that these are examples and not an exhaustive list in all cases.
+The input naming panel is capable of analysing the following structures. Please note that these are examples and not an exhaustive list.
 
 - Individual notes (C, Db/C#)
 - Intervals (longhand names include semitone distance)
@@ -32,7 +32,7 @@ The input naming panel is capable of analysing the following structures. Please 
     - Second octave: Cm9, CM9, Cm10, CM10, CP11, CTT, CP12, Cm13, CM13, Cm14, CM14, CP15
     - Third octave and beyond: revert to simple/first octave naming
 - Triads and other three note structures
-    - Triad qualities: CM, cm, Cdim, Caug
+    - Triad qualities: CM, Cm, Cdim, Caug
     - Suspended: Csus2, Csus4
     - Inversions: CM/E, Csus2/D
     - 5 chords: C5
@@ -42,12 +42,12 @@ The input naming panel is capable of analysing the following structures. Please 
     - All inversions: Cdim7/Eb ...
     - Added notes: CMadd2, CMadd4, CMadd9, CMadd11 ...
 
-### Exercise Panel
+## Exercise Panel
 
-### Keyboard Display Panel
+## Keyboard Display Panel
 
 ## Design Rationale
-Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the key
+Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features.
 
 ### Input Analysis
 
