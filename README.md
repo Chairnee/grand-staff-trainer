@@ -195,9 +195,9 @@ If more than one practical reading makes sense for an input, the panel shows a p
 
 If multiple valid readings are found, the tool tries to rank them. The most important ranking factor is bass position: readings where the root matches the bass note are strongly biased over inversions. One explicit exception is the case of overlapping inversions of major 6 and minor 7 chords. Currently, the minor 7 inversion is being given higher priority for the primary reading with the major 6 inversion being listed as an alternative. The major 6th in root position still wins overall, though.
 
-Voicing can also affect ranking in some cases. This is most noticeable with added-note chords such as `add2/add9` and `add4/add11`, where the preferred reading depends on how the added note is spaced in the played input.
+Voicing can also affect ranking in some cases. This is most noticeable with added-note chords such as `add2/add9` and `add4/add11`, where the primary reading depends on how the added note is spaced in the played input.
 
-Repeated chord tones are recognised and taken into account. They do not always change the shorthand label, but they are still considered part of the played structure. This helps the input naming panel remain useful when the player uses fuller voicings or the sustain pedal.
+Repeated chord tones are recognised and taken into account. They do not always change the primary reading, but they are still considered part of the played structure. This helps the input naming panel remain useful when the player uses fuller voicings or the sustain pedal.
  
 ### Exercise Engraving
 **Incomplete**
