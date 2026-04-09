@@ -44,7 +44,9 @@ The input naming panel is capable of analysing the following structures. Please 
 - Repeated chord tones are recognised and considered (e.g. sustain pedal use).
 
 ## Exercise Panel
-The exercise panel is the centre panel when visible. It is the crux of Grand Staff Trainer and therefore assigned the most space. It renders sheet music based on the chosen exercise settings. The sheet music scrolls as the player plays and will only advance when the expected notes are played correctly. Exercises cycle endlessly. 
+The exercise panel is the centre panel when visible. It is the crux of Grand Staff Trainer and therefore assigned the most space. It renders sheet music based on the chosen exercise settings. The sheet music scrolls as the player plays and will only advance when the expected notes are played correctly. Exercises cycle endlessly. Where appropriate, practical engraving features such as key signatures, clef changes, ottava markings, barlines and chord labels are rendered.
+
+There is an input overlay that describes where the player's current input resides on the grand staff. The input overlay responds to engraving features so that it is never out of musical context. For instance, if middle C is under an ottava line describing to play up one octave, then when the player plays C5 it will be overlayed at middle C on the grand staff.
 
 Depending on the exercise settings (tonic, etc.), the tool may render the exercise in a different context to prioritise readability. The player can easily swap to the less readable view if they wish.
 
@@ -66,9 +68,6 @@ There are four main components to the exercise panel:
 2. An input overlay that shows where the currently played notes reside on the grand staff. This is vertically aligned with the notes expected to be played next.
 3. A conditionally visible button to swap between especially ambiguous enharmonic readings (top left).
 4. A summary of the current exercise settings (bottom left).
-
-
-
 
 This is the current exercise suite:
 
