@@ -61,10 +61,6 @@ const SETTINGS_SCHEMA_VERSION = 1;
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
-const STAGE_WIDTH = 1280;
-const STAGE_HEIGHT = 720;
-const STAGE_HORIZONTAL_PADDING = 0;
-const STAGE_VERTICAL_PADDING = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
@@ -556,19 +552,6 @@ if ("fonts" in document) {
 function renderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
   const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
-  const stageScale = getStageScale();
-  document.documentElement.style.setProperty(
-    "--stage-scale",
-    stageScale.toFixed(3),
-  );
-  document.documentElement.style.setProperty(
-    "--stage-shell-padding-inline",
-    `${(STAGE_HORIZONTAL_PADDING * stageScale).toFixed(2)}px`,
-  );
-  document.documentElement.style.setProperty(
-    "--stage-shell-padding-block",
-    `${(STAGE_VERTICAL_PADDING * stageScale).toFixed(2)}px`,
-  );
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
@@ -1139,19 +1122,6 @@ function renderInputName() {
   const analysis = analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
 
   renderInputNameDisplay(inputNameDisplayElement, analysis);
-}
-
-function getStageScale() {
-  const totalLogicalWidth = STAGE_WIDTH + STAGE_HORIZONTAL_PADDING * 2;
-  const totalLogicalHeight = STAGE_HEIGHT + STAGE_VERTICAL_PADDING * 2;
-
-  return Math.max(
-    0.5,
-    Math.min(
-      window.innerWidth / totalLogicalWidth,
-      window.innerHeight / totalLogicalHeight,
-    ),
-  );
 }
 
 function renderTonicOptions() {
