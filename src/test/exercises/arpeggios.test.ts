@@ -34,7 +34,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/5",
       "g/4",
       "e/4",
-      "c/4",
     ]);
   });
 
@@ -58,7 +57,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/5",
       "g/4",
       "e/4",
-      "c/4",
     ]);
   });
 
@@ -96,7 +94,6 @@ describe("createArpeggioPracticeQueue", () => {
       { duration: "q", trebleKeys: ["c/5"], bassKeys: ["c/3"] },
       { duration: "q", trebleKeys: ["g/4"], bassKeys: ["e/3"] },
       { duration: "q", trebleKeys: ["e/4"], bassKeys: ["g/3"] },
-      { duration: "q", trebleKeys: ["c/4"], bassKeys: ["c/4"] },
     ]);
   });
 
@@ -114,7 +111,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/5",
       "e/5",
       "g/5",
-      "c/6",
     ]);
   });
 
@@ -133,7 +129,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/3",
       "e/3",
       "g/3",
-      "c/4",
     ]);
   });
 
@@ -187,7 +182,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/5",
       "gb/4",
       "eb/4",
-      "c/4",
     ]);
   });
 
@@ -205,7 +199,6 @@ describe("createArpeggioPracticeQueue", () => {
       "c/5",
       "g#/4",
       "e/4",
-      "c/4",
     ]);
   });
 });

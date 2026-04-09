@@ -49,7 +49,7 @@ export function createArpeggioPracticeQueue(
     generationSettings.scaleHands,
   );
 
-  return [...ascendingPrompts, ...descendingPrompts];
+  return [...ascendingPrompts, ...descendingPrompts.slice(0, -1)];
 }
 
 function createDescendingSingleHandArpeggioPracticeQueue(
@@ -89,7 +89,7 @@ function createDescendingSingleHandArpeggioPracticeQueue(
       })),
     ];
 
-    return prompts;
+    return prompts.slice(0, -1);
   }
 
   const prompts: PromptSlot[] = [
@@ -103,7 +103,7 @@ function createDescendingSingleHandArpeggioPracticeQueue(
     })),
   ];
 
-  return prompts;
+  return prompts.slice(0, -1);
 }
 
 function createContraryMotionArpeggioPracticeQueue(
@@ -135,7 +135,7 @@ function createContraryMotionArpeggioPracticeQueue(
     "together",
   );
 
-  return [...outwardPrompts, ...inwardPrompts];
+  return [...outwardPrompts, ...inwardPrompts.slice(0, -1)];
 }
 
 function getAscendingArpeggioKeys(
