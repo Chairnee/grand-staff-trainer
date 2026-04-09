@@ -1,4 +1,5 @@
 :root {
+  --ui-scale: 1;
   color-scheme: light;
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.5;
@@ -23,7 +24,7 @@ body {
 .stage-shell {
   position: fixed;
   inset: 0;
-  padding: 4px 7px;
+  padding: calc(4px * var(--ui-scale)) calc(7px * var(--ui-scale));
   display: grid;
   place-items: center;
   overflow: auto;
@@ -31,41 +32,42 @@ body {
 }
 
 .layout {
-  width: min(1280px, 100%);
-  height: min(720px, 100%);
+  width: min(calc(1280px * var(--ui-scale)), 100%);
+  height: min(calc(720px * var(--ui-scale)), 100%);
   min-width: 0;
   min-height: 0;
   display: flex;
-  gap: 4px;
+  gap: calc(4px * var(--ui-scale));
   flex-direction: column;
   position: relative;
   pointer-events: auto;
+  font-size: calc(1rem * var(--ui-scale));
 }
 
 .toolbar {
   width: 100%;
   margin: 0;
-  padding: 12px 14px;
+  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   display: flex;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale));
   align-items: center;
   justify-content: space-between;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.88);
   box-shadow: 0 12px 30px rgba(70, 52, 28, 0.06);
 }
 
 .toolbar-actions {
   display: flex;
-  gap: 10px;
+  gap: calc(10px * var(--ui-scale));
   align-items: center;
 }
 
 .toolbar-button {
-  padding: 8px 12px;
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #3e2f1c;
   font: inherit;
@@ -77,23 +79,23 @@ body {
 }
 
 .status-pill {
-  padding: 8px 12px;
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(70, 52, 28, 0.08);
   color: #5b4931;
-  font-size: 0.9rem;
+  font-size: 0.9em;
 }
 
 .practice-area {
-  --keyboard-white-key-width: 18px;
-  --keyboard-white-key-height: 120px;
-  --keyboard-black-key-width: 11px;
-  --keyboard-black-key-height: 72px;
+  --keyboard-white-key-width: calc(18px * var(--ui-scale));
+  --keyboard-white-key-height: calc(120px * var(--ui-scale));
+  --keyboard-black-key-width: calc(11px * var(--ui-scale));
+  --keyboard-black-key-height: calc(72px * var(--ui-scale));
   width: 100%;
   margin: 0;
   display: flex;
   flex: 1 1 auto;
-  gap: 4px;
+  gap: calc(4px * var(--ui-scale));
   flex-direction: column;
   min-height: 0;
 }
@@ -107,43 +109,44 @@ body {
 }
 
 .practice-area[data-exercise-visible="false"] {
-  --keyboard-white-key-width: 21px;
-  --keyboard-white-key-height: 138px;
-  --keyboard-black-key-width: 13px;
-  --keyboard-black-key-height: 84px;
+  --keyboard-white-key-width: calc(21px * var(--ui-scale));
+  --keyboard-white-key-height: calc(138px * var(--ui-scale));
+  --keyboard-black-key-width: calc(13px * var(--ui-scale));
+  --keyboard-black-key-height: calc(84px * var(--ui-scale));
 }
 
 .midi-picker {
   display: inline-flex;
-  gap: 10px;
+  gap: calc(10px * var(--ui-scale));
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 0.95em;
   color: #5b4931;
 }
 
 .midi-picker select {
-  min-width: 220px;
-  padding: 8px 10px;
+  font: inherit;
+  min-width: calc(220px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #1f1d1b;
 }
 
 .attempt-window-picker {
   display: inline-flex;
-  gap: 8px;
+  gap: calc(8px * var(--ui-scale));
   align-items: center;
-  font-size: 0.95rem;
+  font-size: 0.95em;
   color: #5b4931;
   white-space: nowrap;
 }
 
 .attempt-window-picker input {
-  width: 78px;
-  padding: 8px 10px;
+  width: calc(78px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #1f1d1b;
   font: inherit;
@@ -151,33 +154,33 @@ body {
 
 .midi-debug {
   position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: min(360px, calc(100vw - 40px));
-  max-height: min(420px, 42vh);
+  right: calc(20px * var(--ui-scale));
+  bottom: calc(20px * var(--ui-scale));
+  width: min(calc(360px * var(--ui-scale)), calc(100vw - 40px));
+  max-height: min(calc(420px * var(--ui-scale)), 42vh);
   overflow: auto;
-  padding: 12px 14px;
+  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   white-space: pre-wrap;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.7);
   backdrop-filter: blur(10px);
   color: #5b4931;
   font-family: "Courier New", Courier, monospace;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--ui-scale));
   line-height: 1.45;
   box-shadow: 0 18px 40px rgba(70, 52, 28, 0.12);
   z-index: 2;
 }
 
 .midi-debug-controls {
-  margin-bottom: 10px;
+  margin-bottom: calc(10px * var(--ui-scale));
 }
 
 .midi-debug-button {
-  padding: 6px 10px;
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #3e2f1c;
   font: inherit;
@@ -201,8 +204,8 @@ body {
 
 .exercise-notice {
   position: absolute;
-  top: 16px;
-  left: 18px;
+  top: calc(16px * var(--ui-scale));
+  left: calc(18px * var(--ui-scale));
   z-index: 2;
 }
 
@@ -216,8 +219,8 @@ body {
 
 .exercise-summary {
   position: absolute;
-  left: 18px;
-  bottom: 16px;
+  left: calc(18px * var(--ui-scale));
+  bottom: calc(16px * var(--ui-scale));
   z-index: 2;
   pointer-events: none;
 }
@@ -228,24 +231,24 @@ body {
 
 .exercise-summary-chip {
   display: inline-block;
-  padding: 6px 10px;
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: 999px;
   background: rgba(255, 253, 247, 0.9);
   color: #6c5840;
-  font-size: 0.8rem;
+  font-size: 0.8em;
   line-height: 1;
   box-shadow: 0 8px 20px rgba(70, 52, 28, 0.04);
 }
 
 .exercise-notice-chip,
 .exercise-notice-button {
-  padding: 8px 12px;
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border: 1px solid rgba(166, 64, 31, 0.22);
   border-radius: 999px;
   background: rgba(255, 244, 234, 0.96);
   color: #7c4a28;
-  font-size: 0.86rem;
+  font-size: 0.86em;
   line-height: 1;
   box-shadow: 0 8px 20px rgba(70, 52, 28, 0.05);
 }
@@ -261,7 +264,7 @@ body {
 .exercise-notice-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(8px * var(--ui-scale));
   font: inherit;
   cursor: pointer;
   text-align: left;
@@ -273,11 +276,11 @@ body {
 
 .exercise-notice-button-action {
   display: inline-block;
-  padding: 3px 7px;
+  padding: calc(3px * var(--ui-scale)) calc(7px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(166, 64, 31, 0.12);
   color: #8a4d26;
-  font-size: 0.74rem;
+  font-size: 0.74em;
   line-height: 1;
   letter-spacing: 0.02em;
 }
@@ -288,12 +291,12 @@ body {
 }
 
 .input-name-display {
-  padding: 12px 14px;
-  min-height: 98.89px;
+  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  min-height: calc(98.89px * var(--ui-scale));
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: 12px;
+  border-radius: calc(12px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.82);
   box-shadow: 0 10px 24px rgba(70, 52, 28, 0.06);
 }
@@ -312,7 +315,7 @@ body {
 }
 
 .input-name-content-wrap {
-  gap: 2px;
+  gap: calc(2px * var(--ui-scale));
 }
 
 .input-name-longhand,
@@ -324,25 +327,25 @@ body {
 
 .input-name-note-list {
   color: #5c4932;
-  font-size: 0.88rem;
+  font-size: 0.88em;
   letter-spacing: 0.03em;
 }
 
 .input-name-reading-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: calc(6px * var(--ui-scale));
   align-items: center;
 }
 
 .input-name-pill {
-  padding: 4px 9px;
+  padding: calc(4px * var(--ui-scale)) calc(9px * var(--ui-scale));
   border-radius: 999px;
   border: 1px solid rgba(70, 52, 28, 0.12);
   background: rgba(255, 252, 246, 0.96);
   color: #453423;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.9em;
   line-height: 1.1;
   cursor: default;
 }
@@ -360,11 +363,11 @@ body {
 }
 
 .input-name-naming-note-badge {
-  padding: 2px 6px;
+  padding: calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(210, 196, 172, 0.32);
   color: #7a6548;
-  font-size: 0.68rem;
+  font-size: 0.68em;
   line-height: 1;
   letter-spacing: 0.04em;
   text-transform: lowercase;
@@ -372,24 +375,24 @@ body {
 
 .input-name-separator {
   color: #b2a084;
-  font-size: 0.8rem;
+  font-size: 0.8em;
 }
 
 .input-name-status,
 .input-name-longhand {
   color: #6c5840;
-  font-size: 0.86rem;
+  font-size: 0.86em;
 }
 
 .notation {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 16px 18px;
+  padding: calc(16px * var(--ui-scale)) calc(18px * var(--ui-scale));
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--ui-scale));
   background: #fffdf7;
   box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
 }
@@ -417,7 +420,7 @@ body {
 .notation-loading {
   margin: 0;
   color: #7b6545;
-  font-size: 0.95rem;
+  font-size: 0.95em;
   letter-spacing: 0.01em;
 }
 
@@ -429,10 +432,11 @@ body {
 
 .keyboard-display {
   flex: 0 0 auto;
-  padding: 14px 16px 14px;
+  padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale))
+    calc(14px * var(--ui-scale));
   overflow-x: auto;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: 16px;
+  border-radius: calc(16px * var(--ui-scale));
   background: #fffdf7;
   box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
 }
@@ -462,7 +466,7 @@ body {
 .keyboard-key {
   position: relative;
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 calc(4px * var(--ui-scale)) calc(4px * var(--ui-scale));
   transition:
     background-color 120ms ease,
     box-shadow 120ms ease,
@@ -510,10 +514,10 @@ body {
 .keyboard-key-label {
   position: absolute;
   left: 50%;
-  bottom: 6px;
+  bottom: calc(6px * var(--ui-scale));
   transform: translateX(-50%);
   color: rgba(91, 73, 49, 0.7);
-  font-size: 0.72rem;
+  font-size: 0.72em;
 }
 
 .settings-backdrop {
@@ -531,12 +535,12 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  width: min(360px, 100vw);
+  width: min(calc(360px * var(--ui-scale)), 100vw);
   height: 100vh;
-  padding: 22px 20px;
-  font-size: 1rem;
+  padding: calc(22px * var(--ui-scale)) calc(20px * var(--ui-scale));
+  font-size: calc(1rem * var(--ui-scale));
   display: flex;
-  gap: 20px;
+  gap: calc(20px * var(--ui-scale));
   flex-direction: column;
   border-left: 1px solid rgba(70, 52, 28, 0.12);
   background: #fffaf1;
@@ -567,7 +571,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: calc(12px * var(--ui-scale));
 }
 
 .settings-header h2,
@@ -577,21 +581,21 @@ body {
 
 .settings-section {
   display: flex;
-  gap: 14px;
+  gap: calc(14px * var(--ui-scale));
   flex-direction: column;
 }
 
 .settings-field {
   display: flex;
-  gap: 6px;
+  gap: calc(6px * var(--ui-scale));
   flex-direction: column;
   color: #5b4931;
 }
 
 .settings-field select {
-  padding: 8px 10px;
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #1f1d1b;
   font: inherit;
@@ -599,14 +603,14 @@ body {
 
 .settings-toggle {
   display: flex;
-  gap: 10px;
+  gap: calc(10px * var(--ui-scale));
   align-items: center;
   color: #5b4931;
 }
 
 .settings-toggle input {
-  width: 16px;
-  height: 16px;
+  width: calc(16px * var(--ui-scale));
+  height: calc(16px * var(--ui-scale));
   margin: 0;
   accent-color: #a6401f;
   flex: 0 0 auto;

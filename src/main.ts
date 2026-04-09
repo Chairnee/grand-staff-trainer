@@ -61,6 +61,10 @@ const SETTINGS_SCHEMA_VERSION = 1;
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
+const UI_BASE_WIDTH = 1280;
+const UI_BASE_HEIGHT = 720;
+const UI_SHELL_PADDING_INLINE = 7;
+const UI_SHELL_PADDING_BLOCK = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
@@ -552,6 +556,9 @@ if ("fonts" in document) {
 function renderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
   const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
+  const uiScale = getUiScale();
+
+  document.documentElement.style.setProperty("--ui-scale", uiScale.toFixed(3));
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
@@ -599,6 +606,19 @@ function getDisplayedHeldKeys(
 ) {
   return heldNotes.map((noteNumber) =>
     midiNoteNumberToKey(noteNumber, "sharps"),
+  );
+}
+
+function getUiScale() {
+  const totalBaseWidth = UI_BASE_WIDTH + UI_SHELL_PADDING_INLINE * 2;
+  const totalBaseHeight = UI_BASE_HEIGHT + UI_SHELL_PADDING_BLOCK * 2;
+
+  return Math.max(
+    1,
+    Math.min(
+      window.innerWidth / totalBaseWidth,
+      window.innerHeight / totalBaseHeight,
+    ),
   );
 }
 
