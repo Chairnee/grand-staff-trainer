@@ -12,7 +12,6 @@ export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type ScaleMotion = "parallel" | "contrary";
 export type ScaleDirection = "ascending" | "descending";
-export type NoteSourceMode = "chromatic" | "in-scale";
 export type AccidentalSpellingMode = "sharps" | "flats";
 export type RenderingPreference = "preferred" | "alternate";
 export type TriadType = "major" | "minor" | "diminished" | "augmented";
@@ -77,10 +76,6 @@ export type GenerationSettings = {
   scaleOctaves: ScaleOctaves;
   scaleMotion: ScaleMotion;
   scaleDirection: ScaleDirection;
-  rangeStart: string;
-  rangeEnd: string;
-  noteSourceMode: NoteSourceMode;
-  accidentalSpellingMode: AccidentalSpellingMode;
   tonic: Tonic;
   scaleType: ScaleType;
   triadType: TriadType;
@@ -402,23 +397,6 @@ export function getAccidentalSpellingModeForKeySignature(
   return flatKeySignatures.includes(keySignature) ? "flats" : "sharps";
 }
 
-export function createKeyboardNotePool(
-  startMidiNote: number,
-  endMidiNote: number,
-) {
-  const notePool: string[] = [];
-
-  for (
-    let midiNoteNumber = startMidiNote;
-    midiNoteNumber <= endMidiNote;
-    midiNoteNumber += 1
-  ) {
-    notePool.push(midiNoteNumberToKey(midiNoteNumber, "sharps"));
-  }
-
-  return notePool;
-}
-
 export function getScaleRenderingNotice(
   generationSettings: GenerationSettings,
 ) {
@@ -711,50 +689,6 @@ export function compareKeysByMidiNumber(left: string, right: string) {
   return keyToMidiNoteNumber(left) - keyToMidiNoteNumber(right);
 }
 
-export function getNotesInScale(
-  rangeStart: string,
-  rangeEnd: string,
-  tonic: Tonic,
-  scaleType: ScaleType,
-  renderingPreference: RenderingPreference = "preferred",
-) {
-  const startMidiNoteNumber = keyToMidiNoteNumber(rangeStart);
-  const endMidiNoteNumber = keyToMidiNoteNumber(rangeEnd);
-  const scaleNoteNames = getScaleNoteNames(
-    tonic,
-    scaleType,
-    renderingPreference,
-  );
-  const notesInKey: Array<{ key: string; midiNoteNumber: number }> = [];
-
-  for (
-    let octave = getOctaveForKey(rangeStart) - 1;
-    octave <= getOctaveForKey(rangeEnd) + 1;
-    octave += 1
-  ) {
-    for (const noteName of scaleNoteNames) {
-      const key = `${noteName}/${octave}`;
-      const midiNoteNumber = keyToMidiNoteNumber(key);
-
-      if (
-        midiNoteNumber < startMidiNoteNumber ||
-        midiNoteNumber > endMidiNoteNumber
-      ) {
-        continue;
-      }
-
-      notesInKey.push({
-        key,
-        midiNoteNumber,
-      });
-    }
-  }
-
-  notesInKey.sort((left, right) => left.midiNoteNumber - right.midiNoteNumber);
-
-  return notesInKey.map((note) => note.key);
-}
-
 export function getScaleNoteNames(
   tonic: Tonic,
   scaleType: ScaleType,
@@ -1044,55 +978,6 @@ export function getAscendingTriadPositions(
   }
 
   return ascendingPositions;
-}
-
-export function getGeneratedNotePool(
-  generatedNotePool: string[],
-  rangeStart: string,
-  rangeEnd: string,
-  accidentalSpellingMode: AccidentalSpellingMode,
-) {
-  const startIndex = generatedNotePool.indexOf(rangeStart);
-  const endIndex = generatedNotePool.indexOf(rangeEnd);
-
-  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
-    throw new Error("Invalid generated note range.");
-  }
-
-  return generatedNotePool
-    .slice(startIndex, endIndex + 1)
-    .map((key) =>
-      midiNoteNumberToKey(keyToMidiNoteNumber(key), accidentalSpellingMode),
-    );
-}
-
-export function getOctaveForKey(key: string) {
-  const [, octaveText] = key.split("/");
-
-  if (!octaveText) {
-    throw new Error(`Invalid key format: ${key}`);
-  }
-
-  const octave = Number.parseInt(octaveText, 10);
-
-  if (Number.isNaN(octave)) {
-    throw new Error(`Invalid octave in key: ${key}`);
-  }
-
-  return octave;
-}
-
-export function formatKeyLabel(key: string) {
-  const [noteName, octaveText] = key.split("/");
-
-  if (!noteName || !octaveText) {
-    return key;
-  }
-
-  const firstCharacter = noteName.charAt(0).toUpperCase();
-  const accidental = noteName.slice(1);
-
-  return `${firstCharacter}${accidental}${octaveText}`;
 }
 
 export function midiNoteNumberToKey(

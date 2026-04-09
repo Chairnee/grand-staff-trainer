@@ -8,8 +8,9 @@ import type { ExerciseNotationProfile, PromptSlot } from "./types";
 export function createExercisePromptQueue(
   length: number,
   generationSettings: GenerationSettings,
-  generatedNotePool: string[],
 ) {
+  void length;
+
   if (generationSettings.practiceMode === "scales") {
     return createScalePracticeQueue(generationSettings);
   }
@@ -35,12 +36,10 @@ export function fillExercisePromptQueue(
   promptQueue: PromptSlot[],
   length: number,
   generationSettings: GenerationSettings,
-  generatedNotePool: string[],
 ) {
   void promptQueue;
   void length;
   void generationSettings;
-  void generatedNotePool;
 
   if (generationSettings.practiceMode === "scales") {
     return;

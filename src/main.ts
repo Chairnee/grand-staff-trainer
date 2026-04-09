@@ -22,10 +22,7 @@ import {
 import type { PromptAccidentalOverride, PromptSlot } from "./exercises/types";
 import { connectMidi, type MidiState } from "./midi";
 import {
-  type AccidentalSpellingMode,
   compareKeysByMidiNumber,
-  createKeyboardNotePool,
-  formatKeyLabel,
   type GenerationSettings,
   getAllTonics,
   getArpeggioRenderingNotice,
@@ -44,7 +41,6 @@ import {
   type KeySignature,
   keyToMidiNoteNumber,
   midiNoteNumberToKey,
-  type NoteSourceMode,
   type PracticeMode,
   type RenderingPreference,
   type ScaleDirection,
@@ -88,12 +84,6 @@ const STAVE_BRACE_BOTTOM_OFFSET =
 const STAVE_BRACE_CENTER_OFFSET =
   (STAVE_BRACE_TOP_OFFSET + STAVE_BRACE_BOTTOM_OFFSET) / 2;
 const STAVE_VERTICAL_OPTICAL_OFFSET = 1;
-const GENERATED_NOTE_POOL = createKeyboardNotePool(
-  KEYBOARD_START_MIDI_NOTE,
-  KEYBOARD_END_MIDI_NOTE,
-);
-const DEFAULT_RANGE_START = "c/2";
-const DEFAULT_RANGE_END = "c/6";
 const IS_DEV = import.meta.env.DEV;
 const GUIDE_URL = import.meta.env.VITE_DOCUMENTATION_URL;
 const SHOW_GUIDE_BUTTON = IS_DEV || Boolean(GUIDE_URL);
@@ -242,14 +232,6 @@ app.innerHTML = `
           <option value="2">2</option>
         </select>
       </label>
-      <label id="range-start-field" class="settings-field">
-        <span>Lowest note</span>
-        <select id="range-start-select"></select>
-      </label>
-      <label id="range-end-field" class="settings-field">
-        <span>Highest note</span>
-        <select id="range-end-select"></select>
-      </label>
       <label class="settings-field">
         <span>Tonic</span>
         <select id="tonic-select"></select>
@@ -270,23 +252,6 @@ app.innerHTML = `
           <option value="minor">Minor</option>
           <option value="diminished">Diminished</option>
           <option value="augmented">Augmented</option>
-        </select>
-      </label>
-      <label id="note-source-field" class="settings-field">
-        <span>Note source</span>
-        <select id="note-source-select">
-          <option value="chromatic">Chromatic</option>
-          <option value="in-scale">In scale</option>
-        </select>
-      </label>
-      <label
-        id="accidental-spelling-field"
-        class="settings-field"
-      >
-        <span>Accidental spelling</span>
-        <select id="accidental-spelling-select">
-          <option value="sharps">Sharps</option>
-          <option value="flats">Flats</option>
         </select>
       </label>
     </section>
@@ -349,26 +314,6 @@ const scaleOctavesField = document.querySelector<HTMLLabelElement>(
 const scaleOctavesSelect = document.querySelector<HTMLSelectElement>(
   "#scale-octaves-select",
 );
-const rangeStartField =
-  document.querySelector<HTMLLabelElement>("#range-start-field");
-const rangeStartSelect = document.querySelector<HTMLSelectElement>(
-  "#range-start-select",
-);
-const rangeEndField =
-  document.querySelector<HTMLLabelElement>("#range-end-field");
-const rangeEndSelect =
-  document.querySelector<HTMLSelectElement>("#range-end-select");
-const noteSourceField =
-  document.querySelector<HTMLLabelElement>("#note-source-field");
-const noteSourceSelect = document.querySelector<HTMLSelectElement>(
-  "#note-source-select",
-);
-const accidentalSpellingSelect = document.querySelector<HTMLSelectElement>(
-  "#accidental-spelling-select",
-);
-const accidentalSpellingField = document.querySelector<HTMLLabelElement>(
-  "#accidental-spelling-field",
-);
 const tonicSelect = document.querySelector<HTMLSelectElement>("#tonic-select");
 const scaleTypeSelect =
   document.querySelector<HTMLSelectElement>("#scale-type-select");
@@ -417,14 +362,6 @@ if (
   !scaleDirectionSelect ||
   !scaleOctavesField ||
   !scaleOctavesSelect ||
-  !rangeStartField ||
-  !rangeStartSelect ||
-  !rangeEndField ||
-  !rangeEndSelect ||
-  !noteSourceField ||
-  !noteSourceSelect ||
-  !accidentalSpellingSelect ||
-  !accidentalSpellingField ||
   !tonicSelect ||
   !scaleTypeSelect ||
   !triadTypeField ||
@@ -463,14 +400,6 @@ const scaleDirectionFieldElement = scaleDirectionField;
 const scaleDirectionSelectElement = scaleDirectionSelect;
 const scaleOctavesFieldElement = scaleOctavesField;
 const scaleOctavesSelectElement = scaleOctavesSelect;
-const rangeStartFieldElement = rangeStartField;
-const rangeStartSelectElement = rangeStartSelect;
-const rangeEndFieldElement = rangeEndField;
-const rangeEndSelectElement = rangeEndSelect;
-const noteSourceFieldElement = noteSourceField;
-const noteSourceSelectElement = noteSourceSelect;
-const accidentalSpellingSelectElement = accidentalSpellingSelect;
-const accidentalSpellingFieldElement = accidentalSpellingField;
 const tonicSelectElement = tonicSelect;
 const scaleTypeSelectElement = scaleTypeSelect;
 const triadTypeFieldElement = triadTypeField;
@@ -501,10 +430,6 @@ const initialGenerationSettings: GenerationSettings = {
   scaleOctaves: 2,
   scaleMotion: "parallel",
   scaleDirection: "ascending",
-  rangeStart: DEFAULT_RANGE_START,
-  rangeEnd: DEFAULT_RANGE_END,
-  noteSourceMode: "in-scale",
-  accidentalSpellingMode: "sharps",
   tonic: "C",
   scaleType: "major",
   triadType: "major",
@@ -577,13 +502,6 @@ scaleDirectionSelectElement.addEventListener(
   handleScaleDirectionChange,
 );
 scaleOctavesSelectElement.addEventListener("change", handleScaleOctavesChange);
-rangeStartSelectElement.addEventListener("change", handleRangeStartChange);
-rangeEndSelectElement.addEventListener("change", handleRangeEndChange);
-noteSourceSelectElement.addEventListener("change", handleNoteSourceChange);
-accidentalSpellingSelectElement.addEventListener(
-  "change",
-  handleAccidentalSpellingChange,
-);
 tonicSelectElement.addEventListener("change", handleTonicChange);
 scaleTypeSelectElement.addEventListener("change", handleScaleTypeChange);
 triadTypeSelectElement.addEventListener("change", handleTriadTypeChange);
@@ -746,9 +664,6 @@ function renderSettingsDrawer() {
   scaleDirectionSelectElement.value = state.generationSettings.scaleDirection;
   scaleOctavesSelectElement.value =
     state.generationSettings.scaleOctaves.toString();
-  noteSourceSelectElement.value = state.generationSettings.noteSourceMode;
-  accidentalSpellingSelectElement.value =
-    state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
@@ -785,8 +700,6 @@ function renderSettingsDrawer() {
     !areExerciseSettingsVisible || !isSingleHandDirectionMode;
   scaleOctavesFieldElement.hidden =
     !areExerciseSettingsVisible || isCadencesMode;
-  rangeStartFieldElement.hidden = true;
-  rangeEndFieldElement.hidden = true;
   tonicFieldElement.hidden = !areExerciseSettingsVisible;
   scaleTypeFieldElement.hidden = !areExerciseSettingsVisible || !isScalesMode;
   triadTypeFieldElement.hidden =
@@ -797,10 +710,7 @@ function renderSettingsDrawer() {
     : isArpeggiosMode
       ? "Arpeggio type"
       : "Triad type";
-  noteSourceFieldElement.hidden = true;
-  accidentalSpellingFieldElement.hidden = true;
   renderTonicOptions();
-  renderRangeOptions();
 }
 
 function renderMidiDebug() {
@@ -833,14 +743,11 @@ function renderMidiDebug() {
     `Scale motion: ${state.generationSettings.scaleMotion}`,
     `Scale direction: ${state.generationSettings.scaleDirection}`,
     `Scale octaves: ${state.generationSettings.scaleOctaves}`,
-    `Note source: ${state.generationSettings.noteSourceMode}`,
-    `Accidental spelling: ${state.generationSettings.accidentalSpellingMode}`,
     `Tonic: ${state.generationSettings.tonic}`,
     `Scale type: ${state.generationSettings.scaleType}`,
     `Triad type: ${state.generationSettings.triadType}`,
     `Attempt window: ${state.attemptWindowMs}ms`,
     `Key signature: ${getDerivedKeySignature(state.generationSettings)}`,
-    `Range: ${formatKeyLabel(state.generationSettings.rangeStart)} to ${formatKeyLabel(state.generationSettings.rangeEnd)}`,
     `Held keys: ${getDisplayedHeldKeys(state, displayedHeldNotes).join(", ") || "none"}`,
     `Held notes: ${
       displayedHeldNotes.map((note) => note.toString()).join(", ") || "none"
@@ -1196,19 +1103,6 @@ function getStageScale() {
   );
 }
 
-function renderRangeOptions() {
-  renderRangeSelect(
-    rangeStartSelectElement,
-    state.generationSettings.rangeStart,
-    "Lowest note",
-  );
-  renderRangeSelect(
-    rangeEndSelectElement,
-    state.generationSettings.rangeEnd,
-    "Highest note",
-  );
-}
-
 function renderTonicOptions() {
   tonicSelectElement.replaceChildren();
 
@@ -1219,27 +1113,6 @@ function renderTonicOptions() {
     option.selected = tonic === state.generationSettings.tonic;
     tonicSelectElement.append(option);
   }
-}
-
-function renderRangeSelect(
-  selectElement: HTMLSelectElement,
-  selectedKey: string,
-  labelPrefix: string,
-) {
-  selectElement.replaceChildren();
-
-  for (const key of GENERATED_NOTE_POOL) {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = formatKeyLabel(key);
-    option.selected = key === selectedKey;
-    selectElement.append(option);
-  }
-
-  selectElement.setAttribute(
-    "aria-label",
-    `${labelPrefix}: ${formatKeyLabel(selectedKey)}`,
-  );
 }
 
 function handlePromptAttempt() {
@@ -1356,35 +1229,6 @@ function handleScaleOctavesChange() {
   resetPromptQueue();
 }
 
-function handleRangeStartChange() {
-  updateGenerationRange(
-    rangeStartSelectElement.value,
-    state.generationSettings.rangeEnd,
-  );
-}
-
-function handleRangeEndChange() {
-  updateGenerationRange(
-    state.generationSettings.rangeStart,
-    rangeEndSelectElement.value,
-  );
-}
-
-function handleNoteSourceChange() {
-  state.generationSettings.noteSourceMode =
-    noteSourceSelectElement.value as NoteSourceMode;
-  resetRenderingPreference();
-  saveStoredSettings();
-  resetPromptQueue();
-}
-
-function handleAccidentalSpellingChange() {
-  state.generationSettings.accidentalSpellingMode =
-    accidentalSpellingSelectElement.value as AccidentalSpellingMode;
-  saveStoredSettings();
-  resetPromptQueue();
-}
-
 function handleTonicChange() {
   state.generationSettings.tonic = tonicSelectElement.value as Tonic;
   resetRenderingPreference();
@@ -1460,26 +1304,6 @@ function isCadenceTriadType(
 
 function resetRenderingPreference() {
   state.generationSettings.renderingPreference = "preferred";
-}
-
-function updateGenerationRange(nextStart: string, nextEnd: string) {
-  const nextStartIndex = GENERATED_NOTE_POOL.indexOf(nextStart);
-  const nextEndIndex = GENERATED_NOTE_POOL.indexOf(nextEnd);
-
-  if (nextStartIndex === -1 || nextEndIndex === -1) {
-    return;
-  }
-
-  if (nextStartIndex <= nextEndIndex) {
-    state.generationSettings.rangeStart = nextStart;
-    state.generationSettings.rangeEnd = nextEnd;
-  } else {
-    state.generationSettings.rangeStart = nextEnd;
-    state.generationSettings.rangeEnd = nextStart;
-  }
-
-  saveStoredSettings();
-  resetPromptQueue();
 }
 
 function createFakeAttempt(prompt: PromptSlot): PromptAttempt {
@@ -3520,11 +3344,7 @@ function createPromptQueue(
   length: number,
   generationSettings: GenerationSettings,
 ) {
-  return createExercisePromptQueue(
-    length,
-    generationSettings,
-    GENERATED_NOTE_POOL,
-  );
+  return createExercisePromptQueue(length, generationSettings);
 }
 
 function fillQueueToLength(
@@ -3532,12 +3352,7 @@ function fillQueueToLength(
   length: number,
   generationSettings: GenerationSettings,
 ) {
-  fillExercisePromptQueue(
-    promptQueue,
-    length,
-    generationSettings,
-    GENERATED_NOTE_POOL,
-  );
+  fillExercisePromptQueue(promptQueue, length, generationSettings);
 }
 
 function loadPreferredMidiDeviceId() {
