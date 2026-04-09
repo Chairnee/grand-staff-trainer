@@ -3,7 +3,7 @@ Grand Staff Trainer is a customisable piano practice tool for learning how notes
 
 Primary feature explanations:
 1. [Input naming panel](#input-naming-panel)
-2. [Exercise panel](#exercise-panel) ([chord window](#chord-window))
+2. [Exercise panel](#exercise-panel) ([chord window](#chord-window) is related to the exercise panel)
 3. [Keyboard display panel](#keyboard-display-panel)
 
 Design philosophy rationale:
