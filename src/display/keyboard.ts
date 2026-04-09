@@ -14,6 +14,9 @@ export function renderKeyboardDisplay(
 ) {
   container.replaceChildren();
 
+  const keyboardFrameElement = document.createElement("div");
+  keyboardFrameElement.className = "keyboard-frame";
+
   const keyboardElement = document.createElement("div");
   keyboardElement.className = "keyboard";
 
@@ -67,7 +70,10 @@ export function renderKeyboardDisplay(
   }
 
   keyboardElement.append(whiteKeyLayer, blackKeyLayer);
-  container.append(keyboardElement);
+  keyboardFrameElement.append(keyboardElement);
+  container.append(keyboardFrameElement);
+
+  fitKeyboardToContainer(container, keyboardFrameElement, keyboardElement);
 }
 
 function getKeyClassName(
@@ -101,4 +107,40 @@ function getOctaveLabel(midiNoteNumber: number) {
   const octave = Math.floor(midiNoteNumber / 12) - 1;
 
   return `C${octave}`;
+}
+
+function fitKeyboardToContainer(
+  container: HTMLDivElement,
+  keyboardFrameElement: HTMLDivElement,
+  keyboardElement: HTMLDivElement,
+) {
+  keyboardFrameElement.style.width = "";
+  keyboardFrameElement.style.height = "";
+  keyboardElement.style.transform = "";
+  keyboardElement.style.transformOrigin = "";
+
+  const computedStyle = getComputedStyle(container);
+  const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0;
+  const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0;
+  const availableWidth = Math.max(
+    0,
+    container.clientWidth - paddingLeft - paddingRight,
+  );
+  const naturalWidth = keyboardElement.offsetWidth;
+  const naturalHeight = keyboardElement.offsetHeight;
+
+  if (
+    availableWidth === 0 ||
+    naturalWidth === 0 ||
+    naturalWidth <= availableWidth
+  ) {
+    return;
+  }
+
+  const fitScale = availableWidth / naturalWidth;
+
+  keyboardFrameElement.style.width = `${naturalWidth * fitScale}px`;
+  keyboardFrameElement.style.height = `${naturalHeight * fitScale}px`;
+  keyboardElement.style.transform = `scale(${fitScale})`;
+  keyboardElement.style.transformOrigin = "top left";
 }

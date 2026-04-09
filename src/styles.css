@@ -474,11 +474,16 @@ body {
   display: none;
 }
 
+.keyboard-frame {
+  position: relative;
+  margin: 0 auto;
+}
+
 .keyboard {
   position: relative;
   width: calc(52 * var(--keyboard-white-key-width));
   height: var(--keyboard-white-key-height);
-  margin: 0 auto;
+  margin: 0;
 }
 
 .keyboard-white-keys {
