@@ -93,6 +93,10 @@ const GENERATED_NOTE_POOL = createKeyboardNotePool(
 );
 const DEFAULT_RANGE_START = "c/2";
 const DEFAULT_RANGE_END = "c/6";
+const IS_DEV = import.meta.env.DEV;
+const GUIDE_URL =
+  import.meta.env.VITE_DOCUMENTATION_URL ??
+  new URL("README.md", window.location.href).toString();
 
 type PromptAttempt = {
   midiNotes: number[];
@@ -521,7 +525,7 @@ const state: AppState = {
     ...initialStoredSettings.generationSettings,
   },
   isSettingsOpen: false,
-  isDebugVisible: initialStoredSettings.isDebugVisible,
+  isDebugVisible: IS_DEV && initialStoredSettings.isDebugVisible,
   isExerciseVisible: initialStoredSettings.isExerciseVisible,
   isInputNameVisible: initialStoredSettings.isInputNameVisible,
   isKeyboardVisible: initialStoredSettings.isKeyboardVisible,
@@ -551,7 +555,7 @@ attemptWindowInputElement.addEventListener("change", handleAttemptWindowChange);
 settingsToggleElement.addEventListener("click", toggleSettingsDrawer);
 settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
-debugToggleElement.addEventListener("click", toggleDebugPanel);
+debugToggleElement.addEventListener("click", handleUtilityButtonClick);
 settingsExerciseToggleElement.addEventListener(
   "change",
   handleExerciseToggleChange,
@@ -711,9 +715,11 @@ function renderMidiInputOptions() {
 function renderToolbar() {
   midiStatusElement.textContent =
     `${state.midi.status} ${state.midi.deviceName ? `• ${state.midi.deviceName}` : ""}`.trim();
-  debugToggleElement.textContent = state.isDebugVisible
-    ? "Hide Debug"
-    : "Show Debug";
+  debugToggleElement.textContent = IS_DEV
+    ? state.isDebugVisible
+      ? "Hide Debug"
+      : "Show Debug"
+    : "Guide";
   attemptWindowInputElement.value = state.attemptWindowMs.toString();
   settingsToggleElement.setAttribute(
     "aria-expanded",
@@ -794,6 +800,12 @@ function renderSettingsDrawer() {
 }
 
 function renderMidiDebug() {
+  if (!IS_DEV) {
+    midiDebugElement.hidden = true;
+    midiDebugElement.replaceChildren();
+    return;
+  }
+
   midiDebugElement.hidden = !state.isDebugVisible;
 
   const currentPrompt = state.promptQueue[state.currentPromptIndex] ?? null;
@@ -1259,6 +1271,15 @@ function toggleDebugPanel() {
   state.isDebugVisible = !state.isDebugVisible;
   saveStoredSettings();
   renderApp();
+}
+
+function handleUtilityButtonClick() {
+  if (IS_DEV) {
+    toggleDebugPanel();
+    return;
+  }
+
+  window.open(GUIDE_URL, "_blank", "noopener,noreferrer");
 }
 
 function handleKeyboardToggleChange() {
