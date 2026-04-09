@@ -1649,10 +1649,14 @@ function getDisplayedScaleStaff(
 function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   container.replaceChildren();
 
-  const renderer = new Renderer(container, Renderer.Backends.SVG);
-  const width = Math.max(640, container.clientWidth - 8);
-  const height =
+  const uiScale = getUiScale();
+  const visualWidth = Math.max(640, container.clientWidth - 8);
+  const visualHeight =
     container.clientHeight > 0 ? container.clientHeight : DEFAULT_RENDER_HEIGHT;
+  const width = Math.max(640, visualWidth / uiScale);
+  const height = Math.max(DEFAULT_RENDER_HEIGHT, visualHeight / uiScale);
+
+  const renderer = new Renderer(container, Renderer.Backends.SVG);
   const centeredBraceTopY =
     height / 2 - STAVE_BRACE_CENTER_OFFSET + STAVE_VERTICAL_OPTICAL_OFFSET;
   const staveTopY = centeredBraceTopY;
@@ -2046,6 +2050,15 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     currentBassPromptNote,
     ...currentSecondaryPromptNotes,
   ]);
+
+  const svgElement = container.querySelector<SVGSVGElement>("svg");
+
+  if (svgElement) {
+    svgElement.style.width = `${visualWidth}px`;
+    svgElement.style.height = `${visualHeight}px`;
+    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  }
 }
 
 function getDisplayedPromptSlot(
