@@ -23,7 +23,7 @@ body {
 .stage-shell {
   position: fixed;
   inset: 0;
-  padding: 12px 24px;
+  padding: 4px 7px;
   display: grid;
   place-items: center;
   overflow: auto;
