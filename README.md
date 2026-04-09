@@ -3,7 +3,7 @@ Grand Staff Trainer is a customisable piano practice tool for learning how notes
 
 Primary feature explanations:
 1. [Input naming panel](#input-naming-panel)
-2. [Exercise panel](#exercise-panel)
+2. [Exercise panel](#exercise-panel) and [chord window](#chord-window)
 3. [Keyboard display panel](#keyboard-display-panel)
 
 Design philosophy rationale:
@@ -54,7 +54,7 @@ There is an input overlay that describes where the player's current input reside
 Depending on the exercise settings (tonic, etc.), the tool may render the exercise in a different context to prioritise readability. A button is presented at the top left of the panel when this happens and the player can easily swap to the less readable view if they wish by clicking on it.
 
 ![An example of readability swapping.](referenceImg/exercise_panel_3.png)
-
+<a name="chord-window"></a>
 Any exercise that requires multi-note input, hands together scales or triads for example, depends on the adjustable "chord window" setting in the toolbar at the top of the page. The chord window is how long the tool will wait after detecting the first input before trying to validate the held notes against the expected notes for the exercise. The tighter the window, the more precise the player must be with inputting all notes at once.
 
 ![An example image of the chord window setting.](referenceImg/exercise_panel_4.png)
