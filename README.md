@@ -24,7 +24,7 @@ Every analysis consists of three lines:
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
-The input naming panel is capable of analysing the following structures. Please note that these are some shorthand examples using C and by no means an exhaustive list.
+The input naming panel is capable of analysing the following structures. Please note this list is to show some shorthand examples using C and is by no means exhaustive.
 
 - Individual notes (C, Db/C#)
 - Intervals (longhand names include semitone distance)
@@ -44,17 +44,23 @@ The input naming panel is capable of analysing the following structures. Please 
 - Repeated chord tones are recognised and considered (e.g. sustain pedal use).
 
 ## Exercise Panel
-The exercise panel is the centre panel when visible. It is the crux of Grand Staff Trainer and therefore assigned the most space. It renders sheet music based on the chosen exercise settings. The sheet music scrolls as the player plays and will only advance when the expected notes are played correctly. Exercises cycle endlessly. Where appropriate, practical engraving features such as key signatures, clef changes, ottava markings, barlines and chord labels are rendered.
+The exercise panel is the centre panel when visible. It is the main feature of Grand Staff Trainer and therefore assigned the most space. It renders sheet music based on the chosen exercise settings. The sheet music scrolls as the player plays and will only advance when the expected notes are played correctly. Exercises cycle endlessly. Where appropriate, practical engraving features such as key signatures, clef changes, ottava markings, barlines and chord labels are rendered.
 
-There is an input overlay that describes where the player's current input resides on the grand staff. The input overlay responds to engraving features so that it is never out of musical context. For instance, if middle C is under an ottava line describing to play up one octave, then when the player plays C5 it will be overlayed at middle C on the grand staff.
+![An example image of the exercise panel rendering F major cadences played hands together.](referenceImg/exercise_panel_1.png)
 
-Depending on the exercise settings (tonic, etc.), the tool may render the exercise in a different context to prioritise readability. The player can easily swap to the less readable view if they wish.
+There is an input overlay that describes where the player's current input resides on the grand staff. It is vertically aligned with the expected input. The input overlay follows the exercise's engraving so that it is never out of musical context. For instance, if middle C is under an ottava line describing to play up one octave, then when the player plays C5 it will be overlayed at middle C on the grand staff.
 
-Any exercise that requires multi-note input, hands together scales or triads for example, depends on the adjustable "chord window" in the toolbar at the top of the page. The chord window is how long the tool will wait after detecting the first input before trying to validate the held notes against the expected notes for the exercise. The tighter the window, the more precise the player must be with inputting all notes at once.
+![An example image of the input overlay.](referenceImg/exercise_panel_2.png)
 
-![An example of Ab minor triads for two hands in parallel motion across two octaves being rendered in G# minor for readability.](referenceImg/exercise_panel.png)
+Depending on the exercise settings (tonic, etc.), the tool may render the exercise in a different context to prioritise readability. A button is presented at the top left of the panel when this happens and the player can easily swap to the less readable view if they wish by clicking on it.
 
-The example image above is based on the following exercise settings:
+![An example of readability swapping.](referenceImg/exercise_panel_3.png)
+
+Any exercise that requires multi-note input, hands together scales or triads for example, depends on the adjustable "chord window" setting in the toolbar at the top of the page. The chord window is how long the tool will wait after detecting the first input before trying to validate the held notes against the expected notes for the exercise. The tighter the window, the more precise the player must be with inputting all notes at once.
+
+![An example image of the chord window setting.](referenceImg/exercise_panel_4.png)
+
+The example image below is based on the following exercise settings:
 
 1. Practice mode: triads
 2. Hands: together
@@ -62,12 +68,11 @@ The example image above is based on the following exercise settings:
 4. Tonic: Ab
 5. Triad type: minor
 
-There are four main components to the exercise panel:
+![An example of Ab minor triads for two hands in parallel motion across two octaves being rendered in G# minor for readability.](referenceImg/exercise_panel_5.png)
 
-1. The grand staff (centre).
-2. An input overlay that shows where the currently played notes reside on the grand staff. This is vertically aligned with the notes expected to be played next.
-3. A conditionally visible button to swap between especially ambiguous enharmonic readings (top left).
-4. A summary of the current exercise settings (bottom left).
+All exercises show a summary of the current settings at the bottom left to minimise travel to the settings menu.
+
+![An example of a current settings summary.](referenceImg/exercise_panel_6.png)
 
 This is the current exercise suite:
 
@@ -141,9 +146,12 @@ This is the current exercise suite:
         - Minor
 
 ## Keyboard Display Panel
+The keyboard display panel is the bottommost panel when visible. It is a representation of the physical keyboard and its keys light up blue in response to the player's input. If the exercise panel is in use, the exercise's expected input is also highlighted in red. This allows a new player to become familiar with how grand staff notation and common musical structures in all keys are mapped to the physical keyboard.
+
+![An example of the keyboard panel showing the player's input and the expected input of the exercise.](referenceImg/keyboard_panel.png)
 
 ## Design Rationale
-Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features.
+Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features and provide insight on why something may be displaying unexpectedly.
 
 ### Input Analysis
 
