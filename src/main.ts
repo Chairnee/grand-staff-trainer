@@ -770,10 +770,10 @@ function renderSettingsDrawer() {
     state.generationSettings.triadType,
   );
   const isTogetherMotionMode =
-    (isScalesMode || isArpeggiosMode) &&
+    (isScalesMode || isTriadsMode || isArpeggiosMode) &&
     state.generationSettings.scaleHands === "together";
   const isSingleHandDirectionMode =
-    (isScalesMode || isArpeggiosMode) &&
+    (isScalesMode || isTriadsMode || isArpeggiosMode) &&
     state.generationSettings.scaleHands !== "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
