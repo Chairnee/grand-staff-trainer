@@ -57,6 +57,7 @@ const MIN_ATTEMPT_WINDOW_MS = 10;
 const MAX_ATTEMPT_WINDOW_MS = 250;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
 const SETTINGS_STORAGE_KEY = "piano-tool-settings";
+const SETTINGS_SCHEMA_VERSION = 1;
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
@@ -82,6 +83,28 @@ const STAVE_VERTICAL_OPTICAL_OFFSET = 1;
 const IS_DEV = import.meta.env.DEV;
 const GUIDE_URL = import.meta.env.VITE_DOCUMENTATION_URL;
 const SHOW_GUIDE_BUTTON = IS_DEV || Boolean(GUIDE_URL);
+const PRACTICE_MODES: PracticeMode[] = [
+  "scales",
+  "triads",
+  "arpeggios",
+  "cadences",
+];
+const SCALE_HANDS_OPTIONS: ScaleHands[] = ["treble", "bass", "together"];
+const SCALE_MOTION_OPTIONS: ScaleMotion[] = ["parallel", "contrary"];
+const SCALE_DIRECTION_OPTIONS: ScaleDirection[] = ["ascending", "descending"];
+const SCALE_OCTAVES_OPTIONS: ScaleOctaves[] = [1, 2];
+const SCALE_TYPES: ScaleType[] = [
+  "major",
+  "natural-minor",
+  "harmonic-minor",
+  "melodic-minor",
+];
+const TRIAD_TYPES: TriadType[] = [
+  "major",
+  "minor",
+  "diminished",
+  "augmented",
+];
 
 type PromptAttempt = {
   midiNotes: number[];
@@ -105,6 +128,16 @@ type AppState = {
   midi: MidiState;
   simulatedHeldNotes: number[];
   heldOverlayHands: Map<number, "treble" | "bass">;
+};
+
+type StoredSettingsSnapshot = {
+  version: number;
+  generationSettings: Omit<GenerationSettings, "renderingPreference">;
+  attemptWindowMs: number;
+  isDebugVisible: boolean;
+  isExerciseVisible: boolean;
+  isInputNameVisible: boolean;
+  isKeyboardVisible: boolean;
 };
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -3326,6 +3359,90 @@ function savePreferredMidiDeviceId(deviceId: string) {
   }
 }
 
+function createDefaultStoredSettings() {
+  const generationSettings = {
+    ...initialGenerationSettings,
+  };
+  generationSettings.renderingPreference = "preferred";
+  generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
+
+  return {
+    generationSettings,
+    attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
+    isDebugVisible: false,
+    isExerciseVisible: true,
+    isInputNameVisible: true,
+    isKeyboardVisible: true,
+  };
+}
+
+function isStoredSettingsSnapshotValid(
+  storedSettings: unknown,
+): storedSettings is StoredSettingsSnapshot {
+  if (!storedSettings || typeof storedSettings !== "object") {
+    return false;
+  }
+
+  const parsedSettings = storedSettings as Partial<StoredSettingsSnapshot>;
+  const generationSettings = parsedSettings.generationSettings;
+
+  if (parsedSettings.version !== SETTINGS_SCHEMA_VERSION) {
+    return false;
+  }
+
+  if (!generationSettings || typeof generationSettings !== "object") {
+    return false;
+  }
+
+  return (
+    PRACTICE_MODES.includes(generationSettings.practiceMode as PracticeMode) &&
+    SCALE_HANDS_OPTIONS.includes(generationSettings.scaleHands as ScaleHands) &&
+    SCALE_MOTION_OPTIONS.includes(
+      generationSettings.scaleMotion as ScaleMotion,
+    ) &&
+    SCALE_DIRECTION_OPTIONS.includes(
+      generationSettings.scaleDirection as ScaleDirection,
+    ) &&
+    SCALE_OCTAVES_OPTIONS.includes(
+      generationSettings.scaleOctaves as ScaleOctaves,
+    ) &&
+    getAllTonics().includes(generationSettings.tonic as Tonic) &&
+    SCALE_TYPES.includes(generationSettings.scaleType as ScaleType) &&
+    TRIAD_TYPES.includes(generationSettings.triadType as TriadType) &&
+    typeof parsedSettings.attemptWindowMs === "number" &&
+    typeof parsedSettings.isDebugVisible === "boolean" &&
+    typeof parsedSettings.isExerciseVisible === "boolean" &&
+    typeof parsedSettings.isInputNameVisible === "boolean" &&
+    typeof parsedSettings.isKeyboardVisible === "boolean"
+  );
+}
+
+function saveStoredSettingsSnapshot(settings: {
+  generationSettings: GenerationSettings;
+  attemptWindowMs: number;
+  isDebugVisible: boolean;
+  isExerciseVisible: boolean;
+  isInputNameVisible: boolean;
+  isKeyboardVisible: boolean;
+}) {
+  const {
+    renderingPreference: _renderingPreference,
+    ...storedGenerationSettings
+  } = settings.generationSettings;
+
+  const snapshot: StoredSettingsSnapshot = {
+    version: SETTINGS_SCHEMA_VERSION,
+    generationSettings: storedGenerationSettings,
+    attemptWindowMs: settings.attemptWindowMs,
+    isDebugVisible: settings.isDebugVisible,
+    isExerciseVisible: settings.isExerciseVisible,
+    isInputNameVisible: settings.isInputNameVisible,
+    isKeyboardVisible: settings.isKeyboardVisible,
+  };
+
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(snapshot));
+}
+
 function loadStoredSettings(): {
   generationSettings: GenerationSettings;
   attemptWindowMs: number;
@@ -3338,22 +3455,19 @@ function loadStoredSettings(): {
     const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
 
     if (!storedSettings) {
-      const generationSettings = {
-        ...initialGenerationSettings,
-      };
-      generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
-
-      return {
-        generationSettings,
-        attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
-        isDebugVisible: false,
-        isExerciseVisible: true,
-        isInputNameVisible: true,
-        isKeyboardVisible: true,
-      };
+      const defaultSettings = createDefaultStoredSettings();
+      saveStoredSettingsSnapshot(defaultSettings);
+      return defaultSettings;
     }
 
     const parsedSettings = JSON.parse(storedSettings);
+
+    if (!isStoredSettingsSnapshotValid(parsedSettings)) {
+      const defaultSettings = createDefaultStoredSettings();
+      saveStoredSettingsSnapshot(defaultSettings);
+      return defaultSettings;
+    }
+
     const storedGenerationSettings = parsedSettings?.generationSettings;
     const generationSettings = {
       ...initialGenerationSettings,
@@ -3386,40 +3500,21 @@ function loadStoredSettings(): {
           : true,
     };
   } catch {
-    const generationSettings = {
-      ...initialGenerationSettings,
-    };
-    generationSettings.renderingPreference = "preferred";
-    generationSettings.tonic = getPracticalTonic(generationSettings.tonic);
+    const defaultSettings = createDefaultStoredSettings();
 
-    return {
-      generationSettings,
-      attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
-      isDebugVisible: false,
-      isExerciseVisible: true,
-      isInputNameVisible: true,
-      isKeyboardVisible: true,
-    };
+    try {
+      saveStoredSettingsSnapshot(defaultSettings);
+    } catch {
+      // Ignore storage issues and continue without persistence.
+    }
+
+    return defaultSettings;
   }
 }
 
 function saveStoredSettings() {
   try {
-    const {
-      renderingPreference: _renderingPreference,
-      ...storedGenerationSettings
-    } = state.generationSettings;
-    localStorage.setItem(
-      SETTINGS_STORAGE_KEY,
-      JSON.stringify({
-        generationSettings: storedGenerationSettings,
-        attemptWindowMs: state.attemptWindowMs,
-        isDebugVisible: state.isDebugVisible,
-        isExerciseVisible: state.isExerciseVisible,
-        isInputNameVisible: state.isInputNameVisible,
-        isKeyboardVisible: state.isKeyboardVisible,
-      }),
-    );
+    saveStoredSettingsSnapshot(state);
   } catch {
     // Ignore storage issues and continue without persistence.
   }
