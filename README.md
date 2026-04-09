@@ -40,7 +40,7 @@ The input naming panel is capable of analysing the following structures. Please 
     - 6th chords: C6, Cm6
     - All inversions: Cdim7/Eb
     - Added notes: CMadd2, CMadd4, CMadd9, CMadd11
-- Repeated chord tones are recognised and considered (e.g. sustain pedal use).
+- Repeated chord tones are recognised and considered (e.g. sustain pedal use)
 
 ## Exercise Panel
 The exercise panel is the centre panel when visible. It is the main feature of Grand Staff Trainer and therefore assigned the most space. It renders sheet music based on the chosen exercise settings. The sheet music scrolls as the player plays and will only advance when the expected notes are played correctly. Exercises cycle endlessly. Where appropriate, practical engraving features such as key signatures, clef changes, ottava markings, barlines and chord labels are rendered.
@@ -152,7 +152,7 @@ The keyboard display panel is the bottommost panel when visible. It is a represe
 ## Design Rationale
 Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features and the known shortcomings/tradeoffs.
 
-There is no perfect system. This tool is not absolutely correct. It operates on thoughtful choices and tries its best to make it clear whenever there is ambiguity.
+There is no perfect system. This tool is not absolutely correct. It is structured on careful choices and tries its best to make it clear whenever there is ambiguity.
 
 ### Input Analysis
 The input analysis aspect of this tool is by far the most open to interpretation. To summarise the design philosophy:
@@ -176,10 +176,10 @@ This means that while the analysis provides good readings for a wide range of pr
 
 If more than one practical reading makes sense for an input, the panel shows a primary reading and also presents the most reasonable alternatives alongside it. This is especially important for:
 
-- Enharmonic note spellings such as `Db/C#`
-- Added-note structures where `add2` and `add9` may both be arguable
-- Chord spellings where bass position changes the most useful reading
-- Inputs where multiple roots are musically plausible
+- Enharmonic note spellings such as `Db/C#`.
+- Added-note structures where `add2` and `add9` may both be arguable.
+- Chord spellings where bass position changes the most useful reading.
+- Inputs where multiple roots are musically plausible.
 
 If multiple valid readings are found, the tool tries to rank them. The most important ranking factor is bass position: readings where the root matches the bass note are strongly biased over inversions. One explicit exception is the case of overlapping inversions of major 6 and minor 7 chords. Currently, the minor 7 inversion is being given higher priority for the primary reading with the major 6 inversion being listed as an alternative. The major 6th in root position still wins overall, though.
 
