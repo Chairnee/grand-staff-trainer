@@ -96,6 +96,51 @@ describe("createTriadPracticeQueue", () => {
     });
   });
 
+  it("creates contrary-motion together-hand triads from a shared start and returns inward", () => {
+    const queue = createTriadPracticeQueue(
+      createTriadSettings({
+        scaleHands: "together",
+        scaleMotion: "contrary",
+      }),
+    );
+
+    expect(queue).toEqual([
+      {
+        duration: "q",
+        trebleKeys: ["c/4", "e/4", "g/4"],
+        bassKeys: ["e/3", "g/3", "c/4"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["e/4", "g/4", "c/5"],
+        bassKeys: ["c/3", "e/3", "g/3"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["g/4", "c/5", "e/5"],
+        bassKeys: ["g/2", "c/3", "e/3"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["c/5", "e/5", "g/5"],
+        bassKeys: ["e/2", "g/2", "c/3"],
+        displayedBassKeys: ["e/3", "g/3", "c/4"],
+        bassOttavaStart: true,
+        bassOttavaEnd: true,
+      },
+      {
+        duration: "q",
+        trebleKeys: ["g/4", "c/5", "e/5"],
+        bassKeys: ["g/2", "c/3", "e/3"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["e/4", "g/4", "c/5"],
+        bassKeys: ["c/3", "e/3", "g/3"],
+      },
+    ]);
+  });
+
   it("creates diminished triads with the expected flattened fifth", () => {
     const queue = createTriadPracticeQueue(
       createTriadSettings({

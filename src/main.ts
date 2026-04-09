@@ -1053,12 +1053,15 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
       generationSettings.tonic,
       generationSettings.triadType,
     );
-    const handsLabel = capitalizeWord(generationSettings.scaleHands);
     const octaveLabel = `${generationSettings.scaleOctaves} ${
       generationSettings.scaleOctaves === 1 ? "octave" : "octaves"
     }`;
 
-    return `${handsLabel} | ${triadLabel} | ${octaveLabel}`;
+    if (generationSettings.scaleHands === "together") {
+      return `${capitalizeWord(generationSettings.scaleMotion)} | ${triadLabel} | ${octaveLabel}`;
+    }
+
+    return `${capitalizeWord(generationSettings.scaleDirection)} | ${triadLabel} | ${octaveLabel}`;
   }
 
   if (generationSettings.practiceMode === "arpeggios") {
