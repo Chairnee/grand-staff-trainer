@@ -153,7 +153,7 @@ The keyboard display panel is the bottommost panel when visible. It is a represe
 ## Design Rationale
 Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features and the known shortcomings/tradeoffs.
 
-There is no perfect system. This tool is not absolutely correct. It is structured on careful choices and tries its best to make it clear whenever there is ambiguity.
+There is no perfect system and this tool is definitely not a source of absolute correctness. It is structured on careful choices and tries its best to make it clear whenever there is ambiguity.
 
 ### Input Analysis
 The input analysis aspect of this tool is by far the most open to interpretation. To summarise the design philosophy:
