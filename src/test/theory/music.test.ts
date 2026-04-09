@@ -12,6 +12,7 @@ import {
   getScaleNoteNames,
   getScaleRenderingNotice,
   getScaleStartingOctave,
+  getTriadNoteNames,
   getTonicReadabilityOptionsForScaleType,
   keyToMidiNoteNumber,
 } from "../../theory/music";
@@ -169,6 +170,20 @@ describe("getScaleNoteNames", () => {
       "eb",
       "f",
     ]);
+  });
+});
+
+describe("getTriadNoteNames", () => {
+  it("spells diminished triads with a minor third and diminished fifth", () => {
+    expect(getTriadNoteNames("C", "diminished")).toEqual(["c", "eb", "gb"]);
+  });
+
+  it("spells augmented triads with a major third and augmented fifth", () => {
+    expect(getTriadNoteNames("C", "augmented")).toEqual(["c", "e", "g#"]);
+  });
+
+  it("keeps practical enharmonic spellings when rare tonic names are selected", () => {
+    expect(getTriadNoteNames("Ab", "minor")).toEqual(["g#", "b", "d#"]);
   });
 });
 

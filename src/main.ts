@@ -268,6 +268,8 @@ app.innerHTML = `
         <select id="triad-type-select">
           <option value="major">Major</option>
           <option value="minor">Minor</option>
+          <option value="diminished">Diminished</option>
+          <option value="augmented">Augmented</option>
         </select>
       </label>
       <label id="note-source-field" class="settings-field">
@@ -748,13 +750,24 @@ function renderSettingsDrawer() {
   accidentalSpellingSelectElement.value =
     state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
-  triadTypeSelectElement.value = state.generationSettings.triadType;
   const isRandomNotesMode =
     state.generationSettings.practiceMode === "random-notes";
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
   const isArpeggiosMode = state.generationSettings.practiceMode === "arpeggios";
   const isCadencesMode = state.generationSettings.practiceMode === "cadences";
+  const availableTriadTypes = getAvailableTriadTypesForPracticeMode(
+    state.generationSettings.practiceMode,
+  );
+
+  if (!availableTriadTypes.includes(state.generationSettings.triadType)) {
+    state.generationSettings.triadType = "major";
+  }
+
+  renderTriadTypeOptions(
+    availableTriadTypes,
+    state.generationSettings.triadType,
+  );
   const isTogetherMotionMode =
     (isScalesMode || isArpeggiosMode) &&
     state.generationSettings.scaleHands === "together";
@@ -1124,7 +1137,7 @@ function formatCompactScaleLabel(tonic: Tonic, scaleType: ScaleType) {
 }
 
 function formatCompactTriadLabel(tonic: Tonic, triadType: TriadType) {
-  return triadType === "major" ? `${tonic}M triads` : `${tonic}m triads`;
+  return `${formatCompactTriadTypeLabel(tonic, triadType)} triads`;
 }
 
 function formatCompactCadenceLabel(tonic: Tonic, triadType: TriadType) {
@@ -1132,7 +1145,23 @@ function formatCompactCadenceLabel(tonic: Tonic, triadType: TriadType) {
 }
 
 function formatCompactArpeggioLabel(tonic: Tonic, triadType: TriadType) {
-  return triadType === "major" ? `${tonic}M arpeggios` : `${tonic}m arpeggios`;
+  return `${formatCompactTriadTypeLabel(tonic, triadType)} arpeggios`;
+}
+
+function formatCompactTriadTypeLabel(tonic: Tonic, triadType: TriadType) {
+  if (triadType === "major") {
+    return `${tonic}M`;
+  }
+
+  if (triadType === "minor") {
+    return `${tonic}m`;
+  }
+
+  if (triadType === "diminished") {
+    return `${tonic}dim`;
+  }
+
+  return `${tonic}aug`;
 }
 
 function capitalizeWord(text: string) {
@@ -1307,6 +1336,14 @@ function handleInputNameToggleChange() {
 function handlePracticeModeChange() {
   state.generationSettings.practiceMode =
     practiceModeSelectElement.value as PracticeMode;
+
+  if (
+    state.generationSettings.practiceMode === "cadences" &&
+    !isCadenceTriadType(state.generationSettings.triadType)
+  ) {
+    state.generationSettings.triadType = "major";
+  }
+
   resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
@@ -1396,9 +1433,59 @@ function handleScaleTypeChange() {
 function handleTriadTypeChange() {
   state.generationSettings.triadType =
     triadTypeSelectElement.value as TriadType;
+
+  if (
+    state.generationSettings.practiceMode === "cadences" &&
+    !isCadenceTriadType(state.generationSettings.triadType)
+  ) {
+    state.generationSettings.triadType = "major";
+  }
+
   resetRenderingPreference();
   saveStoredSettings();
   resetPromptQueue();
+}
+
+function getAvailableTriadTypesForPracticeMode(
+  practiceMode: PracticeMode,
+): readonly TriadType[] {
+  if (practiceMode === "cadences") {
+    return ["major", "minor"] as const;
+  }
+
+  if (practiceMode === "triads" || practiceMode === "arpeggios") {
+    return ["major", "minor", "diminished", "augmented"] as const;
+  }
+
+  return [] as const;
+}
+
+function renderTriadTypeOptions(
+  triadTypes: readonly TriadType[],
+  selectedTriadType: TriadType,
+) {
+  const optionLabels: Record<TriadType, string> = {
+    major: "Major",
+    minor: "Minor",
+    diminished: "Diminished",
+    augmented: "Augmented",
+  };
+
+  triadTypeSelectElement.replaceChildren(
+    ...triadTypes.map((triadType) => {
+      const option = document.createElement("option");
+      option.value = triadType;
+      option.textContent = optionLabels[triadType];
+      return option;
+    }),
+  );
+  triadTypeSelectElement.value = selectedTriadType;
+}
+
+function isCadenceTriadType(
+  triadType: TriadType,
+): triadType is Extract<TriadType, "major" | "minor"> {
+  return triadType === "major" || triadType === "minor";
 }
 
 function resetRenderingPreference() {

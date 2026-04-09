@@ -161,7 +161,12 @@ describe("exercise rendering consistency", () => {
 
   it("keeps triad exercises inside the chosen rendered triad spelling", () => {
     const leaks: string[] = [];
-    const triadTypes: TriadType[] = ["major", "minor"];
+    const triadTypes: TriadType[] = [
+      "major",
+      "minor",
+      "diminished",
+      "augmented",
+    ];
 
     for (const tonic of getAllTonics()) {
       for (const triadType of triadTypes) {
@@ -196,7 +201,12 @@ describe("exercise rendering consistency", () => {
 
   it("keeps arpeggio exercises inside the chosen rendered arpeggio spelling", () => {
     const leaks: string[] = [];
-    const triadTypes: TriadType[] = ["major", "minor"];
+    const triadTypes: TriadType[] = [
+      "major",
+      "minor",
+      "diminished",
+      "augmented",
+    ];
 
     for (const tonic of getAllTonics()) {
       for (const triadType of triadTypes) {
@@ -231,10 +241,10 @@ describe("exercise rendering consistency", () => {
 
   it("keeps cadence exercises inside one rendered tonic spelling system", () => {
     const leaks: string[] = [];
-    const triadTypes: TriadType[] = ["major", "minor"];
+    const cadenceTriadTypes: TriadType[] = ["major", "minor"];
 
     for (const tonic of getAllTonics()) {
-      for (const triadType of triadTypes) {
+      for (const triadType of cadenceTriadTypes) {
         const generationSettings = createGenerationSettings({
           practiceMode: "cadences",
           tonic,
@@ -285,7 +295,13 @@ describe("exercise rendering consistency", () => {
       "harmonic-minor",
       "melodic-minor",
     ];
-    const triadTypes: TriadType[] = ["major", "minor"];
+    const triadTypes: TriadType[] = [
+      "major",
+      "minor",
+      "diminished",
+      "augmented",
+    ];
+    const cadenceTriadTypes: TriadType[] = ["major", "minor"];
 
     for (const tonic of getAllTonics()) {
       for (const scaleType of scaleTypes) {
@@ -344,20 +360,11 @@ describe("exercise rendering consistency", () => {
           continue;
         }
 
-        const triadRenderedTonic =
-          triadRenderingOptions.active.tonic.toLowerCase();
-        const triadScaleType =
-          triadType === "major" ? "major" : "natural-minor";
-        const triadRenderedScaleNoteNames =
-          getScaleNoteNamesForRenderedTonicName(
-            triadRenderedTonic,
-            triadScaleType,
-          );
-        const triadAllowedNoteNames = [
-          triadRenderedScaleNoteNames[0],
-          triadRenderedScaleNoteNames[2],
-          triadRenderedScaleNoteNames[4],
-        ].filter((noteName): noteName is string => Boolean(noteName));
+        const triadAllowedNoteNames = getTriadNoteNames(
+          tonic,
+          triadType,
+          "alternate",
+        );
         const triadActualNoteNames = getPromptNoteNames(
           createTriadPracticeQueue(triadGenerationSettings),
         );
@@ -383,20 +390,11 @@ describe("exercise rendering consistency", () => {
         );
 
         if (arpeggioRenderingOptions.alternate) {
-          const arpeggioRenderedTonic =
-            arpeggioRenderingOptions.active.tonic.toLowerCase();
-          const arpeggioScaleType =
-            triadType === "major" ? "major" : "natural-minor";
-          const arpeggioRenderedScaleNoteNames =
-            getScaleNoteNamesForRenderedTonicName(
-              arpeggioRenderedTonic,
-              arpeggioScaleType,
-            );
-          const arpeggioAllowedNoteNames = [
-            arpeggioRenderedScaleNoteNames[0],
-            arpeggioRenderedScaleNoteNames[2],
-            arpeggioRenderedScaleNoteNames[4],
-          ].filter((noteName): noteName is string => Boolean(noteName));
+          const arpeggioAllowedNoteNames = getTriadNoteNames(
+            tonic,
+            triadType,
+            "alternate",
+          );
           const arpeggioActualNoteNames = getPromptNoteNames(
             createArpeggioPracticeQueue(arpeggioGenerationSettings),
           );
@@ -412,10 +410,13 @@ describe("exercise rendering consistency", () => {
           }
         }
 
+      }
+
+      for (const cadenceTriadType of cadenceTriadTypes) {
         const cadenceGenerationSettings = createGenerationSettings({
           practiceMode: "cadences",
           tonic,
-          triadType,
+          triadType: cadenceTriadType,
           scaleOctaves: 1,
           renderingPreference: "alternate",
         });
@@ -430,11 +431,8 @@ describe("exercise rendering consistency", () => {
         const cadenceRenderedTonic =
           cadenceRenderingOptions.active.tonic.toLowerCase();
         const cadenceAllowedNoteNames =
-          triadType === "major"
-            ? getScaleNoteNamesForRenderedTonicName(
-                cadenceRenderedTonic,
-                "major",
-              )
+          cadenceTriadType === "major"
+            ? getScaleNoteNamesForRenderedTonicName(cadenceRenderedTonic, "major")
             : new Set([
                 ...getScaleNoteNamesForRenderedTonicName(
                   cadenceRenderedTonic,
@@ -455,7 +453,7 @@ describe("exercise rendering consistency", () => {
 
         if (cadenceUnexpectedNoteNames.length > 0) {
           leaks.push(
-            `${tonic} ${triadType} cadences: ${cadenceUnexpectedNoteNames.join(", ")}`,
+            `${tonic} ${cadenceTriadType} cadences: ${cadenceUnexpectedNoteNames.join(", ")}`,
           );
         }
       }

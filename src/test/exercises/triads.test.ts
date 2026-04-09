@@ -95,4 +95,38 @@ describe("createTriadPracticeQueue", () => {
       bassKeys: ["c/3", "e/3", "g/3"],
     });
   });
+
+  it("creates diminished triads with the expected flattened fifth", () => {
+    const queue = createTriadPracticeQueue(
+      createTriadSettings({
+        triadType: "diminished",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys)).toEqual([
+      ["c/4", "eb/4", "gb/4"],
+      ["eb/4", "gb/4", "c/5"],
+      ["gb/4", "c/5", "eb/5"],
+      ["c/5", "eb/5", "gb/5"],
+      ["gb/4", "c/5", "eb/5"],
+      ["eb/4", "gb/4", "c/5"],
+    ]);
+  });
+
+  it("creates augmented triads with the expected raised fifth", () => {
+    const queue = createTriadPracticeQueue(
+      createTriadSettings({
+        triadType: "augmented",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys)).toEqual([
+      ["c/4", "e/4", "g#/4"],
+      ["e/4", "g#/4", "c/5"],
+      ["g#/4", "c/5", "e/5"],
+      ["c/5", "e/5", "g#/5"],
+      ["g#/4", "c/5", "e/5"],
+      ["e/4", "g#/4", "c/5"],
+    ]);
+  });
 });

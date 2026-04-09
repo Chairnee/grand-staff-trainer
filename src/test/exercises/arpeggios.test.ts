@@ -172,4 +172,40 @@ describe("createArpeggioPracticeQueue", () => {
     expect(queue[1]?.trebleKeys).toEqual(["b/3"]);
     expect(queue[2]?.trebleKeys).toEqual(["d#/4"]);
   });
+
+  it("creates diminished arpeggios with the expected minor third and flat fifth", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        triadType: "diminished",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "c/4",
+      "eb/4",
+      "gb/4",
+      "c/5",
+      "gb/4",
+      "eb/4",
+      "c/4",
+    ]);
+  });
+
+  it("creates augmented arpeggios with the expected major third and raised fifth", () => {
+    const queue = createArpeggioPracticeQueue(
+      createArpeggioSettings({
+        triadType: "augmented",
+      }),
+    );
+
+    expect(queue.map((prompt) => prompt.trebleKeys?.[0] ?? null)).toEqual([
+      "c/4",
+      "e/4",
+      "g#/4",
+      "c/5",
+      "g#/4",
+      "e/4",
+      "c/4",
+    ]);
+  });
 });
