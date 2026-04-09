@@ -94,9 +94,8 @@ const GENERATED_NOTE_POOL = createKeyboardNotePool(
 const DEFAULT_RANGE_START = "c/2";
 const DEFAULT_RANGE_END = "c/6";
 const IS_DEV = import.meta.env.DEV;
-const GUIDE_URL =
-  import.meta.env.VITE_DOCUMENTATION_URL ??
-  new URL("README.md", window.location.href).toString();
+const GUIDE_URL = import.meta.env.VITE_DOCUMENTATION_URL;
+const SHOW_GUIDE_BUTTON = IS_DEV || Boolean(GUIDE_URL);
 
 type PromptAttempt = {
   midiNotes: number[];
@@ -715,6 +714,7 @@ function renderMidiInputOptions() {
 function renderToolbar() {
   midiStatusElement.textContent =
     `${state.midi.status} ${state.midi.deviceName ? `• ${state.midi.deviceName}` : ""}`.trim();
+  debugToggleElement.hidden = !SHOW_GUIDE_BUTTON;
   debugToggleElement.textContent = IS_DEV
     ? state.isDebugVisible
       ? "Hide Debug"
@@ -1276,6 +1276,10 @@ function toggleDebugPanel() {
 function handleUtilityButtonClick() {
   if (IS_DEV) {
     toggleDebugPanel();
+    return;
+  }
+
+  if (!GUIDE_URL) {
     return;
   }
 
