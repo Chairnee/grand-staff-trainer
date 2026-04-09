@@ -1,5 +1,5 @@
 # Grand Staff Trainer
-Grand Staff Trainer is a customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences.
+Grand Staff Trainer is a customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences.
 
 Primary feature explanations:
 1. [Input naming panel](#input-naming-panel)
@@ -14,7 +14,7 @@ Design philosophy rationale:
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
 ## Input Naming Panel
-The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent about ambiguities as possible, refer to [here](input-analysis) for the design philosophy.
+The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent about ambiguities as possible, refer to [here](#input-analysis) for the design philosophy.
 
 ![An example image of named input.](referenceImg/input_naming.jpg)
 
@@ -24,7 +24,7 @@ Every analysis consists of three lines:
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
-The input naming panel is capable of analysing the following structures. Please note that these are examples and not an exhaustive list.
+The input naming panel is capable of analysing the following structures. Please note that these are some shorthand examples using C and by no means an exhaustive list.
 
 - Individual notes (C, Db/C#)
 - Intervals (longhand names include semitone distance)
@@ -39,10 +39,12 @@ The input naming panel is capable of analysing the following structures. Please 
 - 7th chords and other four note structures
     - 7th qualities: CM7, C7, Cm7, Cm7b5, Cdim7, CmM7, CaugM7, Caug7
     - 6th chords: C6, Cm6
-    - All inversions: Cdim7/Eb ...
-    - Added notes: CMadd2, CMadd4, CMadd9, CMadd11 ...
+    - All inversions: Cdim7/Eb
+    - Added notes: CMadd2, CMadd4, CMadd9, CMadd11
+- Repeated chord tones are recognised and considered (e.g. sustain pedal use).
 
 ## Exercise Panel
+The exercise panel is the crux of Grand Staff Trainer. 
 
 ## Keyboard Display Panel
 
