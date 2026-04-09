@@ -660,6 +660,7 @@ function renderSettingsDrawer() {
     "aria-hidden",
     String(!state.isSettingsOpen),
   );
+  settingsDrawerElement.inert = !state.isSettingsOpen;
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
   settingsExerciseToggleElement.checked = state.isExerciseVisible;
