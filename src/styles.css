@@ -1,5 +1,8 @@
 :root {
   --ui-scale: 1;
+  --stage-scale: 1;
+  --shell-scale: 1;
+  --overlay-scale: 1;
   color-scheme: light;
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.5;
@@ -24,7 +27,7 @@ body {
 .stage-shell {
   position: fixed;
   inset: 0;
-  padding: calc(4px * var(--ui-scale)) calc(7px * var(--ui-scale));
+  padding: calc(4px * var(--shell-scale)) calc(7px * var(--shell-scale));
   display: grid;
   place-items: center;
   overflow: auto;
@@ -44,6 +47,22 @@ body {
   font-size: calc(1rem * var(--ui-scale));
 }
 
+:root[data-layout-mode="compact"] .stage-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:root[data-layout-mode="compact"] .layout {
+  width: 1280px;
+  height: 720px;
+  transform: scale(var(--stage-scale));
+  transform-origin: center center;
+  pointer-events: auto;
+}
+
 .toolbar {
   width: 100%;
   margin: 0;
@@ -56,6 +75,10 @@ body {
   border-radius: calc(16px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.88);
   box-shadow: 0 12px 30px rgba(70, 52, 28, 0.06);
+}
+
+.toolbar > * {
+  min-width: 0;
 }
 
 .toolbar-actions {
@@ -154,33 +177,35 @@ body {
 
 .midi-debug {
   position: fixed;
-  right: calc(20px * var(--ui-scale));
-  bottom: calc(20px * var(--ui-scale));
-  width: min(calc(360px * var(--ui-scale)), calc(100vw - 40px));
-  max-height: min(calc(420px * var(--ui-scale)), 42vh);
+  right: calc(20px * var(--overlay-scale));
+  bottom: calc(20px * var(--overlay-scale));
+  width: min(calc(360px * var(--overlay-scale)), calc(100vw - 40px));
+  max-height: min(calc(420px * var(--overlay-scale)), 42vh);
   overflow: auto;
-  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  padding: calc(12px * var(--overlay-scale))
+    calc(14px * var(--overlay-scale));
   white-space: pre-wrap;
   border: 1px solid rgba(70, 52, 28, 0.12);
-  border-radius: calc(12px * var(--ui-scale));
+  border-radius: calc(12px * var(--overlay-scale));
   background: rgba(255, 253, 247, 0.7);
   backdrop-filter: blur(10px);
   color: #5b4931;
   font-family: "Courier New", Courier, monospace;
-  font-size: calc(0.9rem * var(--ui-scale));
+  font-size: calc(0.9rem * var(--overlay-scale));
   line-height: 1.45;
   box-shadow: 0 18px 40px rgba(70, 52, 28, 0.12);
   z-index: 2;
 }
 
 .midi-debug-controls {
-  margin-bottom: calc(10px * var(--ui-scale));
+  margin-bottom: calc(10px * var(--overlay-scale));
 }
 
 .midi-debug-button {
-  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  padding: calc(6px * var(--overlay-scale))
+    calc(10px * var(--overlay-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: calc(10px * var(--ui-scale));
+  border-radius: calc(10px * var(--overlay-scale));
   background: #fffdf7;
   color: #3e2f1c;
   font: inherit;
@@ -450,11 +475,16 @@ body {
   display: none;
 }
 
+.keyboard-frame {
+  position: relative;
+  margin: 0 auto;
+}
+
 .keyboard {
   position: relative;
   width: calc(52 * var(--keyboard-white-key-width));
   height: var(--keyboard-white-key-height);
-  margin: 0 auto;
+  margin: 0;
 }
 
 .keyboard-white-keys {
@@ -542,12 +572,13 @@ body {
   position: fixed;
   top: 0;
   right: 0;
-  width: min(calc(360px * var(--ui-scale)), 100vw);
+  width: min(calc(360px * var(--overlay-scale)), 100vw);
   height: 100vh;
-  padding: calc(22px * var(--ui-scale)) calc(20px * var(--ui-scale));
-  font-size: calc(1rem * var(--ui-scale));
+  padding: calc(22px * var(--overlay-scale))
+    calc(20px * var(--overlay-scale));
+  font-size: calc(1rem * var(--overlay-scale));
   display: flex;
-  gap: calc(20px * var(--ui-scale));
+  gap: calc(20px * var(--overlay-scale));
   flex-direction: column;
   border-left: 1px solid rgba(70, 52, 28, 0.12);
   background: #fffaf1;
@@ -578,7 +609,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: calc(12px * var(--ui-scale));
+  gap: calc(12px * var(--overlay-scale));
 }
 
 .settings-header h2,
@@ -588,21 +619,22 @@ body {
 
 .settings-section {
   display: flex;
-  gap: calc(14px * var(--ui-scale));
+  gap: calc(14px * var(--overlay-scale));
   flex-direction: column;
 }
 
 .settings-field {
   display: flex;
-  gap: calc(6px * var(--ui-scale));
+  gap: calc(6px * var(--overlay-scale));
   flex-direction: column;
   color: #5b4931;
 }
 
 .settings-field select {
-  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  padding: calc(8px * var(--overlay-scale))
+    calc(10px * var(--overlay-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
-  border-radius: calc(10px * var(--ui-scale));
+  border-radius: calc(10px * var(--overlay-scale));
   background: #fffdf7;
   color: #1f1d1b;
   font: inherit;
@@ -610,14 +642,14 @@ body {
 
 .settings-toggle {
   display: flex;
-  gap: calc(10px * var(--ui-scale));
+  gap: calc(10px * var(--overlay-scale));
   align-items: center;
   color: #5b4931;
 }
 
 .settings-toggle input {
-  width: calc(16px * var(--ui-scale));
-  height: calc(16px * var(--ui-scale));
+  width: calc(16px * var(--overlay-scale));
+  height: calc(16px * var(--overlay-scale));
   margin: 0;
   accent-color: #a6401f;
   flex: 0 0 auto;
@@ -642,17 +674,17 @@ body {
 }
 
 @media (max-width: 640px) {
-  body {
+  :root:not([data-layout-mode="compact"]) body {
     overflow: auto;
   }
 
-  .stage-shell {
+  :root:not([data-layout-mode="compact"]) .stage-shell {
     position: static;
     display: block;
     overflow: visible;
   }
 
-  .layout {
+  :root:not([data-layout-mode="compact"]) .layout {
     width: auto;
     height: auto;
     min-height: 100vh;
@@ -660,13 +692,13 @@ body {
     transform: none;
   }
 
-  .toolbar {
+  :root:not([data-layout-mode="compact"]) .toolbar {
     margin-bottom: 12px;
     align-items: stretch;
     flex-direction: column;
   }
 
-  .midi-debug {
+  :root:not([data-layout-mode="compact"]) .midi-debug {
     right: 12px;
     bottom: 12px;
     width: calc(100vw - 24px);
@@ -674,61 +706,61 @@ body {
     font-size: 0.85rem;
   }
 
-  .practice-area {
+  :root:not([data-layout-mode="compact"]) .practice-area {
     --keyboard-white-key-width: 14px;
     --keyboard-white-key-height: 102px;
     --keyboard-black-key-width: 9px;
     --keyboard-black-key-height: 60px;
   }
 
-  .midi-picker {
+  :root:not([data-layout-mode="compact"]) .midi-picker {
     width: 100%;
     align-items: stretch;
     flex-direction: column;
   }
 
-  .midi-picker select {
+  :root:not([data-layout-mode="compact"]) .midi-picker select {
     min-width: 0;
     width: 100%;
   }
 
-  .toolbar-actions {
+  :root:not([data-layout-mode="compact"]) .toolbar-actions {
     width: 100%;
   }
 
-  .toolbar-button {
+  :root:not([data-layout-mode="compact"]) .toolbar-button {
     flex: 1;
   }
 
-  .status-pill {
+  :root:not([data-layout-mode="compact"]) .status-pill {
     text-align: center;
   }
 
-  .settings-drawer {
+  :root:not([data-layout-mode="compact"]) .settings-drawer {
     width: 100vw;
     padding: 18px 16px;
     font-size: 1rem;
     gap: 20px;
   }
 
-  .settings-section {
+  :root:not([data-layout-mode="compact"]) .settings-section {
     gap: 14px;
   }
 
-  .settings-field {
+  :root:not([data-layout-mode="compact"]) .settings-field {
     gap: 6px;
   }
 
-  .settings-field select {
+  :root:not([data-layout-mode="compact"]) .settings-field select {
     padding: 8px 10px;
     border-radius: 10px;
   }
 
-  .settings-toggle {
+  :root:not([data-layout-mode="compact"]) .settings-toggle {
     gap: 10px;
   }
 
-  .settings-toggle input {
+  :root:not([data-layout-mode="compact"]) .settings-toggle input {
     width: 16px;
     height: 16px;
   }

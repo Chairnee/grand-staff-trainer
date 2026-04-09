@@ -111,6 +111,7 @@ type PromptAttempt = {
 };
 
 type AttemptResult = "correct" | "incorrect" | null;
+type LayoutMode = "responsive" | "compact";
 
 type AppState = {
   promptQueue: PromptSlot[];
@@ -556,9 +557,25 @@ if ("fonts" in document) {
 function renderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
   const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
-  const uiScale = getUiScale();
+  const layoutMetrics = getLayoutMetrics();
 
-  document.documentElement.style.setProperty("--ui-scale", uiScale.toFixed(3));
+  document.documentElement.dataset.layoutMode = layoutMetrics.layoutMode;
+  document.documentElement.style.setProperty(
+    "--ui-scale",
+    layoutMetrics.uiScale.toFixed(3),
+  );
+  document.documentElement.style.setProperty(
+    "--stage-scale",
+    layoutMetrics.stageScale.toFixed(3),
+  );
+  document.documentElement.style.setProperty(
+    "--shell-scale",
+    layoutMetrics.shellScale.toFixed(3),
+  );
+  document.documentElement.style.setProperty(
+    "--overlay-scale",
+    layoutMetrics.overlayScale.toFixed(3),
+  );
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
@@ -609,17 +626,41 @@ function getDisplayedHeldKeys(
   );
 }
 
-function getUiScale() {
+function getViewportBaselineScale() {
   const totalBaseWidth = UI_BASE_WIDTH + UI_SHELL_PADDING_INLINE * 2;
   const totalBaseHeight = UI_BASE_HEIGHT + UI_SHELL_PADDING_BLOCK * 2;
 
-  return Math.max(
-    1,
-    Math.min(
-      window.innerWidth / totalBaseWidth,
-      window.innerHeight / totalBaseHeight,
-    ),
+  return Math.min(
+    window.innerWidth / totalBaseWidth,
+    window.innerHeight / totalBaseHeight,
   );
+}
+
+function getLayoutMetrics(): {
+  layoutMode: LayoutMode;
+  uiScale: number;
+  stageScale: number;
+  shellScale: number;
+  overlayScale: number;
+} {
+  const baselineScale = getViewportBaselineScale();
+  const layoutMode: LayoutMode = baselineScale < 1 ? "compact" : "responsive";
+  const uiScale = layoutMode === "compact" ? 1 : baselineScale;
+  const stageScale = layoutMode === "compact" ? baselineScale : 1;
+  const shellScale = layoutMode === "compact" ? stageScale : uiScale;
+  const overlayScale = layoutMode === "compact" ? stageScale : uiScale;
+
+  return {
+    layoutMode,
+    uiScale,
+    stageScale,
+    shellScale,
+    overlayScale,
+  };
+}
+
+function getUiScale() {
+  return getLayoutMetrics().uiScale;
 }
 
 function handleWindowResize() {
