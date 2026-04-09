@@ -4,7 +4,6 @@ const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
 export type PracticeMode =
-  | "random-notes"
   | "scales"
   | "triads"
   | "arpeggios"

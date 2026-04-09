@@ -1,10 +1,6 @@
 import type { GenerationSettings } from "../theory/music";
 import { createArpeggioPracticeQueue } from "./arpeggios";
 import { createCadencePracticeQueue } from "./cadences";
-import {
-  createRandomNotePromptQueue,
-  fillRandomNotePromptQueue,
-} from "./randomNotes";
 import { createScalePracticeQueue } from "./scales";
 import { createTriadPracticeQueue } from "./triads";
 import type { ExerciseNotationProfile, PromptSlot } from "./types";
@@ -30,11 +26,9 @@ export function createExercisePromptQueue(
     return createCadencePracticeQueue(generationSettings);
   }
 
-  return createRandomNotePromptQueue(
-    length,
-    generationSettings,
-    generatedNotePool,
-  );
+  const unsupportedPracticeMode: never = generationSettings.practiceMode;
+
+  throw new Error(`Unsupported practice mode: ${unsupportedPracticeMode}`);
 }
 
 export function fillExercisePromptQueue(
@@ -43,6 +37,11 @@ export function fillExercisePromptQueue(
   generationSettings: GenerationSettings,
   generatedNotePool: string[],
 ) {
+  void promptQueue;
+  void length;
+  void generationSettings;
+  void generatedNotePool;
+
   if (generationSettings.practiceMode === "scales") {
     return;
   }
@@ -58,13 +57,6 @@ export function fillExercisePromptQueue(
   if (generationSettings.practiceMode === "cadences") {
     return;
   }
-
-  fillRandomNotePromptQueue(
-    promptQueue,
-    length,
-    generationSettings,
-    generatedNotePool,
-  );
 }
 
 export function getExerciseNotationProfile(

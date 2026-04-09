@@ -21,7 +21,7 @@ function createGenerationSettings(
   overrides: Partial<GenerationSettings> = {},
 ): GenerationSettings {
   return {
-    practiceMode: "random-notes",
+    practiceMode: "scales",
     scaleHands: "treble",
     scaleOctaves: 1,
     scaleMotion: "parallel",

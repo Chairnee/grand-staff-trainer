@@ -211,7 +211,6 @@ app.innerHTML = `
           <option value="triads">Triads</option>
           <option value="arpeggios">Arpeggios</option>
           <option value="cadences">Cadences</option>
-          <option value="random-notes">Random notes</option>
         </select>
       </label>
       <label id="scale-hands-field" class="settings-field" hidden>
@@ -751,8 +750,6 @@ function renderSettingsDrawer() {
   accidentalSpellingSelectElement.value =
     state.generationSettings.accidentalSpellingMode;
   scaleTypeSelectElement.value = state.generationSettings.scaleType;
-  const isRandomNotesMode =
-    state.generationSettings.practiceMode === "random-notes";
   const isScalesMode = state.generationSettings.practiceMode === "scales";
   const isTriadsMode = state.generationSettings.practiceMode === "triads";
   const isArpeggiosMode = state.generationSettings.practiceMode === "arpeggios";
@@ -777,22 +774,19 @@ function renderSettingsDrawer() {
     state.generationSettings.scaleHands !== "together";
   const areExerciseSettingsVisible = state.isExerciseVisible;
   if (scaleModeNote) {
-    scaleModeNote.hidden = !areExerciseSettingsVisible || isRandomNotesMode;
+    scaleModeNote.hidden = !areExerciseSettingsVisible;
   }
   exerciseSettingsHeadingElement.hidden = !areExerciseSettingsVisible;
   practiceModeFieldElement.hidden = !areExerciseSettingsVisible;
-  scaleHandsFieldElement.hidden =
-    !areExerciseSettingsVisible || isRandomNotesMode;
+  scaleHandsFieldElement.hidden = !areExerciseSettingsVisible;
   scaleMotionFieldElement.hidden =
     !areExerciseSettingsVisible || !isTogetherMotionMode;
   scaleDirectionFieldElement.hidden =
     !areExerciseSettingsVisible || !isSingleHandDirectionMode;
   scaleOctavesFieldElement.hidden =
-    !areExerciseSettingsVisible || isRandomNotesMode || isCadencesMode;
-  rangeStartFieldElement.hidden =
-    !areExerciseSettingsVisible || !isRandomNotesMode;
-  rangeEndFieldElement.hidden =
-    !areExerciseSettingsVisible || !isRandomNotesMode;
+    !areExerciseSettingsVisible || isCadencesMode;
+  rangeStartFieldElement.hidden = true;
+  rangeEndFieldElement.hidden = true;
   tonicFieldElement.hidden = !areExerciseSettingsVisible;
   scaleTypeFieldElement.hidden = !areExerciseSettingsVisible || !isScalesMode;
   triadTypeFieldElement.hidden =
@@ -803,12 +797,8 @@ function renderSettingsDrawer() {
     : isArpeggiosMode
       ? "Arpeggio type"
       : "Triad type";
-  noteSourceFieldElement.hidden =
-    !areExerciseSettingsVisible || !isRandomNotesMode;
-  accidentalSpellingFieldElement.hidden =
-    !areExerciseSettingsVisible ||
-    !isRandomNotesMode ||
-    state.generationSettings.noteSourceMode !== "chromatic";
+  noteSourceFieldElement.hidden = true;
+  accidentalSpellingFieldElement.hidden = true;
   renderTonicOptions();
   renderRangeOptions();
 }
@@ -958,21 +948,6 @@ function renderExerciseNotice() {
       }
 
       exerciseNotice = getCadenceRenderingNotice(state.generationSettings);
-    } else if (state.generationSettings.noteSourceMode === "in-scale") {
-      const renderingOptions = getScaleRenderingOptions(
-        state.generationSettings,
-      );
-      const scaleLabel = formatScaleTypeLabelForDisplay(
-        state.generationSettings.scaleType,
-      );
-
-      if (renderingOptions.alternate) {
-        exerciseNoticeButtonText = `Showing as ${renderingOptions.active.tonic} ${scaleLabel}`;
-        exerciseNoticeButtonActionText = "Swap";
-        exerciseNoticeButtonTitle = `Click to view this exercise as ${renderingOptions.alternate.tonic} ${scaleLabel}.`;
-      }
-
-      exerciseNotice = getScaleRenderingNotice(state.generationSettings);
     }
   }
 
@@ -1090,16 +1065,7 @@ function getExerciseSummaryText(generationSettings: GenerationSettings) {
     return `${handsLabel} | ${cadenceLabel}`;
   }
 
-  if (generationSettings.noteSourceMode === "in-scale") {
-    const scaleLabel = formatCompactScaleLabel(
-      generationSettings.tonic,
-      generationSettings.scaleType,
-    );
-
-    return `Random notes | ${scaleLabel}`;
-  }
-
-  return "Random notes | Chromatic";
+  return null;
 }
 
 function handleExerciseRenderingToggle() {
@@ -2451,13 +2417,6 @@ function getStaffClefChangeBefore(
 }
 
 function getDisplayedKeySignature(appState: AppState) {
-  if (
-    appState.generationSettings.practiceMode === "random-notes" &&
-    appState.generationSettings.noteSourceMode !== "in-scale"
-  ) {
-    return null;
-  }
-
   return getDerivedKeySignature(appState.generationSettings);
 }
 

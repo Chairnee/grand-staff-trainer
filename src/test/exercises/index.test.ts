@@ -25,7 +25,7 @@ function createGenerationSettings(
 }
 
 describe("getExerciseNotationProfile", () => {
-  it("returns common-time notation for scales, triads, and cadences", () => {
+  it("returns common-time notation for scales, triads, arpeggios, and cadences", () => {
     expect(
       getExerciseNotationProfile(
         createGenerationSettings({
@@ -51,6 +51,17 @@ describe("getExerciseNotationProfile", () => {
     expect(
       getExerciseNotationProfile(
         createGenerationSettings({
+          practiceMode: "arpeggios",
+        }),
+      ),
+    ).toEqual({
+      timeSignature: "C",
+      beatsPerMeasure: 4,
+    });
+
+    expect(
+      getExerciseNotationProfile(
+        createGenerationSettings({
           practiceMode: "cadences",
         }),
       ),
@@ -58,15 +69,5 @@ describe("getExerciseNotationProfile", () => {
       timeSignature: "C",
       beatsPerMeasure: 4,
     });
-  });
-
-  it("leaves random notes without a notation profile", () => {
-    expect(
-      getExerciseNotationProfile(
-        createGenerationSettings({
-          practiceMode: "random-notes",
-        }),
-      ),
-    ).toBeNull();
   });
 });
