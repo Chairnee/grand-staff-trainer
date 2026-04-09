@@ -102,8 +102,8 @@ const SCALE_TYPES: ScaleType[] = [
 const TRIAD_TYPES: TriadType[] = [
   "major",
   "minor",
-  "diminished",
   "augmented",
+  "diminished",
 ];
 
 type PromptAttempt = {
@@ -278,8 +278,8 @@ app.innerHTML = `
         <select id="triad-type-select">
           <option value="major">Major</option>
           <option value="minor">Minor</option>
-          <option value="diminished">Diminished</option>
           <option value="augmented">Augmented</option>
+          <option value="diminished">Diminished</option>
         </select>
       </label>
     </section>
@@ -1319,7 +1319,7 @@ function getAvailableTriadTypesForPracticeMode(
   }
 
   if (practiceMode === "triads" || practiceMode === "arpeggios") {
-    return ["major", "minor", "diminished", "augmented"] as const;
+    return ["major", "minor", "augmented", "diminished"] as const;
   }
 
   return [] as const;
