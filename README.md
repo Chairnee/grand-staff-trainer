@@ -13,7 +13,7 @@ Design philosophy rationale:
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
 ## Input Naming Panel
-The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent about ambiguities as possible, refer to [here](#input-analysis) for the design philosophy.
+The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
 
 ![An example image of named input.](referenceImg/input_naming.jpg)
 
@@ -104,6 +104,13 @@ This is the current exercise suite:
         - Treble only
         - Bass only
         - Together
+    - Direction or Motion depending on single or double hand
+        - Direction
+            - Ascending
+            - Descending
+        - Motion
+            - Parallel
+            - Contrary
     - Octaves
         - 1
         - 2
@@ -112,6 +119,8 @@ This is the current exercise suite:
     - Triad type
         - Major
         - Minor
+        - Augmented
+        - Diminished
 
 - Arpeggios
     - Hands
@@ -133,6 +142,8 @@ This is the current exercise suite:
     - Arpeggio type
         - Major
         - Minor
+        - Augmented
+        - Diminished
 
 - Cadences
     - Hands
