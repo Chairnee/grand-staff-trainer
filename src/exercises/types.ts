@@ -24,6 +24,8 @@ export type PromptSlot = {
   bassDisplayedClef?: "treble" | "bass";
   trebleOttavaStart?: boolean;
   trebleOttavaEnd?: boolean;
+  bassOttavaStart?: boolean;
+  bassOttavaEnd?: boolean;
 };
 
 export type ExerciseNotationProfile = {

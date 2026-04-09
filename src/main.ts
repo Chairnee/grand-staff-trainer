@@ -70,6 +70,7 @@ const STAGE_HORIZONTAL_PADDING = 0;
 const STAGE_VERTICAL_PADDING = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
+const OTTAVA_VIEWPORT_PADDING = 18;
 const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
 const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
 const SCALE_TOP_VISIBLE_MIDI_NOTE = 90;
@@ -2162,6 +2163,7 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     bassNotes,
     trebleStave,
     bassStave,
+    height,
   );
 
   for (const instruction of promptAnnotationDrawInstructions) {
@@ -2209,6 +2211,14 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     trebleNotes,
     trebleStave,
     context,
+    height,
+  );
+  drawBassOttavaBracket(
+    appState.promptQueue,
+    bassNotes,
+    bassStave,
+    context,
+    height,
   );
 
   if (currentTrebleTickable) {
@@ -2381,6 +2391,8 @@ function getDisplayedPromptSlot(
     bassDisplayedClef: prompt.bassDisplayedClef,
     trebleOttavaStart: prompt.trebleOttavaStart,
     trebleOttavaEnd: prompt.trebleOttavaEnd,
+    bassOttavaStart: prompt.bassOttavaStart,
+    bassOttavaEnd: prompt.bassOttavaEnd,
   };
 }
 
@@ -2601,6 +2613,8 @@ function assignHeldOverlayHand(
 
     if (specialNotationContext === "treble-ottava") {
       assignedHand = "treble";
+    } else if (specialNotationContext === "bass-ottava") {
+      assignedHand = "bass";
     } else if (specialNotationContext === "bass-clef-shift") {
       assignedHand = "bass";
     } else {
@@ -2670,6 +2684,14 @@ function getPresentationForAssignedHand(
     return {
       hand: "bass" as const,
       key: literalKey,
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+    };
+  }
+
+  if (isBassOttavaTransformActive(appState, prompt)) {
+    return {
+      hand: "bass" as const,
+      key: shiftKeyByOctaves(literalKey, 1),
       clef: displayedPrompt.bassDisplayedClef ?? "bass",
     };
   }
@@ -2837,6 +2859,10 @@ function getSpecialNotationContext(
     return "treble-ottava" as const;
   }
 
+  if (isBassOttavaTransformActive(appState, prompt)) {
+    return "bass-ottava" as const;
+  }
+
   if (isBassNotationTransformActive(appState, displayedPrompt)) {
     return "bass-clef-shift" as const;
   }
@@ -2866,6 +2892,17 @@ function isBassNotationTransformActive(
   );
 }
 
+function isBassOttavaTransformActive(
+  appState: AppState,
+  prompt: PromptSlot,
+) {
+  return (
+    Boolean(prompt.displayedBassKeys) &&
+    (appState.generationSettings.scaleHands === "bass" ||
+      appState.generationSettings.scaleHands === "together")
+  );
+}
+
 function getSpecialNotationCandidates(
   prompt: PromptSlot,
   displayedPrompt: PromptSlot,
@@ -2890,6 +2927,15 @@ function getSpecialNotationCandidates(
       key: shiftKeyByOctaves(literalKey, -1),
       clef: displayedPrompt.trebleDisplayedClef ?? "treble",
       score: getClosestPromptDistance(prompt.trebleKeys, heldNoteNumber),
+    });
+  }
+
+  if ((prompt.bassKeys?.length ?? 0) > 0 && prompt.displayedBassKeys) {
+    candidates.push({
+      hand: "bass",
+      key: shiftKeyByOctaves(literalKey, 1),
+      clef: displayedPrompt.bassDisplayedClef ?? "bass",
+      score: getClosestPromptDistance(prompt.bassKeys, heldNoteNumber),
     });
   }
 
@@ -3000,6 +3046,7 @@ function getPromptAnnotationYPositions(
   bassNotes: StaveNote[],
   trebleStave: Stave,
   bassStave: Stave,
+  rendererHeight: number,
 ) {
   const yPositions = new Map<string, number>();
   const laneKeys = new Set(
@@ -3050,6 +3097,7 @@ function getPromptAnnotationYPositions(
     const safeBottomTextLine = getSafeBottomTextLineForNotes(
       anchorNotes[0],
       anchorNotes,
+      rendererHeight,
     );
     yPositions.set(laneKey, stave.getYForBottomText(safeBottomTextLine));
   }
@@ -3160,58 +3208,117 @@ function drawTrebleOttavaBracket(
   trebleNotes: StaveNote[],
   trebleStave: Stave,
   context: ReturnType<Renderer["getContext"]>,
+  rendererHeight: number,
 ) {
-  const ottavaStartIndex = promptQueue.findIndex(
-    (prompt) => prompt.trebleOttavaStart,
+  drawOttavaBracket(
+    promptQueue,
+    trebleNotes,
+    trebleStave,
+    context,
+    rendererHeight,
+    {
+      placement: "above",
+      label: "8va",
+      isStart: (prompt) => Boolean(prompt.trebleOttavaStart),
+      isEnd: (prompt) => Boolean(prompt.trebleOttavaEnd),
+    },
   );
-  const ottavaEndIndex = promptQueue.findIndex(
-    (prompt) => prompt.trebleOttavaEnd,
+}
+
+function drawBassOttavaBracket(
+  promptQueue: PromptSlot[],
+  bassNotes: StaveNote[],
+  bassStave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+  rendererHeight: number,
+) {
+  drawOttavaBracket(
+    promptQueue,
+    bassNotes,
+    bassStave,
+    context,
+    rendererHeight,
+    {
+      placement: "below",
+      label: "8vb",
+      isStart: (prompt) => Boolean(prompt.bassOttavaStart),
+      isEnd: (prompt) => Boolean(prompt.bassOttavaEnd),
+    },
   );
+}
+
+function drawOttavaBracket(
+  promptQueue: PromptSlot[],
+  staffNotes: StaveNote[],
+  stave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+  rendererHeight: number,
+  {
+    placement,
+    label,
+    isStart,
+    isEnd,
+  }: {
+    placement: "above" | "below";
+    label: string;
+    isStart: (prompt: PromptSlot) => boolean;
+    isEnd: (prompt: PromptSlot) => boolean;
+  },
+) {
+  const ottavaStartIndex = promptQueue.findIndex(isStart);
+  const ottavaEndIndex = promptQueue.findIndex(isEnd);
 
   if (ottavaStartIndex === -1 || ottavaEndIndex === -1) {
     return;
   }
 
-  if (ottavaStartIndex <= ottavaEndIndex) {
-    const segmentNotes = trebleNotes.slice(
-      ottavaStartIndex,
-      ottavaEndIndex + 1,
-    );
-    const safeTopTextLine = getSafeTopTextLineForNotes(
-      trebleNotes[ottavaStartIndex],
-      segmentNotes,
-    );
+  const wrappedSpanNotes =
+    ottavaStartIndex <= ottavaEndIndex
+      ? staffNotes.slice(ottavaStartIndex, ottavaEndIndex + 1)
+      : [
+          ...staffNotes.slice(ottavaStartIndex),
+          ...staffNotes.slice(0, ottavaEndIndex + 1),
+        ];
+  const referenceNote = staffNotes[ottavaStartIndex];
 
+  if (!referenceNote || wrappedSpanNotes.length === 0) {
+    return;
+  }
+
+  const textLine =
+    placement === "above"
+      ? getSafeTopTextLineForNotes(referenceNote, wrappedSpanNotes)
+      : getSafeBottomTextLineForNotes(
+          referenceNote,
+          wrappedSpanNotes,
+          rendererHeight,
+        );
+
+  if (ottavaStartIndex <= ottavaEndIndex) {
     drawOttavaBracketSegment(
-      trebleNotes[ottavaStartIndex],
-      trebleNotes[ottavaEndIndex],
-      trebleStave,
+      staffNotes[ottavaStartIndex],
+      staffNotes[ottavaEndIndex],
+      stave,
       context,
       {
-        labelAnchorX: trebleNotes[ottavaStartIndex].getAbsoluteX(),
+        labelAnchorX: staffNotes[ottavaStartIndex]?.getAbsoluteX() ?? 0,
         lineEndX:
-          trebleNotes[ottavaEndIndex].getAbsoluteX() +
-          trebleNotes[ottavaEndIndex].getGlyphWidth(),
+          (staffNotes[ottavaEndIndex]?.getAbsoluteX() ?? 0) +
+          (staffNotes[ottavaEndIndex]?.getGlyphWidth() ?? 0),
         showLabel: true,
         showEndCap: true,
-        topTextLine: safeTopTextLine,
+        textLine,
+        placement,
+        label,
       },
     );
     return;
   }
 
-  const wrappedSpanNotes = [
-    ...trebleNotes.slice(ottavaStartIndex),
-    ...trebleNotes.slice(0, ottavaEndIndex + 1),
-  ];
-  const safeTopTextLine = getSafeTopTextLineForNotes(
-    trebleNotes[ottavaStartIndex],
-    wrappedSpanNotes,
-  );
-  const currentSegmentStartNote = trebleNotes[0];
-  const currentSegmentEndNote = trebleNotes[ottavaEndIndex];
-  const futureSegmentStartNote = trebleNotes[ottavaStartIndex];
-  const futureSegmentEndNote = trebleNotes.at(-1);
+  const currentSegmentStartNote = staffNotes[0];
+  const currentSegmentEndNote = staffNotes[ottavaEndIndex];
+  const futureSegmentStartNote = staffNotes[ottavaStartIndex];
+  const futureSegmentEndNote = staffNotes.at(-1);
 
   if (
     !currentSegmentStartNote ||
@@ -3225,33 +3332,37 @@ function drawTrebleOttavaBracket(
   drawOttavaBracketSegment(
     currentSegmentStartNote,
     currentSegmentEndNote,
-    trebleStave,
+    stave,
     context,
     {
-      labelAnchorX: trebleStave.getNoteStartX(),
+      labelAnchorX: stave.getNoteStartX(),
       lineEndX:
         currentSegmentEndNote.getAbsoluteX() +
         currentSegmentEndNote.getGlyphWidth(),
       showLabel: true,
       showEndCap: true,
-      topTextLine: safeTopTextLine,
+      textLine,
+      placement,
+      label,
     },
   );
   drawOttavaBracketSegment(
     futureSegmentStartNote,
     futureSegmentEndNote,
-    trebleStave,
+    stave,
     context,
     {
       labelAnchorX: futureSegmentStartNote.getAbsoluteX(),
       lineEndX: Math.min(
-        trebleStave.getNoteEndX(),
+        stave.getNoteEndX(),
         futureSegmentEndNote.getAbsoluteX() +
           futureSegmentEndNote.getGlyphWidth(),
       ),
       showLabel: true,
       showEndCap: false,
-      topTextLine: safeTopTextLine,
+      textLine,
+      placement,
+      label,
     },
   );
 }
@@ -3259,27 +3370,34 @@ function drawTrebleOttavaBracket(
 function drawOttavaBracketSegment(
   ottavaStartNote: StaveNote | undefined,
   ottavaEndNote: StaveNote | undefined,
-  trebleStave: Stave,
+  stave: Stave,
   context: ReturnType<Renderer["getContext"]>,
   {
     labelAnchorX,
     lineEndX,
     showLabel,
     showEndCap,
-    topTextLine,
+    textLine,
+    placement,
+    label,
   }: {
     labelAnchorX: number;
     lineEndX: number;
     showLabel: boolean;
     showEndCap: boolean;
-    topTextLine: number;
+    textLine: number;
+    placement: "above" | "below";
+    label: string;
   },
 ) {
   if (!ottavaStartNote || !ottavaEndNote) {
     return;
   }
 
-  const startY = trebleStave.getYForTopText(topTextLine);
+  const startY =
+    placement === "above"
+      ? stave.getYForTopText(textLine)
+      : stave.getYForBottomText(textLine);
   const mainFontSize = 15;
   const superscriptFontSize = mainFontSize * 0.714286;
   const bracketHeight = 8;
@@ -3295,28 +3413,36 @@ function drawOttavaBracketSegment(
   let lineY = startY;
 
   if (showLabel) {
-    context.fillText("8", labelAnchorX, startY);
-    const mainWidth = context.measureText("8").width;
+    const mainLabel = label.charAt(0);
+    const superLabel = label.slice(1);
+
+    context.fillText(mainLabel, labelAnchorX, startY);
+    const mainWidth = context.measureText(mainLabel).width;
     const mainHeight = mainFontSize;
     const superY = startY - mainHeight / 2.5;
 
     context.setFont(undefined, superscriptFontSize, "normal", "italic");
-    context.fillText("va", labelAnchorX + mainWidth + 1, superY);
-    const superWidth = context.measureText("va").width;
+    context.fillText(superLabel, labelAnchorX + mainWidth + 1, superY);
+    const superWidth = context.measureText(superLabel).width;
     const superHeight = superscriptFontSize;
 
     lineStartX = labelAnchorX + mainWidth + superWidth + 5;
-    lineY = superY - superHeight / 2.7;
+    lineY =
+      placement === "above"
+        ? superY - superHeight / 2.7
+        : startY + mainHeight / 6;
   }
 
   const resolvedLineEndX = Math.max(lineStartX, lineEndX);
+  const endCapY =
+    placement === "above" ? lineY + bracketHeight : lineY - bracketHeight;
 
   context.beginPath();
   context.moveTo(lineStartX, lineY);
   context.lineTo(resolvedLineEndX, lineY);
 
   if (showEndCap) {
-    context.lineTo(resolvedLineEndX, lineY + bracketHeight);
+    context.lineTo(resolvedLineEndX, endCapY);
   }
 
   context.stroke();
@@ -3329,7 +3455,7 @@ function getSafeTopTextLineForNotes(
 ) {
   const stave = referenceNote.checkStave();
   const noteTopPadding = 8;
-  const minimumVisibleY = 18;
+  const minimumVisibleY = OTTAVA_VIEWPORT_PADDING;
   const topMostOccupiedY = Math.min(
     ...notes.map((note) => {
       const stemTopY = note.getStemExtents().topY;
@@ -3355,9 +3481,11 @@ function getSafeTopTextLineForNotes(
 function getSafeBottomTextLineForNotes(
   referenceNote: StaveNote,
   notes: StaveNote[],
+  rendererHeight: number,
 ) {
   const stave = referenceNote.checkStave();
   const noteBottomPadding = 12;
+  const maximumVisibleY = rendererHeight - OTTAVA_VIEWPORT_PADDING;
   const bottomMostOccupiedY = Math.max(
     ...notes.map((note) => {
       const stemBaseY = note.getStemExtents().baseY;
@@ -3369,7 +3497,11 @@ function getSafeBottomTextLineForNotes(
   const targetBottomTextY = bottomMostOccupiedY + noteBottomPadding;
   let line = 1;
 
-  while (line < 12 && stave.getYForBottomText(line + 0.5) < targetBottomTextY) {
+  while (
+    line < 12 &&
+    stave.getYForBottomText(line + 0.5) < targetBottomTextY &&
+    stave.getYForBottomText(line + 0.5) <= maximumVisibleY
+  ) {
     line += 0.5;
   }
 
