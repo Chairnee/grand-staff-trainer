@@ -238,7 +238,8 @@ body {
   color: #6c5840;
   font-size: 0.8em;
   line-height: 1;
-  box-shadow: 0 8px 20px rgba(70, 52, 28, 0.04);
+  box-shadow: 0 calc(8px * var(--ui-scale)) calc(20px * var(--ui-scale))
+    rgba(70, 52, 28, 0.04);
 }
 
 .exercise-notice-chip,
@@ -250,7 +251,8 @@ body {
   color: #7c4a28;
   font-size: 0.86em;
   line-height: 1;
-  box-shadow: 0 8px 20px rgba(70, 52, 28, 0.05);
+  box-shadow: 0 calc(8px * var(--ui-scale)) calc(20px * var(--ui-scale))
+    rgba(70, 52, 28, 0.05);
 }
 
 .exercise-notice-chip {
@@ -287,7 +289,7 @@ body {
 
 .exercise-notice-button:focus-visible {
   outline: 2px solid rgba(166, 64, 31, 0.35);
-  outline-offset: 2px;
+  outline-offset: calc(2px * var(--ui-scale));
 }
 
 .input-name-display {
@@ -298,7 +300,8 @@ body {
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: calc(12px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.82);
-  box-shadow: 0 10px 24px rgba(70, 52, 28, 0.06);
+  box-shadow: 0 calc(10px * var(--ui-scale)) calc(24px * var(--ui-scale))
+    rgba(70, 52, 28, 0.06);
 }
 
 .input-name-display[hidden] {
@@ -394,7 +397,8 @@ body {
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: calc(16px * var(--ui-scale));
   background: #fffdf7;
-  box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
+  box-shadow: 0 calc(18px * var(--ui-scale)) calc(40px * var(--ui-scale))
+    rgba(70, 52, 28, 0.08);
 }
 
 .notation[hidden] {
@@ -438,7 +442,8 @@ body {
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: calc(16px * var(--ui-scale));
   background: #fffdf7;
-  box-shadow: 0 18px 40px rgba(70, 52, 28, 0.08);
+  box-shadow: 0 calc(18px * var(--ui-scale)) calc(40px * var(--ui-scale))
+    rgba(70, 52, 28, 0.08);
 }
 
 .keyboard-display[hidden] {
@@ -485,7 +490,8 @@ body {
   height: var(--keyboard-black-key-height);
   background: linear-gradient(180deg, #49382a 0%, #2c2119 100%);
   border-color: rgba(31, 29, 27, 0.4);
-  box-shadow: 0 4px 10px rgba(31, 29, 27, 0.18);
+  box-shadow: 0 calc(4px * var(--ui-scale)) calc(10px * var(--ui-scale))
+    rgba(31, 29, 27, 0.18);
   z-index: 1;
 }
 
@@ -498,7 +504,8 @@ body {
 .keyboard-key.is-active.keyboard-key-black {
   background: linear-gradient(180deg, #d77f53 0%, #a6401f 100%);
   border-color: rgba(166, 64, 31, 0.75);
-  box-shadow: 0 4px 10px rgba(166, 64, 31, 0.24);
+  box-shadow: 0 calc(4px * var(--ui-scale)) calc(10px * var(--ui-scale))
+    rgba(166, 64, 31, 0.24);
 }
 
 .keyboard-key.is-held:not(.is-active).keyboard-key-white {
@@ -622,11 +629,11 @@ body {
   }
 
   20% {
-    transform: translateX(-3px);
+    transform: translateX(calc(-3px * var(--ui-scale)));
   }
 
   50% {
-    transform: translateX(2px);
+    transform: translateX(calc(2px * var(--ui-scale)));
   }
 
   100% {
