@@ -67,11 +67,6 @@ const STAGE_VERTICAL_PADDING = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
-const DEFAULT_TOP_VISIBLE_MIDI_NOTE = 84;
-const DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE = 36;
-const SCALE_TOP_VISIBLE_MIDI_NOTE = 90;
-const SCALE_BOTTOM_VISIBLE_MIDI_NOTE = 44;
-const MIDI_OVERFLOW_PIXELS = 4;
 const STAVE_GAP = 76;
 const STAVE_CONNECTOR_THICKNESS = 3;
 const STAVE_SIDE_MARGIN = 56;
@@ -423,6 +418,7 @@ const scaleTypeFieldElement = scaleTypeField;
 
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
+let areNotationFontsReady = !("fonts" in document);
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
@@ -512,6 +508,17 @@ if (state.promptQueue.length === 0) {
 }
 
 renderApp();
+
+if ("fonts" in document) {
+  void document.fonts.ready.then(() => {
+    if (areNotationFontsReady) {
+      return;
+    }
+
+    areNotationFontsReady = true;
+    renderApp();
+  });
+}
 
 function renderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
@@ -1050,6 +1057,16 @@ function renderNotation() {
 
   if (!state.isExerciseVisible) {
     notationCanvasElement.replaceChildren();
+    return;
+  }
+
+  if (!areNotationFontsReady) {
+    notationCanvasElement.replaceChildren();
+
+    const loadingMessage = document.createElement("p");
+    loadingMessage.className = "notation-loading";
+    loadingMessage.textContent = "Loading notation...";
+    notationCanvasElement.append(loadingMessage);
     return;
   }
 
@@ -1608,49 +1625,13 @@ function getDisplayedScaleStaff(
 function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   container.replaceChildren();
 
-  const promptKeys = getPromptQueueKeys(appState.promptQueue);
-  const defaultTopVisibleMidiNote =
-    appState.generationSettings.practiceMode === "scales" ||
-    appState.generationSettings.practiceMode === "triads" ||
-    appState.generationSettings.practiceMode === "arpeggios" ||
-    appState.generationSettings.practiceMode === "cadences"
-      ? SCALE_TOP_VISIBLE_MIDI_NOTE
-      : DEFAULT_TOP_VISIBLE_MIDI_NOTE;
-  const defaultBottomVisibleMidiNote =
-    appState.generationSettings.practiceMode === "scales" ||
-    appState.generationSettings.practiceMode === "triads" ||
-    appState.generationSettings.practiceMode === "arpeggios" ||
-    appState.generationSettings.practiceMode === "cadences"
-      ? SCALE_BOTTOM_VISIBLE_MIDI_NOTE
-      : DEFAULT_BOTTOM_VISIBLE_MIDI_NOTE;
-  const topMidiNoteNumber =
-    getHighestMidiNoteNumber(promptKeys) ?? defaultTopVisibleMidiNote;
-  const bottomMidiNoteNumber =
-    getLowestMidiNoteNumber(promptKeys) ?? defaultBottomVisibleMidiNote;
   const renderer = new Renderer(container, Renderer.Backends.SVG);
   const width = Math.max(640, container.clientWidth - 8);
-  const topOverflow =
-    Math.max(0, topMidiNoteNumber - defaultTopVisibleMidiNote) *
-    MIDI_OVERFLOW_PIXELS;
-  const bottomOverflow =
-    Math.max(0, defaultBottomVisibleMidiNote - bottomMidiNoteNumber) *
-    MIDI_OVERFLOW_PIXELS;
-  const systemHeight = STAVE_GAP + 92;
-  const contentHeight = systemHeight + topOverflow + bottomOverflow;
-  const availableHeight =
+  const height =
     container.clientHeight > 0 ? container.clientHeight : DEFAULT_RENDER_HEIGHT;
-  const height = Math.max(availableHeight, contentHeight);
   const centeredBraceTopY =
     height / 2 - STAVE_BRACE_CENTER_OFFSET + STAVE_VERTICAL_OPTICAL_OFFSET;
-  const minStaveTopY = topOverflow;
-  const maxStaveTopY = Math.max(
-    minStaveTopY,
-    height - (systemHeight + bottomOverflow),
-  );
-  const staveTopY = Math.min(
-    maxStaveTopY,
-    Math.max(minStaveTopY, centeredBraceTopY),
-  );
+  const staveTopY = centeredBraceTopY;
   const bassStaveY = staveTopY + STAVE_GAP;
 
   renderer.resize(width, height);
@@ -2041,32 +2022,6 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     currentBassPromptNote,
     ...currentSecondaryPromptNotes,
   ]);
-}
-
-function getPromptQueueKeys(promptQueue: PromptSlot[]) {
-  return promptQueue.flatMap((prompt) => {
-    return [...(prompt.trebleKeys ?? []), ...(prompt.bassKeys ?? [])];
-  });
-}
-
-function getHighestMidiNoteNumber(keys: string[]) {
-  const midiNoteNumbers = keys.map(keyToMidiNoteNumber);
-
-  if (midiNoteNumbers.length === 0) {
-    return null;
-  }
-
-  return Math.max(...midiNoteNumbers);
-}
-
-function getLowestMidiNoteNumber(keys: string[]) {
-  const midiNoteNumbers = keys.map(keyToMidiNoteNumber);
-
-  if (midiNoteNumbers.length === 0) {
-    return null;
-  }
-
-  return Math.min(...midiNoteNumbers);
 }
 
 function getDisplayedPromptSlot(
@@ -2527,8 +2482,8 @@ function getExactArpeggioOverlayPresentation(
     appState.generationSettings.scaleHands === "bass"
       ? "bass"
       : appState.generationSettings.scaleHands === "together"
-      ? getTogetherScaleDisplayedStaff(appState, "bass", exactBassKey)
-      : getClefForKey(exactBassKey);
+        ? getTogetherScaleDisplayedStaff(appState, "bass", exactBassKey)
+        : getClefForKey(exactBassKey);
 
   return {
     hand: displayedStaff,
@@ -2678,10 +2633,7 @@ function isBassNotationTransformActive(
   );
 }
 
-function isBassOttavaTransformActive(
-  appState: AppState,
-  prompt: PromptSlot,
-) {
+function isBassOttavaTransformActive(appState: AppState, prompt: PromptSlot) {
   return (
     Boolean(prompt.displayedBassKeys) &&
     (appState.generationSettings.scaleHands === "bass" ||
@@ -3274,10 +3226,12 @@ function getSafeBottomTextLineForNotes(
   const maximumVisibleY = rendererHeight - OTTAVA_VIEWPORT_PADDING;
   const bottomMostOccupiedY = Math.max(
     ...notes.map((note) => {
-      const stemBaseY = note.getStemExtents().baseY;
+      const stemExtents = note.getStemExtents();
+      const stemBottomY =
+        note.getStemDirection() === -1 ? stemExtents.topY : stemExtents.baseY;
       const noteHeadBottomY = Math.max(...note.getYs());
 
-      return Math.max(stemBaseY, noteHeadBottomY);
+      return Math.max(stemBottomY, noteHeadBottomY);
     }),
   );
   const targetBottomTextY = bottomMostOccupiedY + noteBottomPadding;

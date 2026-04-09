@@ -12,8 +12,8 @@ import {
   getScaleNoteNames,
   getScaleRenderingNotice,
   getScaleStartingOctave,
-  getTriadNoteNames,
   getTonicReadabilityOptionsForScaleType,
+  getTriadNoteNames,
   keyToMidiNoteNumber,
 } from "../../theory/music";
 

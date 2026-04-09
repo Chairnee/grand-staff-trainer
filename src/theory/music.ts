@@ -3,11 +3,7 @@ import type { PromptSlot } from "../exercises/types";
 const SHARP_KEY_SIGNATURE_ORDER = ["f", "c", "g", "d", "a", "e", "b"];
 const FLAT_KEY_SIGNATURE_ORDER = ["b", "e", "a", "d", "g", "c", "f"];
 
-export type PracticeMode =
-  | "scales"
-  | "triads"
-  | "arpeggios"
-  | "cadences";
+export type PracticeMode = "scales" | "triads" | "arpeggios" | "cadences";
 export type ScaleHands = "treble" | "bass" | "together";
 export type ScaleOctaves = 1 | 2;
 export type ScaleMotion = "parallel" | "contrary";
@@ -757,7 +753,10 @@ export function getTonicReadabilityOptionsForTriadType(
 
   return candidateTonics
     .map((candidateTonic) => {
-      const keySignature = getKeySignatureForTriadType(candidateTonic, triadType);
+      const keySignature = getKeySignatureForTriadType(
+        candidateTonic,
+        triadType,
+      );
       const triadNoteNames = getTriadNoteNamesForRenderedTonic(
         candidateTonic.toLowerCase(),
         triadType,

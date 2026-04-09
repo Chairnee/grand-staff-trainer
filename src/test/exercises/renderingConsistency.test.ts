@@ -9,7 +9,6 @@ import {
   type GenerationSettings,
   getAllTonics,
   getCadenceRenderingOptions,
-  getScaleNoteNames,
   getScaleNoteNamesForRenderedTonicName,
   getScaleRenderingOptions,
   getTriadNoteNames,
@@ -405,7 +404,6 @@ describe("exercise rendering consistency", () => {
             );
           }
         }
-
       }
 
       for (const cadenceTriadType of cadenceTriadTypes) {
@@ -428,7 +426,10 @@ describe("exercise rendering consistency", () => {
           cadenceRenderingOptions.active.tonic.toLowerCase();
         const cadenceAllowedNoteNames =
           cadenceTriadType === "major"
-            ? getScaleNoteNamesForRenderedTonicName(cadenceRenderedTonic, "major")
+            ? getScaleNoteNamesForRenderedTonicName(
+                cadenceRenderedTonic,
+                "major",
+              )
             : new Set([
                 ...getScaleNoteNamesForRenderedTonicName(
                   cadenceRenderedTonic,
