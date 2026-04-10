@@ -771,6 +771,22 @@ body {
     flex: 1 1 0;
   }
 
+  .settings-drawer {
+    width: min(96vw, 720px);
+    height: auto;
+    max-height: calc(100dvh - 12px);
+    top: 6px;
+    right: 2vw;
+    padding: calc(12px * var(--overlay-scale));
+    gap: calc(12px * var(--overlay-scale));
+    font-size: clamp(1rem, 2.2vh, 1.35rem);
+  }
+
+  .settings-drawer input[type="checkbox"] {
+    width: 0.8em;
+    height: 0.8em;
+  }
+
   .midi-picker select {
     min-width: 60px;
   }
