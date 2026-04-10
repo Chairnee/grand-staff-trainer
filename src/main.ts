@@ -3916,7 +3916,7 @@ function drawTrebleOttavaBracket(
     {
       placement: "above",
       label: "8va",
-      isStart: (prompt) => Boolean(prompt.trebleOttavaStart),
+      isActive: (prompt) => Boolean(prompt.displayedTrebleKeys),
       isEnd: (prompt) => Boolean(prompt.trebleOttavaEnd),
     },
   );
@@ -3938,7 +3938,7 @@ function drawBassOttavaBracket(
     {
       placement: "below",
       label: "8vb",
-      isStart: (prompt) => Boolean(prompt.bassOttavaStart),
+      isActive: (prompt) => Boolean(prompt.displayedBassKeys),
       isEnd: (prompt) => Boolean(prompt.bassOttavaEnd),
     },
   );
@@ -3953,22 +3953,116 @@ function drawOttavaBracket(
   {
     placement,
     label,
-    isStart,
+    isActive,
     isEnd,
   }: {
     placement: "above" | "below";
     label: string;
-    isStart: (prompt: PromptSlot) => boolean;
+    isActive: (prompt: PromptSlot) => boolean;
     isEnd: (prompt: PromptSlot) => boolean;
   },
 ) {
-  const ottavaStartIndex = promptQueue.findIndex(isStart);
-  const ottavaEndIndex = promptQueue.findIndex(isEnd);
+  const ottavaSpans = getOttavaBracketDisplaySpans(promptQueue, isActive);
 
-  if (ottavaStartIndex === -1 || ottavaEndIndex === -1) {
+  if (ottavaSpans.length === 0) {
     return;
   }
 
+  for (const ottavaSpan of ottavaSpans) {
+    drawOttavaBracketSpan(
+      promptQueue,
+      staffNotes,
+      stave,
+      context,
+      rendererHeight,
+      ottavaSpan,
+      {
+        placement,
+        label,
+        isEnd,
+      },
+    );
+  }
+}
+
+function getOttavaBracketDisplaySpans(
+  promptQueue: PromptSlot[],
+  isActive: (prompt: PromptSlot) => boolean,
+) {
+  const activeIndices = promptQueue
+    .map((prompt, index) => (isActive(prompt) ? index : -1))
+    .filter((index) => index !== -1);
+
+  if (activeIndices.length === 0) {
+    return [];
+  }
+
+  const spans: Array<{ startIndex: number; endIndex: number }> = [];
+  let spanStartIndex = activeIndices[0];
+  let previousIndex = activeIndices[0];
+
+  for (const activeIndex of activeIndices.slice(1)) {
+    if (activeIndex === previousIndex + 1) {
+      previousIndex = activeIndex;
+      continue;
+    }
+
+    spans.push({
+      startIndex: spanStartIndex,
+      endIndex: previousIndex,
+    });
+    spanStartIndex = activeIndex;
+    previousIndex = activeIndex;
+  }
+
+  spans.push({
+    startIndex: spanStartIndex,
+    endIndex: previousIndex,
+  });
+
+  const firstSpan = spans[0];
+  const lastSpan = spans.at(-1);
+  const finalPromptIndex = promptQueue.length - 1;
+
+  if (
+    firstSpan &&
+    lastSpan &&
+    firstSpan.startIndex === 0 &&
+    lastSpan.endIndex === finalPromptIndex
+  ) {
+    return [
+      {
+        startIndex: lastSpan.startIndex,
+        endIndex: firstSpan.endIndex,
+      },
+      ...spans.slice(1, -1),
+    ];
+  }
+
+  return spans;
+}
+
+function drawOttavaBracketSpan(
+  promptQueue: PromptSlot[],
+  staffNotes: StaveNote[],
+  stave: Stave,
+  context: ReturnType<Renderer["getContext"]>,
+  rendererHeight: number,
+  ottavaSpan: {
+    startIndex: number;
+    endIndex: number;
+  },
+  {
+    placement,
+    label,
+    isEnd,
+  }: {
+    placement: "above" | "below";
+    label: string;
+    isEnd: (prompt: PromptSlot) => boolean;
+  },
+) {
+  const { startIndex: ottavaStartIndex, endIndex: ottavaEndIndex } = ottavaSpan;
   const wrappedSpanNotes =
     ottavaStartIndex <= ottavaEndIndex
       ? staffNotes.slice(ottavaStartIndex, ottavaEndIndex + 1)
@@ -4037,7 +4131,12 @@ function drawOttavaBracket(
         currentSegmentEndNote.getAbsoluteX() +
         currentSegmentEndNote.getGlyphWidth(),
       showLabel: true,
-      showEndCap: true,
+      showEndCap: hasOttavaEndMarkerInRange(
+        promptQueue,
+        0,
+        ottavaEndIndex,
+        isEnd,
+      ),
       textLine,
       placement,
       label,
@@ -4056,12 +4155,34 @@ function drawOttavaBracket(
           futureSegmentEndNote.getGlyphWidth(),
       ),
       showLabel: true,
-      showEndCap: false,
+      showEndCap: hasOttavaEndMarkerInRange(
+        promptQueue,
+        ottavaStartIndex,
+        promptQueue.length - 1,
+        isEnd,
+      ),
       textLine,
       placement,
       label,
     },
   );
+}
+
+function hasOttavaEndMarkerInRange(
+  promptQueue: PromptSlot[],
+  startIndex: number,
+  endIndex: number,
+  isEnd: (prompt: PromptSlot) => boolean,
+) {
+  for (let index = startIndex; index <= endIndex; index += 1) {
+    const prompt = promptQueue[index];
+
+    if (prompt && isEnd(prompt)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function drawOttavaBracketSegment(
