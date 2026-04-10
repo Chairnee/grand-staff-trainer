@@ -18,6 +18,13 @@ export function createTriadPracticeQueue(
     return createContraryMotionTriadPracticeQueue(generationSettings);
   }
 
+  if (
+    generationSettings.scaleHands !== "together" &&
+    generationSettings.scaleDirection === "descending"
+  ) {
+    return createDescendingSingleHandTriadPracticeQueue(generationSettings);
+  }
+
   const trebleStartingOctave = getTriadStartingOctave(
     generationSettings.tonic,
     generationSettings.triadType,
@@ -55,6 +62,67 @@ export function createTriadPracticeQueue(
   return [...ascendingPrompts, ...descendingPrompts.slice(0, -1)];
 }
 
+function createDescendingSingleHandTriadPracticeQueue(
+  generationSettings: GenerationSettings,
+) {
+  const scaleHands = generationSettings.scaleHands;
+
+  if (scaleHands === "together") {
+    throw new Error("Descending single-hand triads require a single hand.");
+  }
+
+  const descendingStartingOctave =
+    scaleHands === "treble"
+      ? getDescendingTrebleTriadStartingOctave(generationSettings)
+      : getDescendingBassTriadStartingOctave(generationSettings);
+  const descendingTriads = getAscendingTriadPositions(
+    generationSettings.tonic,
+    generationSettings.triadType,
+    descendingStartingOctave,
+    generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
+  ).reverse();
+  const ascendingTriads = getAscendingTriadPositions(
+    generationSettings.tonic,
+    generationSettings.triadType,
+    descendingStartingOctave,
+    generationSettings.scaleOctaves,
+    generationSettings.renderingPreference,
+  ).slice(1);
+  const promptQueue: PromptSlot[] =
+    scaleHands === "treble"
+      ? [
+          ...descendingTriads.map((trebleKeys) => ({
+            duration: "q" as const,
+            trebleKeys,
+          })),
+          ...ascendingTriads.map((trebleKeys) => ({
+            duration: "q" as const,
+            trebleKeys,
+          })),
+        ]
+      : [
+          ...descendingTriads.map((bassKeys) => ({
+            duration: "q" as const,
+            bassKeys,
+          })),
+          ...ascendingTriads.map((bassKeys) => ({
+            duration: "q" as const,
+            bassKeys,
+          })),
+        ];
+
+  promptQueue.pop();
+
+  if (scaleHands === "treble") {
+    applyTrebleOttavaToHighSingleHandTriadPrompts(promptQueue);
+  } else {
+    applyBassOttavaToLowTriadPrompts(promptQueue);
+  }
+
+  return promptQueue;
+}
+
 function createContraryMotionTriadPracticeQueue(
   generationSettings: GenerationSettings,
 ) {
@@ -88,7 +156,7 @@ function createContraryMotionTriadPracticeQueue(
   );
   const promptQueue = [...outwardPrompts, ...inwardPrompts.slice(0, -1)];
 
-  applyBassOttavaToLowContraryTriadPrompts(promptQueue);
+  applyBassOttavaToLowTriadPrompts(promptQueue);
 
   return promptQueue;
 }
@@ -312,6 +380,74 @@ function createDescendingTriadFromHighestKey(
   return [lowerKey, upperLowerKey, highestKey];
 }
 
+function getDescendingTrebleTriadStartingOctave(
+  generationSettings: GenerationSettings,
+) {
+  const [rootNoteName] = getTriadNoteNames(
+    generationSettings.tonic,
+    generationSettings.triadType,
+    generationSettings.renderingPreference,
+  );
+
+  if (!rootNoteName) {
+    throw new Error("Could not determine descending treble triad root.");
+  }
+
+  const highestDisplayedStartMidiNote = 78; // F#5
+  const trebleOttavaOffset = 12;
+  const candidateTopRootMidiNote = keyToMidiNoteNumber(`${rootNoteName}/6`);
+  const topRootOctave =
+    candidateTopRootMidiNote - trebleOttavaOffset <= highestDisplayedStartMidiNote
+      ? 6
+      : 5;
+
+  return topRootOctave - generationSettings.scaleOctaves;
+}
+
+function getDescendingBassTriadStartingOctave(
+  generationSettings: GenerationSettings,
+) {
+  const triadNoteNames = getTriadNoteNames(
+    generationSettings.tonic,
+    generationSettings.triadType,
+    generationSettings.renderingPreference,
+  );
+  const [rootNoteName, thirdNoteName, fifthNoteName] = triadNoteNames;
+
+  if (!rootNoteName || !thirdNoteName || !fifthNoteName) {
+    throw new Error("Could not determine descending bass triad note names.");
+  }
+
+  const rootPositionAtMiddleC = createRootPositionTriad(
+    rootNoteName,
+    thirdNoteName,
+    fifthNoteName,
+    4,
+  );
+  const highestBassStartMidiNote = 66; // F#4
+  const topRootOctave = rootPositionAtMiddleC.every(
+    (key) => keyToMidiNoteNumber(key) <= highestBassStartMidiNote,
+  )
+    ? 4
+    : 3;
+
+  return topRootOctave - generationSettings.scaleOctaves;
+}
+
+function createRootPositionTriad(
+  rootNoteName: string,
+  thirdNoteName: string,
+  fifthNoteName: string,
+  rootOctave: number,
+) {
+  const rootKey = `${rootNoteName}/${rootOctave}`;
+  const rootMidiNoteNumber = keyToMidiNoteNumber(rootKey);
+
+  return [rootNoteName, thirdNoteName, fifthNoteName].map((noteName) =>
+    findNextTriadKeyAtOrAbove(noteName, rootMidiNoteNumber),
+  );
+}
+
 function findPreviousTriadKeyAtOrBelow(
   noteName: string,
   maximumMidiNoteNumber: number,
@@ -346,8 +482,69 @@ function findNextTriadKeyAtOrAbove(
   return key;
 }
 
-function applyBassOttavaToLowContraryTriadPrompts(promptQueue: PromptSlot[]) {
-  const bassOttavaThresholdMidiNote = keyToMidiNoteNumber("f/2");
+function applyTrebleOttavaToHighSingleHandTriadPrompts(promptQueue: PromptSlot[]) {
+  const trebleOttavaThresholdMidiNote = 82; // A#5
+  const ottavaPromptIndices = promptQueue
+    .map((prompt, index) =>
+      (prompt.trebleKeys ?? []).some(
+        (key) => keyToMidiNoteNumber(key) > trebleOttavaThresholdMidiNote,
+      )
+        ? index
+        : -1,
+    )
+    .filter((index) => index !== -1);
+
+  if (ottavaPromptIndices.length === 0) {
+    return;
+  }
+
+  const ottavaStartIndex = ottavaPromptIndices[0];
+  const ottavaEndIndex = ottavaPromptIndices.at(-1);
+
+  if (ottavaStartIndex === undefined || ottavaEndIndex === undefined) {
+    return;
+  }
+
+  for (const index of ottavaPromptIndices) {
+    const prompt = promptQueue[index];
+
+    if (!prompt?.trebleKeys) {
+      continue;
+    }
+
+    prompt.displayedTrebleKeys = prompt.trebleKeys.map((key) =>
+      shiftKeyByOctaves(key, -1),
+    );
+  }
+
+  let currentSpanStartIndex = ottavaStartIndex;
+
+  for (let indexPosition = 0; indexPosition < ottavaPromptIndices.length; indexPosition += 1) {
+    const currentIndex = ottavaPromptIndices[indexPosition];
+    const nextIndex = ottavaPromptIndices[indexPosition + 1];
+    const isSpanEnd = nextIndex === undefined || nextIndex !== currentIndex + 1;
+
+    if (!isSpanEnd) {
+      continue;
+    }
+
+    const startPrompt = promptQueue[currentSpanStartIndex];
+    const endPrompt = promptQueue[currentIndex];
+
+    if (startPrompt) {
+      startPrompt.trebleOttavaStart = true;
+    }
+
+    if (endPrompt) {
+      endPrompt.trebleOttavaEnd = true;
+    }
+
+    currentSpanStartIndex = nextIndex ?? currentSpanStartIndex;
+  }
+}
+
+function applyBassOttavaToLowTriadPrompts(promptQueue: PromptSlot[]) {
+  const bassOttavaThresholdMidiNote = 41; // F2
   const ottavaPromptIndices = promptQueue
     .map((prompt, index) =>
       (prompt.bassKeys ?? []).some(

@@ -34,6 +34,50 @@ describe("createTriadPracticeQueue", () => {
     ]);
   });
 
+  it("creates a descending one-octave treble triad exercise that starts under ottava and drops it once the triad fits", () => {
+    const queue = createTriadPracticeQueue(
+      createTriadSettings({
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue).toEqual([
+      {
+        duration: "q",
+        trebleKeys: ["c/6", "e/6", "g/6"],
+        displayedTrebleKeys: ["c/5", "e/5", "g/5"],
+        trebleOttavaStart: true,
+      },
+      {
+        duration: "q",
+        trebleKeys: ["g/5", "c/6", "e/6"],
+        displayedTrebleKeys: ["g/4", "c/5", "e/5"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["e/5", "g/5", "c/6"],
+        displayedTrebleKeys: ["e/4", "g/4", "c/5"],
+        trebleOttavaEnd: true,
+      },
+      {
+        duration: "q",
+        trebleKeys: ["c/5", "e/5", "g/5"],
+      },
+      {
+        duration: "q",
+        trebleKeys: ["e/5", "g/5", "c/6"],
+        displayedTrebleKeys: ["e/4", "g/4", "c/5"],
+        trebleOttavaStart: true,
+      },
+      {
+        duration: "q",
+        trebleKeys: ["g/5", "c/6", "e/6"],
+        displayedTrebleKeys: ["g/4", "c/5", "e/5"],
+        trebleOttavaEnd: true,
+      },
+    ]);
+  });
+
   it("creates a two-octave treble triad exercise with an ottava display span", () => {
     const queue = createTriadPracticeQueue(
       createTriadSettings({
@@ -76,6 +120,47 @@ describe("createTriadPracticeQueue", () => {
     expect(queue[3]?.bassDisplayedClef).toBe("treble");
     expect(queue[9]?.bassDisplayedClef).toBe("treble");
     expect(queue[10]?.bassDisplayedClef).toBe("bass");
+  });
+
+  it("creates a descending one-octave bass triad exercise that adds bass ottava through the low span", () => {
+    const queue = createTriadPracticeQueue(
+      createTriadSettings({
+        scaleHands: "bass",
+        scaleDirection: "descending",
+      }),
+    );
+
+    expect(queue).toEqual([
+      {
+        duration: "q",
+        bassKeys: ["c/3", "e/3", "g/3"],
+      },
+      {
+        duration: "q",
+        bassKeys: ["g/2", "c/3", "e/3"],
+      },
+      {
+        duration: "q",
+        bassKeys: ["e/2", "g/2", "c/3"],
+        displayedBassKeys: ["e/3", "g/3", "c/4"],
+        bassOttavaStart: true,
+      },
+      {
+        duration: "q",
+        bassKeys: ["c/2", "e/2", "g/2"],
+        displayedBassKeys: ["c/3", "e/3", "g/3"],
+      },
+      {
+        duration: "q",
+        bassKeys: ["e/2", "g/2", "c/3"],
+        displayedBassKeys: ["e/3", "g/3", "c/4"],
+        bassOttavaEnd: true,
+      },
+      {
+        duration: "q",
+        bassKeys: ["g/2", "c/3", "e/3"],
+      },
+    ]);
   });
 
   it("keeps together-hand triad prompts one octave apart", () => {
