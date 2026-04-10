@@ -711,7 +711,7 @@ body {
 
 .settings-field {
   display: flex;
-  gap: calc(6px * var(--overlay-scale));
+  gap: calc(0px * var(--overlay-scale));
   flex-direction: column;
   color: #5b4931;
 }
