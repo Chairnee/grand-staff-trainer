@@ -66,6 +66,9 @@ const UI_BASE_HEIGHT = 720;
 const UI_SHELL_PADDING_INLINE = 7;
 const UI_SHELL_PADDING_BLOCK = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
+const MIN_RENDER_WIDTH = 640;
+const PORTRAIT_MIN_RENDER_WIDTH = 0;
+const PORTRAIT_RENDER_WIDTH_RATIO = 0.6;
 const INPUT_NAME_POPOUT_BASE_WIDTH = 270;
 const INPUT_NAME_POPOUT_BASE_HEIGHT = 72;
 const KEYBOARD_POPOUT_BASE_WIDTH = 1080;
@@ -758,6 +761,10 @@ function getLayoutMetrics(): {
 
 function getUiScale() {
   return getLayoutMetrics().uiScale;
+}
+
+function isPortraitViewport() {
+  return window.matchMedia("(orientation: portrait)").matches;
 }
 
 function handleWindowResize() {
@@ -2572,10 +2579,16 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   container.replaceChildren();
 
   const uiScale = getUiScale();
-  const visualWidth = Math.max(640, container.clientWidth - 8);
+  const visualWidth = Math.max(MIN_RENDER_WIDTH, container.clientWidth - 8);
   const visualHeight =
     container.clientHeight > 0 ? container.clientHeight : DEFAULT_RENDER_HEIGHT;
-  const width = Math.max(640, visualWidth / uiScale);
+  const renderWidthTarget = isPortraitViewport()
+    ? visualWidth * PORTRAIT_RENDER_WIDTH_RATIO
+    : visualWidth;
+  const width = Math.max(
+    isPortraitViewport() ? PORTRAIT_MIN_RENDER_WIDTH : MIN_RENDER_WIDTH,
+    renderWidthTarget / uiScale,
+  );
   const height = Math.max(DEFAULT_RENDER_HEIGHT, visualHeight / uiScale);
 
   const renderer = new Renderer(container, Renderer.Backends.SVG);
@@ -2976,8 +2989,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   const svgElement = container.querySelector<SVGSVGElement>("svg");
 
   if (svgElement) {
-    svgElement.style.width = `${visualWidth}px`;
-    svgElement.style.height = `${visualHeight}px`;
+    svgElement.removeAttribute("width");
+    svgElement.removeAttribute("height");
     svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
   }

@@ -466,7 +466,8 @@ body {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -826,6 +827,18 @@ body {
   .notation {
     flex: 2 1 0;
     font-size: clamp(1rem, 2.2vh, 1.6rem);
+  }
+
+  .notation-canvas {
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+
+  .notation-canvas svg {
+    max-width: none;
+    width: 300%;
+    flex: 0 0 auto;
   }
 
   .keyboard-display {
