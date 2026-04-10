@@ -18,7 +18,7 @@ Extra:
 ## Input Analysis Panel
 The input analysis panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
 
-![An example of input analysis.](referenceImg/input_naming.jpg)
+![An example of input analysis.](referenceImg/input_naming.png)
 
 Every analysis consists of three lines:
 
