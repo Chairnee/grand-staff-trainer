@@ -69,6 +69,7 @@ body {
   padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   display: flex;
   gap: calc(12px * var(--ui-scale));
+  text-align: center;
   align-items: center;
   justify-content: space-between;
   border: 1px solid rgba(70, 52, 28, 0.12);
@@ -83,6 +84,7 @@ body {
 
 .toolbar-actions {
   display: flex;
+  flex: 0 0 auto;
   gap: calc(10px * var(--ui-scale));
   align-items: center;
 }
@@ -102,6 +104,9 @@ body {
 }
 
 .status-pill {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
   padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(70, 52, 28, 0.08);
@@ -144,16 +149,24 @@ body {
   align-items: center;
   font-size: 0.95em;
   color: #5b4931;
+  max-width: 100%;
+}
+
+.midi-picker > span {
+  flex-shrink: 1;
 }
 
 .midi-picker select {
+  flex-shrink: 1;
   font: inherit;
   width: calc(220px * var(--ui-scale));
+  min-width: 100px;
   padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
   border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #1f1d1b;
+  text-overflow: ellipsis;
 }
 
 .attempt-window-picker {
@@ -162,6 +175,17 @@ body {
   align-items: center;
   font-size: 0.95em;
   color: #5b4931;
+  min-width: 168px;
+}
+
+.attempt-window-picker > span:first-of-type {
+  flex-shrink: 1;
+}
+
+.attempt-window-picker > span:last-of-type,
+.attempt-window-picker input {
+  flex-shrink: 0;
+
 }
 
 .attempt-window-picker input {

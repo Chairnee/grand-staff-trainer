@@ -99,12 +99,7 @@ const SCALE_TYPES: ScaleType[] = [
   "harmonic-minor",
   "melodic-minor",
 ];
-const TRIAD_TYPES: TriadType[] = [
-  "major",
-  "minor",
-  "augmented",
-  "diminished",
-];
+const TRIAD_TYPES: TriadType[] = ["major", "minor", "augmented", "diminished"];
 
 type PromptAttempt = {
   midiNotes: number[];
