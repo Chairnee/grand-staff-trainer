@@ -9,7 +9,7 @@ Primary feature explanations:
 3. [Keyboard display panel](#keyboard-display-panel) (popout friendly)
 
 Extra references:
-1.[Complete list of exercises](#exercise-list)
+1. [Complete list of exercises](#exercise-list)
 2. [List of supported tonics](#full-tonic-list) (every practical tonic)
 
 Design philosophy:
