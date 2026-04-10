@@ -47,7 +47,7 @@ The exercise panel is the centre panel when visible. It is the main feature of G
 
 ![An example image of the exercise panel rendering F major cadences played hands together.](referenceImg/exercise_panel_1.png)
 
-There is an input overlay that describes where the player's current input resides on the grand staff. It is vertically aligned with the expected input. The input overlay follows the exercise's engraving so that it is never out of musical context. For instance, if middle C were under an ottava line describing to play up one octave, then when the player played C5 it would be overlayed at middle C on the grand staff.
+There is an input overlay that describes where the player's current input resides on the grand staff. It is aligned with the expected input. The input overlay follows the exercise's engraving so that it is never out of musical context. For instance, if middle C were under an ottava line describing to play up one octave, then when the player played C5 it would be overlayed at middle C on the grand staff.
 
 ![An example image of the input overlay.](referenceImg/exercise_panel_2.png)
 
@@ -197,7 +197,7 @@ If multiple valid readings are found, the tool tries to rank them. The most impo
 
 Voicing can also affect ranking in some cases. This is most noticeable with added-note chords such as `add2/add9` and `add4/add11`, where the primary reading depends on how the added note is spaced in the played input.
 
-Repeated chord tones are recognised and taken into account. They do not always change the primary reading, but they are still considered part of the played structure. This helps the input naming panel remain useful when the player uses fuller voicings or the sustain pedal.
+Repeated chord tones are recognised and taken into account. They do not always change the primary reading, but they are still considered part of the played structure. This helps the input naming feature remain useful when the player uses fuller voicings or the sustain pedal.
  
 ### Exercise Engraving
 **Incomplete**
