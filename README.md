@@ -13,7 +13,7 @@ Design philosophy:
 2. [Exercise panel](#exercise-engraving)
 
 Extra:
-1. [List of supported tonics](#full-tonic-list)
+1. [List of supported tonics](#full-tonic-list) (every practical tonic)
 
 ## Input Analysis Panel
 The input analysis panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
