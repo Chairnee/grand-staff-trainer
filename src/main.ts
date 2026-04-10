@@ -68,6 +68,8 @@ const UI_SHELL_PADDING_BLOCK = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
 const INPUT_NAME_POPOUT_BASE_WIDTH = 270;
 const INPUT_NAME_POPOUT_BASE_HEIGHT = 72;
+const KEYBOARD_POPOUT_BASE_WIDTH = 1080;
+const KEYBOARD_POPOUT_BASE_HEIGHT = 220;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
 const STAVE_GAP = 76;
@@ -459,10 +461,18 @@ type InputNamePopoutHandle = {
   handleBeforeUnload: () => void;
 };
 
+type KeyboardPopoutHandle = {
+  window: Window;
+  container: HTMLDivElement;
+  handleResize: () => void;
+  handleBeforeUnload: () => void;
+};
+
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 let areNotationFontsReady = !("fonts" in document);
 let inputNamePopoutHandle: InputNamePopoutHandle | null = null;
+let keyboardPopoutHandle: KeyboardPopoutHandle | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
@@ -1171,16 +1181,29 @@ function renderNotation() {
 }
 
 function renderKeyboard() {
+  const keyboardOptions = getCurrentKeyboardDisplayOptions();
+
   keyboardDisplayElement.hidden = !state.keyboardDisplay.visibleInApp;
 
   if (!state.keyboardDisplay.visibleInApp) {
     keyboardDisplayElement.replaceChildren();
-    return;
+  } else {
+    renderKeyboardDisplay(keyboardDisplayElement, {
+      ...keyboardOptions,
+      showPopoutButton: true,
+      onPopout: handleKeyboardPopoutClick,
+      popoutButtonLabel: "Pop out",
+      popoutButtonTitle: "Open the keyboard display in a separate window.",
+    });
   }
 
+  renderKeyboardPopout(keyboardOptions);
+}
+
+function getCurrentKeyboardDisplayOptions() {
   const currentPrompt = state.promptQueue[state.currentPromptIndex];
 
-  renderKeyboardDisplay(keyboardDisplayElement, {
+  return {
     activeNotes:
       state.isExerciseVisible && currentPrompt
         ? getPromptMidiNotes(currentPrompt)
@@ -1188,7 +1211,7 @@ function renderKeyboard() {
     heldNotes: getDisplayedHeldNotes(state),
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
-  });
+  };
 }
 
 function renderInputName() {
@@ -1309,7 +1332,7 @@ function handleInputNamePopoutClick() {
       min-height: 0;
     }
 
-    #input-name-popout-root .input-name-popout-button {
+    #input-name-popout-root .panel-popout-button {
       display: none;
     }
   `;
@@ -1413,11 +1436,185 @@ function cleanupInputNamePopout() {
 }
 
 function handleWindowBeforeUnload() {
-  if (!inputNamePopoutHandle || inputNamePopoutHandle.window.closed) {
+  if (inputNamePopoutHandle && !inputNamePopoutHandle.window.closed) {
+    inputNamePopoutHandle.window.close();
+  }
+
+  if (keyboardPopoutHandle && !keyboardPopoutHandle.window.closed) {
+    keyboardPopoutHandle.window.close();
+  }
+}
+
+function handleKeyboardPopoutClick() {
+  if (keyboardPopoutHandle && !keyboardPopoutHandle.window.closed) {
+    state.keyboardDisplay.popoutMode = "panel";
+    keyboardPopoutHandle.window.focus();
+    renderKeyboardPopout(getCurrentKeyboardDisplayOptions());
     return;
   }
 
-  inputNamePopoutHandle.window.close();
+  const popoutWindow = window.open(
+    "",
+    "grand-staff-trainer-keyboard",
+    "popup=yes,width=1320,height=360,resizable=yes,scrollbars=yes",
+  );
+
+  if (!popoutWindow) {
+    return;
+  }
+
+  state.keyboardDisplay.popoutMode = "panel";
+
+  popoutWindow.document.open();
+  popoutWindow.document.write(`
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>Keyboard</title>
+      </head>
+      <body class="keyboard-popout-body">
+        <div id="keyboard-popout-root"></div>
+      </body>
+    </html>
+  `);
+  popoutWindow.document.close();
+
+  for (const node of document.head.querySelectorAll(
+    'link[rel="stylesheet"], style',
+  )) {
+    popoutWindow.document.head.append(node.cloneNode(true));
+  }
+
+  const popoutStyle = popoutWindow.document.createElement("style");
+  popoutStyle.textContent = `
+    body.keyboard-popout-body {
+      --keyboard-white-key-width: calc(18px * var(--ui-scale));
+      --keyboard-white-key-height: calc(120px * var(--ui-scale));
+      --keyboard-black-key-width: calc(11px * var(--ui-scale));
+      --keyboard-black-key-height: calc(72px * var(--ui-scale));
+      margin: 0;
+      min-height: 100vh;
+      overflow: auto;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 16px;
+      background: #f7f1e4;
+      font-size: calc(1rem * var(--ui-scale));
+    }
+
+    #keyboard-popout-root {
+      flex: 1 1 auto;
+      display: flex;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    #keyboard-popout-root .keyboard-display {
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+    }
+
+    #keyboard-popout-root .panel-popout-button {
+      display: none;
+    }
+  `;
+  popoutWindow.document.head.append(popoutStyle);
+
+  const popoutContainer = popoutWindow.document.querySelector<HTMLDivElement>(
+    "#keyboard-popout-root",
+  );
+
+  if (!popoutContainer) {
+    popoutWindow.close();
+    return;
+  }
+
+  const handleResize = () => {
+    syncKeyboardPopoutScale();
+    renderKeyboardPopout(getCurrentKeyboardDisplayOptions());
+  };
+  const handleBeforeUnload = () => {
+    cleanupKeyboardPopout();
+  };
+
+  popoutWindow.addEventListener("resize", handleResize);
+  popoutWindow.addEventListener("beforeunload", handleBeforeUnload);
+
+  keyboardPopoutHandle = {
+    window: popoutWindow,
+    container: popoutContainer,
+    handleResize,
+    handleBeforeUnload,
+  };
+
+  syncKeyboardPopoutScale();
+  renderKeyboardPopout(getCurrentKeyboardDisplayOptions());
+  popoutWindow.focus();
+}
+
+function renderKeyboardPopout(options = getCurrentKeyboardDisplayOptions()) {
+  if (state.keyboardDisplay.popoutMode === "none") {
+    cleanupKeyboardPopout();
+    return;
+  }
+
+  if (!keyboardPopoutHandle || keyboardPopoutHandle.window.closed) {
+    cleanupKeyboardPopout();
+    return;
+  }
+
+  renderKeyboardDisplay(keyboardPopoutHandle.container, options);
+}
+
+function syncKeyboardPopoutScale() {
+  if (!keyboardPopoutHandle || keyboardPopoutHandle.window.closed) {
+    cleanupKeyboardPopout();
+    return;
+  }
+
+  const availableWidth = Math.max(1, keyboardPopoutHandle.window.innerWidth - 32);
+  const availableHeight = Math.max(
+    1,
+    keyboardPopoutHandle.window.innerHeight - 32,
+  );
+  const widthScale = availableWidth / KEYBOARD_POPOUT_BASE_WIDTH;
+  const heightScale = availableHeight / KEYBOARD_POPOUT_BASE_HEIGHT;
+  const uiScale = Math.max(0.8, Math.min(widthScale, heightScale));
+
+  keyboardPopoutHandle.window.document.documentElement.style.setProperty(
+    "--ui-scale",
+    uiScale.toFixed(3),
+  );
+}
+
+function cleanupKeyboardPopout() {
+  if (!keyboardPopoutHandle) {
+    if (state.keyboardDisplay.popoutMode !== "none") {
+      state.keyboardDisplay.popoutMode = "none";
+      renderApp();
+    }
+    return;
+  }
+
+  if (!keyboardPopoutHandle.window.closed) {
+    keyboardPopoutHandle.window.removeEventListener(
+      "resize",
+      keyboardPopoutHandle.handleResize,
+    );
+    keyboardPopoutHandle.window.removeEventListener(
+      "beforeunload",
+      keyboardPopoutHandle.handleBeforeUnload,
+    );
+  }
+
+  keyboardPopoutHandle = null;
+  if (state.keyboardDisplay.popoutMode !== "none") {
+    state.keyboardDisplay.popoutMode = "none";
+    renderApp();
+  }
 }
 
 function renderTonicOptions() {

@@ -366,7 +366,7 @@ body {
   display: none;
 }
 
-.input-name-popout-button {
+.panel-popout-button {
   position: absolute;
   top: calc(10px * var(--ui-scale));
   right: calc(12px * var(--ui-scale));
@@ -382,11 +382,11 @@ body {
   cursor: pointer;
 }
 
-.input-name-popout-button:hover {
+.panel-popout-button:hover {
   background: rgba(255, 239, 223, 0.98);
 }
 
-.input-name-popout-button:focus-visible {
+.panel-popout-button:focus-visible {
   outline: 2px solid rgba(166, 64, 31, 0.35);
   outline-offset: calc(2px * var(--ui-scale));
 }
@@ -518,6 +518,7 @@ body {
 }
 
 .keyboard-display {
+  position: relative;
   flex: 0 0 auto;
   padding: calc(14px * var(--ui-scale)) calc(16px * var(--ui-scale))
     calc(14px * var(--ui-scale));

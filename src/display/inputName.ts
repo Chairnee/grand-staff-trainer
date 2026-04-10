@@ -19,7 +19,7 @@ export function renderInputNameDisplay(
   if (options.showPopoutButton && options.onPopout) {
     const popoutButton = document.createElement("button");
     popoutButton.type = "button";
-    popoutButton.className = "input-name-popout-button";
+    popoutButton.className = "panel-popout-button";
     popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
     popoutButton.title =
       options.popoutButtonTitle ?? "Open the input name display in a new window.";

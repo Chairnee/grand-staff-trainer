@@ -3,6 +3,10 @@ type KeyboardDisplayOptions = {
   heldNotes?: number[];
   startMidiNote?: number;
   endMidiNote?: number;
+  showPopoutButton?: boolean;
+  onPopout?: () => void;
+  popoutButtonLabel?: string;
+  popoutButtonTitle?: string;
 };
 
 const DEFAULT_START_MIDI_NOTE = 21;
@@ -13,6 +17,18 @@ export function renderKeyboardDisplay(
   options: KeyboardDisplayOptions,
 ) {
   container.replaceChildren();
+  container.classList.toggle("has-utility", Boolean(options.showPopoutButton));
+
+  if (options.showPopoutButton && options.onPopout) {
+    const popoutButton = document.createElement("button");
+    popoutButton.type = "button";
+    popoutButton.className = "panel-popout-button";
+    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+    popoutButton.title =
+      options.popoutButtonTitle ?? "Open the keyboard display in a new window.";
+    popoutButton.addEventListener("click", options.onPopout);
+    container.append(popoutButton);
+  }
 
   const keyboardFrameElement = document.createElement("div");
   keyboardFrameElement.className = "keyboard-frame";
