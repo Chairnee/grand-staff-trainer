@@ -11,7 +11,7 @@ Design philosophy:
 2. [Exercise panel](#exercise-engraving)
 
 Extra:
-1. [List of supported tonics](#full-tonic-list))
+1. [List of supported tonics](#full-tonic-list)
 
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
