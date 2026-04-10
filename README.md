@@ -1,21 +1,21 @@
 # Grand Staff Trainer
-Grand Staff Trainer is a customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences. The settings button opens the menu that contains all configuration settings.
+Grand Staff Trainer is a highly customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences. The settings button opens the menu that contains all configuration settings.
 
 Primary feature explanations:
-1. [Input naming panel](#input-naming-panel)
+1. [Input analysis panel (popout friendly)](#input-analysis-panel)
 2. [Exercise panel](#exercise-panel) (related to [chord window](#chord-window))
-3. [Keyboard display panel](#keyboard-display-panel)
+3. [Keyboard display panel (popout friendly)](#keyboard-display-panel)
 
-Design philosophy rationale:
-1. [Input naming panel](#input-analysis)
+Design philosophy:
+1. [Input analysis panel](#input-analysis)
 2. [Exercise panel](#exercise-engraving)
 
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
-## Input Naming Panel
-The input naming panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
+## Input Analysis Panel
+The input analysis panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
 
-![An example image of named input.](referenceImg/input_naming.jpg)
+![An example of input analysis.](referenceImg/input_naming.jpg)
 
 Every analysis consists of three lines:
 
@@ -23,7 +23,11 @@ Every analysis consists of three lines:
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
-The input naming panel is capable of analysing the following structures. Please note this list is to show some shorthand examples using C and is by no means exhaustive.
+This feature can be popped out and used in isolation or with the keyboard display. ([keyboard](#keyboard-display-panel))
+
+![An example of the input analysis feature popped out with the keyboard display](referenceImg/input_naming_2.png)
+
+The input analysis panel is capable of analysing the following structures. Please note this list is to show some shorthand examples using C and is by no means exhaustive.
 
 - Individual notes (C, Db/C#)
 - Intervals (longhand names include semitone distance)
@@ -62,13 +66,14 @@ Any exercise that requires multi-note input, hands together scales or triads for
 
 The example image below is based on the following exercise settings:
 
-1. Practice mode: triads
+1. Practice mode: scales
 2. Hands: together
+3. Motion: contrary
 3. Octaves: 2
 4. Tonic: Ab
-5. Triad type: minor
+5. Triad type: melodic minor
 
-![An example of Ab minor triads for two hands in parallel motion across two octaves being rendered in G# minor for readability.](referenceImg/exercise_panel_5.png)
+![An example of the Ab melodic minor scale for two hands in contrary motion across two octaves with optional G# melodic minor notation.](referenceImg/exercise_panel_5.png)
 
 All exercises show a summary of the current settings at the bottom left to minimise travel to the settings menu.
 
@@ -159,6 +164,8 @@ This is the current exercise suite:
 ## Keyboard Display Panel
 The keyboard display panel is the bottommost panel when visible. It is a representation of the physical keyboard and its keys light up blue in response to the player's input. If the exercise panel is in use, the exercise's expected input is also highlighted in orange. This allows a new player to become familiar with how grand staff notation and common musical structures in all keys are mapped to the physical keyboard.
 
+This feature can be popped out and used in isolation or in tandem with input analysis. ([input analysis](#input-analysis-panel))
+
 ![An example of the keyboard panel showing the player's input and the expected input of the exercise.](referenceImg/keyboard_panel.png)
 
 ## Design Rationale
@@ -197,7 +204,7 @@ If multiple valid readings are found, the tool tries to rank them. The most impo
 
 Voicing can also affect ranking in some cases. This is most noticeable with added-note chords such as `add2/add9` and `add4/add11`, where the primary reading depends on how the added note is spaced in the played input.
 
-Repeated chord tones are recognised and taken into account. They do not always change the primary reading, but they are still considered part of the played structure. This helps the input naming feature remain useful when the player uses fuller voicings or the sustain pedal.
+Repeated chord tones are recognised and taken into account. They do not always change the primary reading, but they are still considered part of the played structure. This helps the input analysis feature remain useful when the player uses fuller voicings or the sustain pedal.
  
 ### Exercise Engraving
 **Incomplete**

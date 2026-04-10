@@ -220,7 +220,7 @@ app.innerHTML = `
         </label>
         <label class="settings-toggle">
           <input id="settings-input-name-toggle" type="checkbox" />
-          <span>Input naming</span>
+          <span>Input analysis</span>
         </label>
         <label class="settings-toggle">
           <input id="settings-keyboard-toggle" type="checkbox" />
@@ -236,7 +236,7 @@ app.innerHTML = `
             class="toolbar-button settings-action-button"
             type="button"
           >
-            Input
+            Input analysis
           </button>
           <button
             id="settings-keyboard-popout"
@@ -1264,7 +1264,7 @@ function renderKeyboard() {
       popoutButtonTitle: "Open the keyboard display in a separate window.",
       showSecondaryPopoutButton: true,
       onSecondaryPopout: handleCombinedPopoutClick,
-      secondaryPopoutButtonLabel: "w/ input naming",
+      secondaryPopoutButtonLabel: "w/ input analysis",
       secondaryPopoutButtonTitle:
         "Open the keyboard with input naming in a separate window.",
     });
