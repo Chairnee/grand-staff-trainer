@@ -63,12 +63,6 @@ body {
   box-shadow: 0 12px 30px rgba(70, 52, 28, 0.06);
 }
 
-@media (max-width: 720px), (max-height: 375px) {
-  .toolbar {
-    flex-wrap: wrap;
-  }
-}
-
 .toolbar > * {
   min-width: 0;
 }
@@ -575,6 +569,11 @@ body {
   width: var(--keyboard-white-key-width);
   height: var(--keyboard-white-key-height);
   background: linear-gradient(180deg, #fffef9 0%, #f4ead8 100%);
+  border-right: 0;
+}
+
+.keyboard-white-keys > .keyboard-key-white:last-child {
+  border-right: 1px solid rgba(70, 52, 28, 0.14);
 }
 
 .keyboard-key-black {
