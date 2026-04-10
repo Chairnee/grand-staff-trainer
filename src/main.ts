@@ -109,6 +109,11 @@ type PromptAttempt = {
 
 type AttemptResult = "correct" | "incorrect" | null;
 type LayoutMode = "responsive" | "compact";
+type PanelPopoutMode = "none" | "panel";
+type PanelDisplayState = {
+  visibleInApp: boolean;
+  popoutMode: PanelPopoutMode;
+};
 
 type AppState = {
   promptQueue: PromptSlot[];
@@ -121,8 +126,8 @@ type AppState = {
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
-  isInputNameVisible: boolean;
-  isKeyboardVisible: boolean;
+  inputNameDisplay: PanelDisplayState;
+  keyboardDisplay: PanelDisplayState;
   midi: MidiState;
   simulatedHeldNotes: number[];
   heldOverlayHands: Map<number, "treble" | "bass">;
@@ -488,8 +493,14 @@ const state: AppState = {
   isSettingsOpen: false,
   isDebugVisible: IS_DEV && initialStoredSettings.isDebugVisible,
   isExerciseVisible: initialStoredSettings.isExerciseVisible,
-  isInputNameVisible: initialStoredSettings.isInputNameVisible,
-  isKeyboardVisible: initialStoredSettings.isKeyboardVisible,
+  inputNameDisplay: {
+    visibleInApp: initialStoredSettings.isInputNameVisible,
+    popoutMode: "none",
+  },
+  keyboardDisplay: {
+    visibleInApp: initialStoredSettings.isKeyboardVisible,
+    popoutMode: "none",
+  },
   midi: {
     status: "idle",
     deviceId: null,
@@ -592,9 +603,11 @@ function renderApp() {
     `Held: ${displayedHeldKeys.join(", ") || "none"}`,
   ].join("\n");
   practiceAreaElement.dataset.exerciseVisible = String(state.isExerciseVisible);
-  practiceAreaElement.dataset.keyboardVisible = String(state.isKeyboardVisible);
+  practiceAreaElement.dataset.keyboardVisible = String(
+    state.keyboardDisplay.visibleInApp,
+  );
   practiceAreaElement.dataset.inputNameVisible = String(
-    state.isInputNameVisible,
+    state.inputNameDisplay.visibleInApp,
   );
   practiceAreaElement.dataset.debugVisible = String(state.isDebugVisible);
   renderMidiInputOptions();
@@ -747,8 +760,8 @@ function renderSettingsDrawer() {
   settingsBackdropElement.hidden = !state.isSettingsOpen;
   settingsBackdropElement.classList.toggle("is-open", state.isSettingsOpen);
   settingsExerciseToggleElement.checked = state.isExerciseVisible;
-  settingsInputNameToggleElement.checked = state.isInputNameVisible;
-  settingsKeyboardToggleElement.checked = state.isKeyboardVisible;
+  settingsInputNameToggleElement.checked = state.inputNameDisplay.visibleInApp;
+  settingsKeyboardToggleElement.checked = state.keyboardDisplay.visibleInApp;
   practiceModeSelectElement.value = state.generationSettings.practiceMode;
   scaleHandsSelectElement.value = state.generationSettings.scaleHands;
   scaleMotionSelectElement.value = state.generationSettings.scaleMotion;
@@ -1158,9 +1171,9 @@ function renderNotation() {
 }
 
 function renderKeyboard() {
-  keyboardDisplayElement.hidden = !state.isKeyboardVisible;
+  keyboardDisplayElement.hidden = !state.keyboardDisplay.visibleInApp;
 
-  if (!state.isKeyboardVisible) {
+  if (!state.keyboardDisplay.visibleInApp) {
     keyboardDisplayElement.replaceChildren();
     return;
   }
@@ -1181,9 +1194,9 @@ function renderKeyboard() {
 function renderInputName() {
   const analysis = getCurrentInputAnalysis();
 
-  inputNameDisplayElement.hidden = !state.isInputNameVisible;
+  inputNameDisplayElement.hidden = !state.inputNameDisplay.visibleInApp;
 
-  if (!state.isInputNameVisible) {
+  if (!state.inputNameDisplay.visibleInApp) {
     inputNameDisplayElement.replaceChildren();
   } else {
     renderInputNameDisplay(inputNameDisplayElement, analysis, {
@@ -1203,6 +1216,7 @@ function getCurrentInputAnalysis() {
 
 function handleInputNamePopoutClick() {
   if (inputNamePopoutHandle && !inputNamePopoutHandle.window.closed) {
+    state.inputNameDisplay.popoutMode = "panel";
     inputNamePopoutHandle.window.focus();
     renderInputNamePopout(getCurrentInputAnalysis());
     return;
@@ -1217,6 +1231,8 @@ function handleInputNamePopoutClick() {
   if (!popoutWindow) {
     return;
   }
+
+  state.inputNameDisplay.popoutMode = "panel";
 
   popoutWindow.document.open();
   popoutWindow.document.write(`
@@ -1332,6 +1348,11 @@ function handleInputNamePopoutClick() {
 }
 
 function renderInputNamePopout(analysis = getCurrentInputAnalysis()) {
+  if (state.inputNameDisplay.popoutMode === "none") {
+    cleanupInputNamePopout();
+    return;
+  }
+
   if (!inputNamePopoutHandle || inputNamePopoutHandle.window.closed) {
     cleanupInputNamePopout();
     return;
@@ -1366,6 +1387,10 @@ function syncInputNamePopoutScale() {
 
 function cleanupInputNamePopout() {
   if (!inputNamePopoutHandle) {
+    if (state.inputNameDisplay.popoutMode !== "none") {
+      state.inputNameDisplay.popoutMode = "none";
+      renderApp();
+    }
     return;
   }
 
@@ -1381,6 +1406,10 @@ function cleanupInputNamePopout() {
   }
 
   inputNamePopoutHandle = null;
+  if (state.inputNameDisplay.popoutMode !== "none") {
+    state.inputNameDisplay.popoutMode = "none";
+    renderApp();
+  }
 }
 
 function handleWindowBeforeUnload() {
@@ -1447,7 +1476,7 @@ function handleUtilityButtonClick() {
 }
 
 function handleKeyboardToggleChange() {
-  state.isKeyboardVisible = settingsKeyboardToggleElement.checked;
+  state.keyboardDisplay.visibleInApp = settingsKeyboardToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
@@ -1459,7 +1488,8 @@ function handleExerciseToggleChange() {
 }
 
 function handleInputNameToggleChange() {
-  state.isInputNameVisible = settingsInputNameToggleElement.checked;
+  state.inputNameDisplay.visibleInApp =
+    settingsInputNameToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
@@ -3764,7 +3794,14 @@ function loadStoredSettings(): {
 
 function saveStoredSettings() {
   try {
-    saveStoredSettingsSnapshot(state);
+    saveStoredSettingsSnapshot({
+      generationSettings: state.generationSettings,
+      attemptWindowMs: state.attemptWindowMs,
+      isDebugVisible: state.isDebugVisible,
+      isExerciseVisible: state.isExerciseVisible,
+      isInputNameVisible: state.inputNameDisplay.visibleInApp,
+      isKeyboardVisible: state.keyboardDisplay.visibleInApp,
+    });
   } catch {
     // Ignore storage issues and continue without persistence.
   }
