@@ -640,7 +640,7 @@ body {
     calc(20px * var(--overlay-scale));
   font-size: calc(1rem * var(--overlay-scale));
   display: flex;
-  gap: calc(20px * var(--overlay-scale));
+  gap: calc(12px * var(--overlay-scale));
   flex-direction: column;
   border-left: 1px solid rgba(70, 52, 28, 0.12);
   background: #fffaf1;
@@ -687,7 +687,7 @@ body {
 
 .settings-section {
   display: flex;
-  gap: calc(14px * var(--overlay-scale));
+  gap: calc(12px * var(--overlay-scale));
   flex-direction: column;
 }
 
@@ -710,7 +710,7 @@ body {
 
 .settings-toggle {
   display: flex;
-  gap: calc(10px * var(--overlay-scale));
+  gap: calc(09px * var(--overlay-scale));
   align-items: center;
   color: #5b4931;
 }
@@ -727,10 +727,14 @@ body {
   display: flex;
   gap: calc(10px * var(--overlay-scale));
   flex-direction: column;
+  text-align: center;
 }
 
 .settings-action-button {
   width: 100%;
+  padding: calc(2px * var(--overlay-scale)) calc(8px * var(--overlay-scale));
+  border-radius: calc(8px * var(--overlay-scale));
+  font-size: 0.9em;
   justify-content: center;
 }
 
@@ -851,5 +855,6 @@ body {
 
   :root:not([data-layout-mode="compact"]) .settings-actions {
     gap: 10px;
+    flex-direction: column;
   }
 }

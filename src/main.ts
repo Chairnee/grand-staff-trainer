@@ -236,7 +236,7 @@ app.innerHTML = `
             class="toolbar-button settings-action-button"
             type="button"
           >
-            Input naming
+            Input
           </button>
           <button
             id="settings-keyboard-popout"
@@ -244,6 +244,13 @@ app.innerHTML = `
             type="button"
           >
             Keyboard
+          </button>
+          <button
+            id="settings-combined-popout"
+            class="toolbar-button settings-action-button"
+            type="button"
+          >
+            Both
           </button>
         </div>
       </section>
@@ -392,6 +399,15 @@ const settingsKeyboardToggle = document.querySelector<HTMLInputElement>(
 const settingsInputNameToggle = document.querySelector<HTMLInputElement>(
   "#settings-input-name-toggle",
 );
+const settingsInputNamePopoutButton = document.querySelector<HTMLButtonElement>(
+  "#settings-input-name-popout",
+);
+const settingsKeyboardPopoutButton = document.querySelector<HTMLButtonElement>(
+  "#settings-keyboard-popout",
+);
+const settingsCombinedPopoutButton = document.querySelector<HTMLButtonElement>(
+  "#settings-combined-popout",
+);
 
 if (
   !practiceArea ||
@@ -427,7 +443,10 @@ if (
   !settingsExerciseToggle ||
   !exerciseSettingsHeading ||
   !settingsKeyboardToggle ||
-  !settingsInputNameToggle
+  !settingsInputNameToggle ||
+  !settingsInputNamePopoutButton ||
+  !settingsKeyboardPopoutButton ||
+  !settingsCombinedPopoutButton
 ) {
   throw new Error("Could not find app elements.");
 }
@@ -466,31 +485,20 @@ const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
 const settingsInputNameToggleElement = settingsInputNameToggle;
-const settingsInputNamePopoutButton = document.querySelector<HTMLButtonElement>(
-  "#settings-input-name-popout",
-);
-const settingsKeyboardPopoutButton = document.querySelector<HTMLButtonElement>(
-  "#settings-keyboard-popout",
-);
+const settingsInputNamePopoutButtonElement = settingsInputNamePopoutButton;
+const settingsKeyboardPopoutButtonElement = settingsKeyboardPopoutButton;
+const settingsCombinedPopoutButtonElement = settingsCombinedPopoutButton;
 const practiceModeField = practiceModeSelectElement.parentElement;
 const tonicField = tonicSelectElement.parentElement;
 const scaleTypeField = scaleTypeSelectElement.parentElement;
 
-if (
-  !practiceModeField ||
-  !tonicField ||
-  !scaleTypeField ||
-  !settingsInputNamePopoutButton ||
-  !settingsKeyboardPopoutButton
-) {
+if (!practiceModeField || !tonicField || !scaleTypeField) {
   throw new Error("Could not find settings field elements.");
 }
 
 const practiceModeFieldElement = practiceModeField;
 const tonicFieldElement = tonicField;
 const scaleTypeFieldElement = scaleTypeField;
-const settingsInputNamePopoutButtonElement = settingsInputNamePopoutButton;
-const settingsKeyboardPopoutButtonElement = settingsKeyboardPopoutButton;
 
 type InputNamePopoutHandle = {
   window: Window;
@@ -507,11 +515,22 @@ type KeyboardPopoutHandle = {
   handleBeforeUnload: () => void;
 };
 
+type CombinedPopoutHandle = {
+  window: Window;
+  inputContainer: HTMLDivElement;
+  keyboardContainer: HTMLDivElement;
+  fitButton: HTMLButtonElement;
+  fitTrack: HTMLDivElement;
+  handleResize: () => void;
+  handleBeforeUnload: () => void;
+};
+
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 let areNotationFontsReady = !("fonts" in document);
 let inputNamePopoutHandle: InputNamePopoutHandle | null = null;
 let keyboardPopoutHandle: KeyboardPopoutHandle | null = null;
+let combinedPopoutHandle: CombinedPopoutHandle | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
@@ -596,6 +615,10 @@ settingsInputNamePopoutButtonElement.addEventListener(
 settingsKeyboardPopoutButtonElement.addEventListener(
   "click",
   handleKeyboardPopoutClick,
+);
+settingsCombinedPopoutButtonElement.addEventListener(
+  "click",
+  handleCombinedPopoutClick,
 );
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
@@ -1245,6 +1268,7 @@ function renderKeyboard() {
   }
 
   renderKeyboardPopout(keyboardOptions);
+  renderCombinedPopout(getCurrentInputAnalysis(), keyboardOptions);
 }
 
 function getCurrentKeyboardDisplayOptions() {
@@ -1490,6 +1514,227 @@ function handleWindowBeforeUnload() {
   if (keyboardPopoutHandle && !keyboardPopoutHandle.window.closed) {
     keyboardPopoutHandle.window.close();
   }
+
+  if (combinedPopoutHandle && !combinedPopoutHandle.window.closed) {
+    combinedPopoutHandle.window.close();
+  }
+}
+
+function handleCombinedPopoutClick() {
+  if (combinedPopoutHandle && !combinedPopoutHandle.window.closed) {
+    combinedPopoutHandle.window.focus();
+    renderCombinedPopout(
+      getCurrentInputAnalysis(),
+      getCurrentKeyboardDisplayOptions(),
+    );
+    return;
+  }
+
+  const popoutWindow = window.open(
+    "",
+    "grand-staff-trainer-combined",
+    "popup=yes,width=3500,height=1500,resizable=yes,scrollbars=yes",
+  );
+
+  if (!popoutWindow) {
+    return;
+  }
+
+  popoutWindow.document.open();
+  popoutWindow.document.write(`
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>Input Naming + Keyboard</title>
+      </head>
+      <body class="combined-popout-body">
+        <div id="combined-popout-root">
+          <section id="combined-popout-input-section">
+            <div id="combined-popout-input-content"></div>
+            <div id="combined-popout-fit-row">
+              <div id="combined-popout-fit-track">
+                <button
+                  id="combined-popout-fit-button"
+                  class="toolbar-button combined-popout-fit-button"
+                  type="button"
+                >
+                  Fit window
+                </button>
+              </div>
+            </div>
+          </section>
+          <div id="combined-popout-keyboard-content"></div>
+        </div>
+      </body>
+    </html>
+  `);
+  popoutWindow.document.close();
+
+  for (const node of document.head.querySelectorAll(
+    'link[rel="stylesheet"], style',
+  )) {
+    popoutWindow.document.head.append(node.cloneNode(true));
+  }
+
+  const popoutStyle = popoutWindow.document.createElement("style");
+  popoutStyle.textContent = `
+    body.combined-popout-body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #f7f1e4;
+    }
+
+    #combined-popout-root {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    #combined-popout-input-section {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+      background: #f7f1e4;
+    }
+
+    #combined-popout-input-content {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-size: calc(1rem * var(--ui-scale));
+    }
+
+    #combined-popout-input-content .input-name-display {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+    }
+
+    #combined-popout-input-content .input-name-content-wrap,
+    #combined-popout-input-content .input-name-status-wrap {
+      align-items: center;
+      text-align: center;
+    }
+
+    #combined-popout-input-content .input-name-reading-row {
+      justify-content: center;
+    }
+
+    #combined-popout-input-content .input-name-note-list,
+    #combined-popout-input-content .input-name-longhand,
+    #combined-popout-input-content .input-name-status {
+      text-align: center;
+    }
+
+    #combined-popout-input-content .input-name-longhand {
+      max-width: min(100%, calc(760px * var(--ui-scale)));
+    }
+
+    #combined-popout-input-content .panel-popout-button {
+      display: none;
+    }
+
+    #combined-popout-fit-row {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    #combined-popout-fit-track {
+      width: fit-content;
+      max-width: 100%;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .combined-popout-fit-button {
+      margin: 0 0 0 0;
+      z-index: 1;
+    }
+
+    #combined-popout-keyboard-content {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+      background: #f7f1e4;
+    }
+
+    #combined-popout-keyboard-content .panel-popout-button {
+      display: none;
+    }
+  `;
+  popoutWindow.document.head.append(popoutStyle);
+
+  const inputContainer = popoutWindow.document.querySelector<HTMLDivElement>(
+    "#combined-popout-input-content",
+  );
+  const keyboardContainer = popoutWindow.document.querySelector<HTMLDivElement>(
+    "#combined-popout-keyboard-content",
+  );
+  const fitButton = popoutWindow.document.querySelector<HTMLButtonElement>(
+    "#combined-popout-fit-button",
+  );
+  const fitTrack = popoutWindow.document.querySelector<HTMLDivElement>(
+    "#combined-popout-fit-track",
+  );
+
+  if (!inputContainer || !keyboardContainer || !fitButton || !fitTrack) {
+    popoutWindow.close();
+    return;
+  }
+
+  const handleResize = () => {
+    syncCombinedPopoutScale();
+    renderCombinedPopout(
+      getCurrentInputAnalysis(),
+      getCurrentKeyboardDisplayOptions(),
+    );
+  };
+  const handleBeforeUnload = () => {
+    cleanupCombinedPopout();
+  };
+
+  popoutWindow.addEventListener("resize", handleResize);
+  popoutWindow.addEventListener("beforeunload", handleBeforeUnload);
+  fitButton.addEventListener("click", () => {
+    fitCombinedPopoutWindow(2);
+  });
+
+  combinedPopoutHandle = {
+    window: popoutWindow,
+    inputContainer,
+    keyboardContainer,
+    fitButton,
+    fitTrack,
+    handleResize,
+    handleBeforeUnload,
+  };
+
+  syncCombinedPopoutScale();
+  renderCombinedPopout(
+    getCurrentInputAnalysis(),
+    getCurrentKeyboardDisplayOptions(),
+  );
+  fitCombinedPopoutWindow(2);
+  popoutWindow.focus();
 }
 
 function handleKeyboardPopoutClick() {
@@ -1725,6 +1970,178 @@ function syncKeyboardPopoutScale() {
     "--ui-scale",
     uiScale.toFixed(3),
   );
+}
+
+function renderCombinedPopout(
+  analysis = getCurrentInputAnalysis(),
+  keyboardOptions = getCurrentKeyboardDisplayOptions(),
+) {
+  if (!combinedPopoutHandle) {
+    return;
+  }
+
+  if (combinedPopoutHandle.window.closed) {
+    cleanupCombinedPopout();
+    return;
+  }
+
+  renderInputNameDisplay(combinedPopoutHandle.inputContainer, analysis);
+  renderKeyboardDisplay(combinedPopoutHandle.keyboardContainer, {
+    ...keyboardOptions,
+    fitMode: "width",
+  });
+  syncCombinedPopoutFitTrack();
+}
+
+function syncCombinedPopoutScale() {
+  if (!combinedPopoutHandle) {
+    return;
+  }
+
+  if (combinedPopoutHandle.window.closed) {
+    cleanupCombinedPopout();
+    return;
+  }
+
+  const inputAvailableWidth = Math.max(
+    1,
+    combinedPopoutHandle.inputContainer.clientWidth,
+  );
+  const inputAvailableHeight = Math.max(
+    1,
+    combinedPopoutHandle.inputContainer.clientHeight,
+  );
+  const inputWidthScale = inputAvailableWidth / INPUT_NAME_POPOUT_BASE_WIDTH;
+  const inputHeightScale = inputAvailableHeight / INPUT_NAME_POPOUT_BASE_HEIGHT;
+  const inputScale = Math.max(0.8, Math.min(inputWidthScale, inputHeightScale));
+
+  const keyboardAvailableWidth = Math.max(
+    1,
+    combinedPopoutHandle.keyboardContainer.clientWidth,
+  );
+  const keyboardScale = Math.max(
+    0.8,
+    keyboardAvailableWidth / KEYBOARD_POPOUT_BASE_WIDTH,
+  );
+
+  combinedPopoutHandle.inputContainer.style.setProperty(
+    "--ui-scale",
+    inputScale.toFixed(3),
+  );
+  combinedPopoutHandle.inputContainer.style.fontSize = `${inputScale.toFixed(3)}rem`;
+  combinedPopoutHandle.keyboardContainer.style.setProperty(
+    "--ui-scale",
+    keyboardScale.toFixed(3),
+  );
+  combinedPopoutHandle.keyboardContainer.style.setProperty(
+    "--keyboard-white-key-width",
+    `calc(18px * ${keyboardScale.toFixed(3)})`,
+  );
+  combinedPopoutHandle.keyboardContainer.style.setProperty(
+    "--keyboard-white-key-height",
+    `calc(120px * ${keyboardScale.toFixed(3)})`,
+  );
+  combinedPopoutHandle.keyboardContainer.style.setProperty(
+    "--keyboard-black-key-width",
+    `calc(11px * ${keyboardScale.toFixed(3)})`,
+  );
+  combinedPopoutHandle.keyboardContainer.style.setProperty(
+    "--keyboard-black-key-height",
+    `calc(72px * ${keyboardScale.toFixed(3)})`,
+  );
+}
+
+function syncCombinedPopoutFitTrack() {
+  if (!combinedPopoutHandle) {
+    return;
+  }
+
+  if (combinedPopoutHandle.window.closed) {
+    cleanupCombinedPopout();
+    return;
+  }
+
+  const renderedKeyboardFrame =
+    combinedPopoutHandle.keyboardContainer.querySelector<HTMLDivElement>(
+      ".keyboard-frame",
+    );
+
+  if (!renderedKeyboardFrame) {
+    combinedPopoutHandle.fitTrack.style.width = "";
+    return;
+  }
+
+  combinedPopoutHandle.fitTrack.style.width = `${renderedKeyboardFrame.offsetWidth}px`;
+}
+
+function fitCombinedPopoutWindow(settlePasses = 0) {
+  if (!combinedPopoutHandle || combinedPopoutHandle.window.closed) {
+    cleanupCombinedPopout();
+    return;
+  }
+
+  const renderedInputDisplay =
+    combinedPopoutHandle.inputContainer.querySelector<HTMLDivElement>(
+      ".input-name-display",
+    );
+  const renderedKeyboardFrame =
+    combinedPopoutHandle.keyboardContainer.querySelector<HTMLDivElement>(
+      ".keyboard-frame",
+    );
+
+  if (!renderedInputDisplay || !renderedKeyboardFrame) {
+    return;
+  }
+
+  const popoutWindow = combinedPopoutHandle.window;
+  const idealInnerHeight =
+    renderedInputDisplay.offsetHeight +
+    combinedPopoutHandle.fitButton.offsetHeight +
+    renderedKeyboardFrame.offsetHeight;
+  const chromeHeight = Math.max(
+    0,
+    popoutWindow.outerHeight - popoutWindow.innerHeight,
+  );
+
+  try {
+    popoutWindow.resizeTo(
+      popoutWindow.outerWidth,
+      Math.max(idealInnerHeight + chromeHeight, 240),
+    );
+  } catch {
+    return;
+  }
+
+  if (settlePasses <= 0) {
+    return;
+  }
+
+  popoutWindow.setTimeout(() => {
+    if (!combinedPopoutHandle || combinedPopoutHandle.window !== popoutWindow) {
+      return;
+    }
+
+    fitCombinedPopoutWindow(settlePasses - 1);
+  }, 120);
+}
+
+function cleanupCombinedPopout() {
+  if (!combinedPopoutHandle) {
+    return;
+  }
+
+  if (!combinedPopoutHandle.window.closed) {
+    combinedPopoutHandle.window.removeEventListener(
+      "resize",
+      combinedPopoutHandle.handleResize,
+    );
+    combinedPopoutHandle.window.removeEventListener(
+      "beforeunload",
+      combinedPopoutHandle.handleBeforeUnload,
+    );
+  }
+
+  combinedPopoutHandle = null;
 }
 
 function cleanupKeyboardPopout() {
