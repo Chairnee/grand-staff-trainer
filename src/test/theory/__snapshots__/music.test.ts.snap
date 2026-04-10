@@ -1,0 +1,846 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`rendering decision manifest > matches the current exercise rendering decision matrix 1`] = `
+[
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | B | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | B | natural-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | B | harmonic-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | B | melodic-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | B | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | B | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | B | minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | B | minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | B | diminished",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | B | diminished",
+  },
+  {
+    "active": "Cb",
+    "alternate": "B",
+    "settings": "triads | B | augmented",
+  },
+  {
+    "active": "Cb",
+    "alternate": "B",
+    "settings": "arpeggios | B | augmented",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "cadences | B | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "cadences | B | minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | F# | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | F# | natural-minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | F# | harmonic-minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | F# | melodic-minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "triads | F# | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "arpeggios | F# | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "triads | F# | minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "arpeggios | F# | minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "triads | F# | diminished",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "arpeggios | F# | diminished",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "triads | F# | augmented",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "arpeggios | F# | augmented",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "cadences | F# | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "cadences | F# | minor",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "scales | C# | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | C# | natural-minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | C# | harmonic-minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | C# | melodic-minor",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "triads | C# | major",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "arpeggios | C# | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "triads | C# | minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "arpeggios | C# | minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "triads | C# | diminished",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "arpeggios | C# | diminished",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "triads | C# | augmented",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "arpeggios | C# | augmented",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "cadences | C# | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "cadences | C# | minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | G# | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "scales | G# | natural-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | G# | harmonic-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | G# | melodic-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "triads | G# | major",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "arpeggios | G# | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "triads | G# | minor",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "arpeggios | G# | minor",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "triads | G# | diminished",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "arpeggios | G# | diminished",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "triads | G# | augmented",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "arpeggios | G# | augmented",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "cadences | G# | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "cadences | G# | minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | D# | major",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "scales | D# | natural-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | D# | harmonic-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | D# | melodic-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "triads | D# | major",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "arpeggios | D# | major",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "triads | D# | minor",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "arpeggios | D# | minor",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "triads | D# | diminished",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "arpeggios | D# | diminished",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "triads | D# | augmented",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "arpeggios | D# | augmented",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "cadences | D# | major",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "cadences | D# | minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | A# | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | A# | natural-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | A# | harmonic-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | A# | melodic-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | A# | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | A# | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | A# | minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | A# | minor",
+  },
+  {
+    "active": "A#",
+    "alternate": "Bb",
+    "settings": "triads | A# | diminished",
+  },
+  {
+    "active": "A#",
+    "alternate": "Bb",
+    "settings": "arpeggios | A# | diminished",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | A# | augmented",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | A# | augmented",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "cadences | A# | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "cadences | A# | minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | Bb | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | Bb | natural-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | Bb | harmonic-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "scales | Bb | melodic-minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | Bb | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | Bb | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | Bb | minor",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | Bb | minor",
+  },
+  {
+    "active": "A#",
+    "alternate": "Bb",
+    "settings": "triads | Bb | diminished",
+  },
+  {
+    "active": "A#",
+    "alternate": "Bb",
+    "settings": "arpeggios | Bb | diminished",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "triads | Bb | augmented",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "arpeggios | Bb | augmented",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "cadences | Bb | major",
+  },
+  {
+    "active": "Bb",
+    "alternate": "A#",
+    "settings": "cadences | Bb | minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | Eb | major",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | Eb | natural-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | Eb | harmonic-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "scales | Eb | melodic-minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "triads | Eb | major",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "arpeggios | Eb | major",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "triads | Eb | minor",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "arpeggios | Eb | minor",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "triads | Eb | diminished",
+  },
+  {
+    "active": "D#",
+    "alternate": "Eb",
+    "settings": "arpeggios | Eb | diminished",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "triads | Eb | augmented",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "arpeggios | Eb | augmented",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "cadences | Eb | major",
+  },
+  {
+    "active": "Eb",
+    "alternate": "D#",
+    "settings": "cadences | Eb | minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | Ab | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "scales | Ab | natural-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | Ab | harmonic-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "scales | Ab | melodic-minor",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "triads | Ab | major",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "arpeggios | Ab | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "triads | Ab | minor",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "arpeggios | Ab | minor",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "triads | Ab | diminished",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "arpeggios | Ab | diminished",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "triads | Ab | augmented",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "arpeggios | Ab | augmented",
+  },
+  {
+    "active": "Ab",
+    "alternate": "G#",
+    "settings": "cadences | Ab | major",
+  },
+  {
+    "active": "G#",
+    "alternate": "Ab",
+    "settings": "cadences | Ab | minor",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "scales | Db | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | Db | natural-minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | Db | harmonic-minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "scales | Db | melodic-minor",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "triads | Db | major",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "arpeggios | Db | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "triads | Db | minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "arpeggios | Db | minor",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "triads | Db | diminished",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "arpeggios | Db | diminished",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "triads | Db | augmented",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "arpeggios | Db | augmented",
+  },
+  {
+    "active": "Db",
+    "alternate": "C#",
+    "settings": "cadences | Db | major",
+  },
+  {
+    "active": "C#",
+    "alternate": "Db",
+    "settings": "cadences | Db | minor",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "scales | Gb | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | Gb | natural-minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | Gb | harmonic-minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "scales | Gb | melodic-minor",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "triads | Gb | major",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "arpeggios | Gb | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "triads | Gb | minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "arpeggios | Gb | minor",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "triads | Gb | diminished",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "arpeggios | Gb | diminished",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "triads | Gb | augmented",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "arpeggios | Gb | augmented",
+  },
+  {
+    "active": "Gb",
+    "alternate": "F#",
+    "settings": "cadences | Gb | major",
+  },
+  {
+    "active": "F#",
+    "alternate": "Gb",
+    "settings": "cadences | Gb | minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | Cb | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | Cb | natural-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | Cb | harmonic-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "scales | Cb | melodic-minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | Cb | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | Cb | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | Cb | minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | Cb | minor",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "triads | Cb | diminished",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "arpeggios | Cb | diminished",
+  },
+  {
+    "active": "Cb",
+    "alternate": "B",
+    "settings": "triads | Cb | augmented",
+  },
+  {
+    "active": "Cb",
+    "alternate": "B",
+    "settings": "arpeggios | Cb | augmented",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "cadences | Cb | major",
+  },
+  {
+    "active": "B",
+    "alternate": "Cb",
+    "settings": "cadences | Cb | minor",
+  },
+]
+`;

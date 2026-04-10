@@ -397,7 +397,8 @@ function getDescendingTrebleTriadStartingOctave(
   const trebleOttavaOffset = 12;
   const candidateTopRootMidiNote = keyToMidiNoteNumber(`${rootNoteName}/6`);
   const topRootOctave =
-    candidateTopRootMidiNote - trebleOttavaOffset <= highestDisplayedStartMidiNote
+    candidateTopRootMidiNote - trebleOttavaOffset <=
+    highestDisplayedStartMidiNote
       ? 6
       : 5;
 
@@ -482,7 +483,9 @@ function findNextTriadKeyAtOrAbove(
   return key;
 }
 
-function applyTrebleOttavaToHighSingleHandTriadPrompts(promptQueue: PromptSlot[]) {
+function applyTrebleOttavaToHighSingleHandTriadPrompts(
+  promptQueue: PromptSlot[],
+) {
   const trebleOttavaThresholdMidiNote = 82; // A#5
   const ottavaPromptIndices = promptQueue
     .map((prompt, index) =>
@@ -519,7 +522,11 @@ function applyTrebleOttavaToHighSingleHandTriadPrompts(promptQueue: PromptSlot[]
 
   let currentSpanStartIndex = ottavaStartIndex;
 
-  for (let indexPosition = 0; indexPosition < ottavaPromptIndices.length; indexPosition += 1) {
+  for (
+    let indexPosition = 0;
+    indexPosition < ottavaPromptIndices.length;
+    indexPosition += 1
+  ) {
     const currentIndex = ottavaPromptIndices[indexPosition];
     const nextIndex = ottavaPromptIndices[indexPosition + 1];
     const isSpanEnd = nextIndex === undefined || nextIndex !== currentIndex + 1;

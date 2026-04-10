@@ -169,8 +169,7 @@ body {
   width: min(calc(360px * var(--overlay-scale)), calc(100vw - 40px));
   max-height: min(calc(420px * var(--overlay-scale)), 42vh);
   overflow: auto;
-  padding: calc(12px * var(--overlay-scale))
-    calc(14px * var(--overlay-scale));
+  padding: calc(12px * var(--overlay-scale)) calc(14px * var(--overlay-scale));
   white-space: pre-wrap;
   border: 1px solid rgba(70, 52, 28, 0.12);
   border-radius: calc(12px * var(--overlay-scale));
@@ -189,8 +188,7 @@ body {
 }
 
 .midi-debug-button {
-  padding: calc(6px * var(--overlay-scale))
-    calc(10px * var(--overlay-scale));
+  padding: calc(6px * var(--overlay-scale)) calc(10px * var(--overlay-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
   border-radius: calc(10px * var(--overlay-scale));
   background: #fffdf7;
@@ -616,8 +614,7 @@ body {
   right: 0;
   width: min(calc(360px * var(--overlay-scale)), 100vw);
   height: 100vh;
-  padding: calc(22px * var(--overlay-scale))
-    calc(20px * var(--overlay-scale));
+  padding: calc(22px * var(--overlay-scale)) calc(20px * var(--overlay-scale));
   font-size: calc(1rem * var(--overlay-scale));
   display: flex;
   gap: calc(12px * var(--overlay-scale));
@@ -679,8 +676,7 @@ body {
 }
 
 .settings-field select {
-  padding: calc(8px * var(--overlay-scale))
-    calc(10px * var(--overlay-scale));
+  padding: calc(8px * var(--overlay-scale)) calc(10px * var(--overlay-scale));
   border: 1px solid rgba(70, 52, 28, 0.18);
   border-radius: calc(10px * var(--overlay-scale));
   background: #fffdf7;
@@ -741,7 +737,7 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
   }
-  
+
   .stage-shell {
     position: static;
     inset: auto;
@@ -749,7 +745,7 @@ body {
     min-height: 100vh;
     padding: calc(2px * var(--shell-scale)) calc(4px * var(--shell-scale));
   }
-  
+
   .layout {
     height: 100%;
     gap: calc(3px * var(--ui-scale));
@@ -801,7 +797,7 @@ body {
   }
 
   .status-pill {
-    width: 100%;    
+    width: 100%;
     justify-self: center;
     text-align: center;
     white-space: nowrap;
@@ -876,5 +872,4 @@ body {
   .keyboard-display .panel-popout-buttons {
     font-size: clamp(1rem, 2.2vh, 1.6rem);
   }
-
 }

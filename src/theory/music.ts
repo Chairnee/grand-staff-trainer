@@ -98,6 +98,10 @@ export type TonicReadabilityOption = {
   cost: number;
 };
 
+type InternalTonicReadabilityOption = TonicReadabilityOption & {
+  visibleAccidentalCount: number;
+};
+
 export type ExerciseRenderingOptions = {
   selectedTonic: Tonic;
   active: TonicReadabilityOption;
@@ -704,8 +708,8 @@ export function getTonicReadabilityOptionsForScaleType(
 ): TonicReadabilityOption[] {
   const candidateTonics = getCandidateTonicsForPitchClass(tonic);
 
-  return candidateTonics
-    .map((candidateTonic) => {
+  return finalizeTonicReadabilityOptions(
+    candidateTonics.map((candidateTonic) => {
       const keySignature = getKeySignatureForScaleType(
         candidateTonic,
         scaleType,
@@ -714,7 +718,9 @@ export function getTonicReadabilityOptionsForScaleType(
         candidateTonic.toLowerCase(),
         scaleType,
       );
-      const keySignatureAccidentalCount = getReadabilityAccidentalCount(
+      const keySignatureAccidentalCount =
+        getKeySignatureAccidentalCount(keySignature);
+      const visibleAccidentalCount = getVisibleAccidentalCount(
         keySignature,
         scaleNoteNames,
       );
@@ -724,25 +730,13 @@ export function getTonicReadabilityOptionsForScaleType(
         tonic: candidateTonic,
         keySignature,
         keySignatureAccidentalCount,
+        visibleAccidentalCount,
         doubleAccidentalCount,
-        cost: keySignatureAccidentalCount + doubleAccidentalCount * 10,
+        cost: 0,
       };
-    })
-    .sort((left, right) => {
-      if (left.cost !== right.cost) {
-        return left.cost - right.cost;
-      }
-
-      if (left.tonic === tonic) {
-        return -1;
-      }
-
-      if (right.tonic === tonic) {
-        return 1;
-      }
-
-      return left.tonic.localeCompare(right.tonic);
-    });
+    }),
+    tonic,
+  );
 }
 
 export function getTonicReadabilityOptionsForTriadType(
@@ -751,8 +745,8 @@ export function getTonicReadabilityOptionsForTriadType(
 ): TonicReadabilityOption[] {
   const candidateTonics = getCandidateTonicsForPitchClass(tonic);
 
-  return candidateTonics
-    .map((candidateTonic) => {
+  return finalizeTonicReadabilityOptions(
+    candidateTonics.map((candidateTonic) => {
       const keySignature = getKeySignatureForTriadType(
         candidateTonic,
         triadType,
@@ -761,7 +755,9 @@ export function getTonicReadabilityOptionsForTriadType(
         candidateTonic.toLowerCase(),
         triadType,
       );
-      const keySignatureAccidentalCount = getReadabilityAccidentalCount(
+      const keySignatureAccidentalCount =
+        getKeySignatureAccidentalCount(keySignature);
+      const visibleAccidentalCount = getVisibleAccidentalCount(
         keySignature,
         triadNoteNames,
       );
@@ -771,20 +767,43 @@ export function getTonicReadabilityOptionsForTriadType(
         tonic: candidateTonic,
         keySignature,
         keySignatureAccidentalCount,
+        visibleAccidentalCount,
         doubleAccidentalCount,
-        cost: keySignatureAccidentalCount + doubleAccidentalCount * 10,
+        cost: 0,
       };
-    })
+    }),
+    tonic,
+  );
+}
+
+function finalizeTonicReadabilityOptions(
+  options: InternalTonicReadabilityOption[],
+  selectedTonic: Tonic,
+): TonicReadabilityOption[] {
+  const hasUnkeyedCandidate = options.some((option) => !option.keySignature);
+
+  return options
+    .map((option) => ({
+      tonic: option.tonic,
+      keySignature: option.keySignature,
+      keySignatureAccidentalCount: option.keySignatureAccidentalCount,
+      doubleAccidentalCount: option.doubleAccidentalCount,
+      cost:
+        (hasUnkeyedCandidate
+          ? option.visibleAccidentalCount
+          : option.keySignatureAccidentalCount) +
+        option.doubleAccidentalCount * 10,
+    }))
     .sort((left, right) => {
       if (left.cost !== right.cost) {
         return left.cost - right.cost;
       }
 
-      if (left.tonic === tonic) {
+      if (left.tonic === selectedTonic) {
         return -1;
       }
 
-      if (right.tonic === tonic) {
+      if (right.tonic === selectedTonic) {
         return 1;
       }
 
@@ -1126,12 +1145,14 @@ function getKeySignatureAccidentalCount(keySignature: KeySignature | null) {
   return Object.keys(getKeySignatureAccidentals(keySignature)).length;
 }
 
-function getReadabilityAccidentalCount(
+function getVisibleAccidentalCount(
   keySignature: KeySignature | null,
   noteNames: string[],
 ) {
   if (keySignature) {
-    return getKeySignatureAccidentalCount(keySignature);
+    return noteNames.filter((noteName) =>
+      Boolean(getRenderedAccidentalForKey(`${noteName}/4`, keySignature)),
+    ).length;
   }
 
   return countExplicitAccidentals(noteNames);

@@ -29,12 +29,7 @@ const SCALE_TYPES: ScaleType[] = [
   "harmonic-minor",
   "melodic-minor",
 ];
-const TRIAD_TYPES: TriadType[] = [
-  "major",
-  "minor",
-  "diminished",
-  "augmented",
-];
+const TRIAD_TYPES: TriadType[] = ["major", "minor", "diminished", "augmented"];
 const CADENCE_TRIAD_TYPES: TriadType[] = ["major", "minor"];
 const SCALE_HANDS: ScaleHands[] = ["treble", "bass", "together"];
 const SCALE_DIRECTIONS: ScaleDirection[] = ["ascending", "descending"];
@@ -109,7 +104,8 @@ function getAllowedScaleExerciseNoteNamesForRenderedTonic(
 function getAllowedScaleExerciseNoteNamesForSettings(
   generationSettings: GenerationSettings,
 ) {
-  const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic.toLowerCase();
+  const renderedTonic =
+    getScaleRenderingOptions(generationSettings).active.tonic.toLowerCase();
 
   return getAllowedScaleExerciseNoteNamesForRenderedTonic(
     renderedTonic,
@@ -135,9 +131,8 @@ function getAllowedNoteNamesForSettings(
     );
   }
 
-  const renderedTonic = getCadenceRenderingOptions(
-    generationSettings,
-  ).active.tonic.toLowerCase();
+  const renderedTonic =
+    getCadenceRenderingOptions(generationSettings).active.tonic.toLowerCase();
 
   return generationSettings.triadType === "major"
     ? getScaleNoteNamesForRenderedTonicName(renderedTonic, "major")

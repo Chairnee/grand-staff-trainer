@@ -4,18 +4,33 @@ import {
   type GenerationSettings,
   getAllTonics,
   getAscendingScaleKeys,
+  getCadenceRenderingOptions,
   getCadenceStartingOctave,
   getDerivedKeySignature,
   getDescendingScaleStartingOctave,
   getHeldOverlayKey,
   getRenderedAccidentalForKey,
   getScaleNoteNames,
+  getScaleRenderingOptions,
   getScaleRenderingNotice,
   getScaleStartingOctave,
   getTonicReadabilityOptionsForScaleType,
+  getTonicReadabilityOptionsForTriadType,
   getTriadNoteNames,
+  getTriadRenderingOptions,
+  type ScaleType,
+  type TriadType,
   keyToMidiNoteNumber,
 } from "../../theory/music";
+
+const SCALE_TYPES: ScaleType[] = [
+  "major",
+  "natural-minor",
+  "harmonic-minor",
+  "melodic-minor",
+];
+const TRIAD_TYPES: TriadType[] = ["major", "minor", "diminished", "augmented"];
+const CADENCE_TRIAD_TYPES: TriadType[] = ["major", "minor"];
 
 function createGenerationSettings(
   overrides: Partial<GenerationSettings> = {},
@@ -182,6 +197,107 @@ describe("getTriadNoteNames", () => {
     expect(getTriadNoteNames("Ab", "minor")).toEqual(["g#", "b", "d#"]);
   });
 });
+
+function forEachRenderingManifestCase(
+  callback: (generationSettings: GenerationSettings) => void,
+) {
+  const tonics = getAllTonics();
+
+  for (const tonic of tonics) {
+    for (const scaleType of SCALE_TYPES) {
+      callback(
+        createGenerationSettings({
+          practiceMode: "scales",
+          tonic,
+          scaleType,
+          scaleHands: "treble",
+          scaleOctaves: 1,
+          scaleDirection: "ascending",
+          renderingPreference: "preferred",
+        }),
+      );
+    }
+
+    for (const triadType of TRIAD_TYPES) {
+      for (const practiceMode of ["triads", "arpeggios"] as const) {
+        callback(
+          createGenerationSettings({
+            practiceMode,
+            tonic,
+            triadType,
+            scaleHands: "treble",
+            scaleOctaves: 1,
+            scaleDirection: "ascending",
+            renderingPreference: "preferred",
+          }),
+        );
+      }
+    }
+
+    for (const triadType of CADENCE_TRIAD_TYPES) {
+      callback(
+        createGenerationSettings({
+          practiceMode: "cadences",
+          tonic,
+          triadType,
+          scaleHands: "treble",
+          scaleOctaves: 1,
+          scaleDirection: "ascending",
+          renderingPreference: "preferred",
+        }),
+      );
+    }
+  }
+}
+
+function formatSettingsLabel(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    return [
+      generationSettings.practiceMode,
+      generationSettings.tonic,
+      generationSettings.scaleType,
+    ].join(" | ");
+  }
+
+  return [
+    generationSettings.practiceMode,
+    generationSettings.tonic,
+    generationSettings.triadType,
+  ].join(" | ");
+}
+
+function getRenderingDecisionRecord(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    const options = getScaleRenderingOptions(generationSettings);
+
+    return {
+      settings: formatSettingsLabel(generationSettings),
+      active: options.active.tonic,
+      alternate: options.alternate?.tonic ?? null,
+    };
+  }
+
+  if (
+    generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "arpeggios"
+  ) {
+    const options = getTriadRenderingOptions(generationSettings);
+
+    return {
+      settings: formatSettingsLabel(generationSettings),
+      active: options.active.tonic,
+      alternate: options.alternate?.tonic ?? null,
+    };
+  }
+
+  const options = getCadenceRenderingOptions(generationSettings);
+
+  return {
+    settings: formatSettingsLabel(generationSettings),
+    active: options.active.tonic,
+    alternate: options.alternate?.tonic ?? null,
+  };
+}
 
 describe("getRenderedAccidentalForKey", () => {
   it("suppresses accidentals implied by the key signature", () => {
@@ -403,7 +519,7 @@ describe("getTonicReadabilityOptionsForScaleType", () => {
         }),
       ),
     ).toEqual([
-      { tonic: "F#", keySignature: "A", cost: 3 },
+      { tonic: "F#", keySignature: "A", cost: 0 },
       { tonic: "Gb", keySignature: null, cost: 27 },
     ]);
 
@@ -416,7 +532,7 @@ describe("getTonicReadabilityOptionsForScaleType", () => {
         }),
       ),
     ).toEqual([
-      { tonic: "C#", keySignature: "E", cost: 4 },
+      { tonic: "C#", keySignature: "E", cost: 0 },
       { tonic: "Db", keySignature: null, cost: 17 },
     ]);
   });
@@ -431,8 +547,56 @@ describe("getTonicReadabilityOptionsForScaleType", () => {
         }),
       ),
     ).toEqual([
-      { tonic: "C#", keySignature: "E", cost: 4 },
+      { tonic: "C#", keySignature: "E", cost: 2 },
       { tonic: "Db", keySignature: null, cost: 6 },
     ]);
+  });
+});
+
+describe("triad readability decisions", () => {
+  it("prefers Ab over G# for A flat major triads", () => {
+    expect(
+      getTonicReadabilityOptionsForTriadType("Ab", "major").map((option) => ({
+        tonic: option.tonic,
+        keySignature: option.keySignature,
+        cost: option.cost,
+      })),
+    ).toEqual([
+      { tonic: "Ab", keySignature: "Ab", cost: 0 },
+      { tonic: "G#", keySignature: null, cost: 3 },
+    ]);
+  });
+
+  it("uses Ab as the preferred rendering tonic for A flat major triads", () => {
+    expect(
+      getTriadRenderingOptions(
+        createGenerationSettings({
+          practiceMode: "triads",
+          tonic: "Ab",
+          triadType: "major",
+        }),
+      ).active.tonic,
+    ).toBe("Ab");
+  });
+});
+
+describe("rendering decision manifest", () => {
+  it("matches the current exercise rendering decision matrix", () => {
+    const manifest: Array<ReturnType<typeof getRenderingDecisionRecord>> = [];
+
+    forEachRenderingManifestCase((generationSettings) => {
+      const decisionRecord = getRenderingDecisionRecord(generationSettings);
+
+      if (
+        decisionRecord.alternate === null ||
+        decisionRecord.active === decisionRecord.alternate
+      ) {
+        return;
+      }
+
+      manifest.push(decisionRecord);
+    });
+
+    expect(manifest).toMatchSnapshot();
   });
 });
