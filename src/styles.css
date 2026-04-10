@@ -736,6 +736,7 @@ body {
 
 @media (orientation: portrait) {
   .stage-shell {
+    place-items: start center;
     padding: calc(2px * var(--shell-scale)) calc(4px * var(--shell-scale));
   }
 
