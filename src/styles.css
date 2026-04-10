@@ -47,22 +47,6 @@ body {
   font-size: calc(1rem * var(--ui-scale));
 }
 
-:root[data-layout-mode="compact"] .stage-shell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-:root[data-layout-mode="compact"] .layout {
-  width: 1280px;
-  height: 720px;
-  transform: scale(var(--stage-scale));
-  transform-origin: center center;
-  pointer-events: auto;
-}
-
 .toolbar {
   width: 100%;
   margin: 0;
@@ -775,17 +759,17 @@ body {
 }
 
 @media (max-width: 640px) {
-  :root:not([data-layout-mode="compact"]) body {
+  body {
     overflow: auto;
   }
 
-  :root:not([data-layout-mode="compact"]) .stage-shell {
+  .stage-shell {
     position: static;
     display: block;
     overflow: visible;
   }
 
-  :root:not([data-layout-mode="compact"]) .layout {
+  .layout {
     width: auto;
     height: auto;
     min-height: 100vh;
@@ -793,13 +777,13 @@ body {
     transform: none;
   }
 
-  :root:not([data-layout-mode="compact"]) .toolbar {
+  .toolbar {
     margin-bottom: 12px;
     align-items: stretch;
     flex-direction: column;
   }
 
-  :root:not([data-layout-mode="compact"]) .midi-debug {
+  .midi-debug {
     right: 12px;
     bottom: 12px;
     width: calc(100vw - 24px);
@@ -807,71 +791,71 @@ body {
     font-size: 0.85rem;
   }
 
-  :root:not([data-layout-mode="compact"]) .practice-area {
+  .practice-area {
     --keyboard-white-key-width: 14px;
     --keyboard-white-key-height: 102px;
     --keyboard-black-key-width: 9px;
     --keyboard-black-key-height: 60px;
   }
 
-  :root:not([data-layout-mode="compact"]) .midi-picker {
+  .midi-picker {
     width: 100%;
     align-items: stretch;
     flex-direction: column;
   }
 
-  :root:not([data-layout-mode="compact"]) .midi-picker select {
+  .midi-picker select {
     min-width: 0;
     width: 100%;
   }
 
-  :root:not([data-layout-mode="compact"]) .toolbar-actions {
+  .toolbar-actions {
     width: 100%;
   }
 
-  :root:not([data-layout-mode="compact"]) .toolbar-button {
+  .toolbar-button {
     flex: 1;
   }
 
-  :root:not([data-layout-mode="compact"]) .status-pill {
+  .status-pill {
     text-align: center;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-drawer {
+  .settings-drawer {
     width: 100vw;
     padding: 18px 16px;
     font-size: 1rem;
     gap: 20px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-section {
+  .settings-section {
     gap: 14px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-top-grid {
+  .settings-top-grid {
     gap: 16px;
     grid-template-columns: 1fr;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-field {
+  .settings-field {
     gap: 6px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-field select {
+  .settings-field select {
     padding: 8px 10px;
     border-radius: 10px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-toggle {
+  .settings-toggle {
     gap: 10px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-toggle input {
+  .settings-toggle input {
     width: 16px;
     height: 16px;
   }
 
-  :root:not([data-layout-mode="compact"]) .settings-actions {
+  .settings-actions {
     gap: 10px;
     flex-direction: column;
   }

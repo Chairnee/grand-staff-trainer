@@ -111,7 +111,7 @@ type PromptAttempt = {
 };
 
 type AttemptResult = "correct" | "incorrect" | null;
-type LayoutMode = "responsive" | "compact";
+type LayoutMode = "responsive";
 type PanelPopoutMode = "none" | "panel";
 type PanelDisplayState = {
   visibleInApp: boolean;
@@ -741,11 +741,11 @@ function getLayoutMetrics(): {
   overlayScale: number;
 } {
   const baselineScale = getViewportBaselineScale();
-  const layoutMode: LayoutMode = baselineScale < 1 ? "compact" : "responsive";
-  const uiScale = layoutMode === "compact" ? 1 : baselineScale;
-  const stageScale = layoutMode === "compact" ? baselineScale : 1;
-  const shellScale = layoutMode === "compact" ? stageScale : uiScale;
-  const overlayScale = layoutMode === "compact" ? stageScale : uiScale;
+  const layoutMode: LayoutMode = "responsive";
+  const uiScale = baselineScale;
+  const stageScale = 1;
+  const shellScale = uiScale;
+  const overlayScale = uiScale;
 
   return {
     layoutMode,
