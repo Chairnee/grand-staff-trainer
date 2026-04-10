@@ -69,7 +69,6 @@ body {
 
 .toolbar-actions {
   display: flex;
-  flex: 0 0 auto;
   gap: calc(10px * var(--ui-scale));
   align-items: center;
 }
@@ -89,15 +88,11 @@ body {
 }
 
 .status-pill {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
   padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(70, 52, 28, 0.08);
   color: #5b4931;
   font-size: 0.9em;
-  flex-shrink: 1;
 }
 
 .practice-area {
@@ -135,18 +130,11 @@ body {
   align-items: center;
   font-size: 0.95em;
   color: #5b4931;
-  min-width: 102px;
-}
-
-.midi-picker > span {
-  flex-shrink: 1;
 }
 
 .midi-picker select {
-  flex-shrink: 1;
   font: inherit;
   width: calc(220px * var(--ui-scale));
-  min-width: 100px;
   padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
   border-radius: calc(10px * var(--ui-scale));
@@ -161,17 +149,6 @@ body {
   align-items: center;
   font-size: 0.95em;
   color: #5b4931;
-  min-width: 168px;
-}
-
-.attempt-window-picker > span:first-of-type {
-  flex-shrink: 1;
-}
-
-.attempt-window-picker > span:last-of-type,
-.attempt-window-picker input {
-  flex-shrink: 0;
-
 }
 
 .attempt-window-picker input {
@@ -757,105 +734,46 @@ body {
   }
 }
 
-@media (max-width: 640px) {
-  body {
-    overflow: auto;
-  }
-
+@media (orientation: portrait) {
   .stage-shell {
-    position: static;
-    display: block;
-    overflow: visible;
+    padding: calc(2px * var(--shell-scale)) calc(4px * var(--shell-scale));
   }
 
   .layout {
-    width: auto;
-    height: auto;
-    min-height: 100vh;
-    padding: 16px;
-    transform: none;
+    gap: calc(3px * var(--ui-scale));
   }
 
   .toolbar {
-    margin-bottom: 12px;
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .midi-debug {
-    right: 12px;
-    bottom: 12px;
-    width: calc(100vw - 24px);
-    max-height: 32vh;
-    font-size: 0.85rem;
-  }
-
-  .practice-area {
-    --keyboard-white-key-width: 14px;
-    --keyboard-white-key-height: 102px;
-    --keyboard-black-key-width: 9px;
-    --keyboard-black-key-height: 60px;
-  }
-
-  .midi-picker {
-    width: 100%;
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .midi-picker select {
-    min-width: 0;
-    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: calc(8px * var(--ui-scale));
   }
 
   .toolbar-actions {
-    width: 100%;
+    grid-column: 1 / -1;
   }
 
   .toolbar-button {
-    flex: 1;
+    flex: 1 1 0;
+  }
+
+  .midi-picker select {
+    min-width: 60px;
+  }
+
+  .attempt-window-picker {
+    justify-self: center;
+  }
+
+  .attempt-window-picker input {
+    width: calc(72px * var(--ui-scale));
+    min-width: 40px;
   }
 
   .status-pill {
+    width: min-content;
+    justify-self: center;
     text-align: center;
-  }
-
-  .settings-drawer {
-    width: 100vw;
-    padding: 18px 16px;
-    font-size: 1rem;
-    gap: 20px;
-  }
-
-  .settings-section {
-    gap: 14px;
-  }
-
-  .settings-top-grid {
-    gap: 16px;
-    grid-template-columns: 1fr;
-  }
-
-  .settings-field {
-    gap: 6px;
-  }
-
-  .settings-field select {
-    padding: 8px 10px;
-    border-radius: 10px;
-  }
-
-  .settings-toggle {
-    gap: 10px;
-  }
-
-  .settings-toggle input {
-    width: 16px;
-    height: 16px;
-  }
-
-  .settings-actions {
-    gap: 10px;
-    flex-direction: column;
+    white-space: nowrap;
   }
 }
