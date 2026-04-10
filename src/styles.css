@@ -68,6 +68,7 @@ body {
   margin: 0;
   padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   display: flex;
+  overflow: hidden;
   gap: calc(12px * var(--ui-scale));
   text-align: center;
   align-items: center;
@@ -76,6 +77,12 @@ body {
   border-radius: calc(16px * var(--ui-scale));
   background: rgba(255, 253, 247, 0.88);
   box-shadow: 0 12px 30px rgba(70, 52, 28, 0.06);
+}
+
+@media (max-width: 720px), (max-height: 375px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
 }
 
 .toolbar > * {
@@ -112,6 +119,7 @@ body {
   background: rgba(70, 52, 28, 0.08);
   color: #5b4931;
   font-size: 0.9em;
+  flex-shrink: 1;
 }
 
 .practice-area {
@@ -149,7 +157,7 @@ body {
   align-items: center;
   font-size: 0.95em;
   color: #5b4931;
-  max-width: 100%;
+  min-width: 102px;
 }
 
 .midi-picker > span {
@@ -318,6 +326,7 @@ body {
   font: inherit;
   cursor: pointer;
   text-align: left;
+  flex-wrap: wrap;
 }
 
 .exercise-notice-button-primary {
