@@ -153,6 +153,7 @@ body {
 
 .attempt-window-picker input {
   width: calc(78px * var(--ui-scale));
+  min-width: 50px;
   padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
   border-radius: calc(10px * var(--ui-scale));
@@ -735,12 +736,21 @@ body {
 }
 
 @media (orientation: portrait) {
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
   .stage-shell {
+    position: static;
+    inset: auto;
     place-items: start center;
+    min-height: 100vh;
     padding: calc(2px * var(--shell-scale)) calc(4px * var(--shell-scale));
   }
-
+  
   .layout {
+    height: 100%;
     gap: calc(3px * var(--ui-scale));
   }
 
@@ -777,4 +787,24 @@ body {
     text-align: center;
     white-space: nowrap;
   }
+
+  .practice-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+.input-name-display {
+  flex: 0.8 1 0;
+}
+
+.notation {
+  flex: 2 1 0;
+}
+
+.keyboard-display {
+  flex: 1 1 0;
+}
+
 }
