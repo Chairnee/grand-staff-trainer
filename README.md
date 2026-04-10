@@ -8,12 +8,13 @@ Primary feature explanations:
 2. [Exercise panel](#exercise-panel) (related to [chord window](#chord-window))
 3. [Keyboard display panel](#keyboard-display-panel) (popout friendly)
 
+Extra references:
+1.[Complete list of exercises](#exercise-list)
+2. [List of supported tonics](#full-tonic-list) (every practical tonic)
+
 Design philosophy:
 1. [Input analysis panel](#input-analysis)
 2. [Exercise panel](#exercise-engraving)
-
-Extra:
-1. [List of supported tonics](#full-tonic-list) (every practical tonic)
 
 ## Input Analysis Panel
 The input analysis panel is the topmost panel when visible. It analyses the player's current input using a key-agnostic naming system centred around C and provides information on its musical structure. It is compatible with sustain pedal use. Significant effort was put into making the analysis as transparent as possible about ambiguities, refer to [here](#input-analysis) for the design philosophy.
@@ -83,6 +84,8 @@ All exercises show a summary of the current settings at the bottom left to minim
 ![An example of a current settings summary.](referenceImg/exercise_panel_6.png)
 
 This is the current exercise suite:
+
+<a name="exercise-list"></a>
 
 - Scales
     - Hands
