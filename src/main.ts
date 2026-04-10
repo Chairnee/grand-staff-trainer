@@ -1262,6 +1262,11 @@ function renderKeyboard() {
       onPopout: handleKeyboardPopoutClick,
       popoutButtonLabel: "Pop out",
       popoutButtonTitle: "Open the keyboard display in a separate window.",
+      showSecondaryPopoutButton: true,
+      onSecondaryPopout: handleCombinedPopoutClick,
+      secondaryPopoutButtonLabel: "w/ input naming",
+      secondaryPopoutButtonTitle:
+        "Open the keyboard with input naming in a separate window.",
     });
   }
 
@@ -1296,6 +1301,11 @@ function renderInputName() {
       onPopout: handleInputNamePopoutClick,
       popoutButtonLabel: "Pop out",
       popoutButtonTitle: "Open the input name display in a separate window.",
+      showSecondaryPopoutButton: true,
+      onSecondaryPopout: handleCombinedPopoutClick,
+      secondaryPopoutButtonLabel: "w/ keyboard",
+      secondaryPopoutButtonTitle:
+        "Open the input name display with the keyboard in a separate window.",
     });
   }
 

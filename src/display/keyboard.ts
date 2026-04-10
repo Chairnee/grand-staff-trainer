@@ -7,6 +7,10 @@ type KeyboardDisplayOptions = {
   onPopout?: () => void;
   popoutButtonLabel?: string;
   popoutButtonTitle?: string;
+  showSecondaryPopoutButton?: boolean;
+  onSecondaryPopout?: () => void;
+  secondaryPopoutButtonLabel?: string;
+  secondaryPopoutButtonTitle?: string;
   fitMode?: "width" | "contain";
 };
 
@@ -18,17 +22,48 @@ export function renderKeyboardDisplay(
   options: KeyboardDisplayOptions,
 ) {
   container.replaceChildren();
-  container.classList.toggle("has-utility", Boolean(options.showPopoutButton));
+  container.classList.toggle(
+    "has-utility",
+    Boolean(
+      (options.showPopoutButton && options.onPopout) ||
+        (options.showSecondaryPopoutButton && options.onSecondaryPopout),
+    ),
+  );
 
-  if (options.showPopoutButton && options.onPopout) {
-    const popoutButton = document.createElement("button");
-    popoutButton.type = "button";
-    popoutButton.className = "panel-popout-button";
-    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
-    popoutButton.title =
-      options.popoutButtonTitle ?? "Open the keyboard display in a new window.";
-    popoutButton.addEventListener("click", options.onPopout);
-    container.append(popoutButton);
+  if (
+    (options.showPopoutButton && options.onPopout) ||
+    (options.showSecondaryPopoutButton && options.onSecondaryPopout)
+  ) {
+    const utilityGroup = document.createElement("div");
+    utilityGroup.className = "panel-popout-buttons";
+
+    if (options.showPopoutButton && options.onPopout) {
+      const popoutButton = document.createElement("button");
+      popoutButton.type = "button";
+      popoutButton.className = "panel-popout-button";
+      popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+      popoutButton.title =
+        options.popoutButtonTitle ??
+        "Open the keyboard display in a new window.";
+      popoutButton.addEventListener("click", options.onPopout);
+      utilityGroup.append(popoutButton);
+    }
+
+    if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
+      const secondaryButton = document.createElement("button");
+      secondaryButton.type = "button";
+      secondaryButton.className =
+        "panel-popout-button panel-popout-button-secondary";
+      secondaryButton.textContent =
+        options.secondaryPopoutButtonLabel ?? "w/ input naming";
+      secondaryButton.title =
+        options.secondaryPopoutButtonTitle ??
+        "Open the keyboard with input naming in a new window.";
+      secondaryButton.addEventListener("click", options.onSecondaryPopout);
+      utilityGroup.append(secondaryButton);
+    }
+
+    container.append(utilityGroup);
   }
 
   const keyboardFrameElement = document.createElement("div");

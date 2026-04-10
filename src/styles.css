@@ -366,11 +366,18 @@ body {
   display: none;
 }
 
-.panel-popout-button {
+.panel-popout-buttons {
   position: absolute;
   top: calc(10px * var(--ui-scale));
   right: calc(12px * var(--ui-scale));
   z-index: 1;
+  display: flex;
+  gap: calc(6px * var(--ui-scale));
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.panel-popout-button {
   padding: calc(5px * var(--ui-scale)) calc(9px * var(--ui-scale));
   border: 1px solid rgba(166, 64, 31, 0.18);
   border-radius: 999px;
@@ -384,6 +391,17 @@ body {
 
 .panel-popout-button:hover {
   background: rgba(255, 239, 223, 0.98);
+}
+
+.panel-popout-button-secondary {
+  border-color: rgba(91, 73, 49, 0.14);
+  background: rgba(255, 250, 241, 0.96);
+  color: #6c5840;
+  font-size: 0.72em;
+}
+
+.panel-popout-button-secondary:hover {
+  background: rgba(250, 243, 231, 0.98);
 }
 
 .panel-popout-button:focus-visible {
