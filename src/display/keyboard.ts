@@ -7,6 +7,7 @@ type KeyboardDisplayOptions = {
   onPopout?: () => void;
   popoutButtonLabel?: string;
   popoutButtonTitle?: string;
+  fitMode?: "width" | "contain";
 };
 
 const DEFAULT_START_MIDI_NOTE = 21;
@@ -89,7 +90,12 @@ export function renderKeyboardDisplay(
   keyboardFrameElement.append(keyboardElement);
   container.append(keyboardFrameElement);
 
-  fitKeyboardToContainer(container, keyboardFrameElement, keyboardElement);
+  fitKeyboardToContainer(
+    container,
+    keyboardFrameElement,
+    keyboardElement,
+    options.fitMode ?? "width",
+  );
 }
 
 function getKeyClassName(
@@ -129,6 +135,7 @@ function fitKeyboardToContainer(
   container: HTMLDivElement,
   keyboardFrameElement: HTMLDivElement,
   keyboardElement: HTMLDivElement,
+  fitMode: "width" | "contain",
 ) {
   keyboardFrameElement.style.width = "";
   keyboardFrameElement.style.height = "";
@@ -138,22 +145,36 @@ function fitKeyboardToContainer(
   const computedStyle = getComputedStyle(container);
   const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0;
   const paddingRight = Number.parseFloat(computedStyle.paddingRight) || 0;
+  const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+  const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
   const availableWidth = Math.max(
     0,
     container.clientWidth - paddingLeft - paddingRight,
   );
+  const availableHeight = Math.max(
+    0,
+    container.clientHeight - paddingTop - paddingBottom,
+  );
   const naturalWidth = keyboardElement.offsetWidth;
   const naturalHeight = keyboardElement.offsetHeight;
 
-  if (
-    availableWidth === 0 ||
-    naturalWidth === 0 ||
-    naturalWidth <= availableWidth
-  ) {
+  if (availableWidth === 0 || naturalWidth === 0 || naturalHeight === 0) {
     return;
   }
 
-  const fitScale = availableWidth / naturalWidth;
+  const widthScale = availableWidth / naturalWidth;
+  const heightScale =
+    fitMode === "contain" && availableHeight > 0
+      ? availableHeight / naturalHeight
+      : 1;
+  const fitScale =
+    fitMode === "contain"
+      ? Math.min(widthScale, heightScale)
+      : Math.min(1, widthScale);
+
+  if (fitScale <= 0 || (fitMode === "width" && fitScale >= 1)) {
+    return;
+  }
 
   keyboardFrameElement.style.width = `${naturalWidth * fitScale}px`;
   keyboardFrameElement.style.height = `${naturalHeight * fitScale}px`;

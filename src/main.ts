@@ -70,6 +70,7 @@ const INPUT_NAME_POPOUT_BASE_WIDTH = 270;
 const INPUT_NAME_POPOUT_BASE_HEIGHT = 72;
 const KEYBOARD_POPOUT_BASE_WIDTH = 1080;
 const KEYBOARD_POPOUT_BASE_HEIGHT = 220;
+const KEYBOARD_POPOUT_ROOT_PADDING = 0;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
 const STAVE_GAP = 76;
@@ -464,6 +465,7 @@ type InputNamePopoutHandle = {
 type KeyboardPopoutHandle = {
   window: Window;
   container: HTMLDivElement;
+  fitButton: HTMLButtonElement;
   handleResize: () => void;
   handleBeforeUnload: () => void;
 };
@@ -1456,7 +1458,7 @@ function handleKeyboardPopoutClick() {
   const popoutWindow = window.open(
     "",
     "grand-staff-trainer-keyboard",
-    "popup=yes,width=1320,height=360,resizable=yes,scrollbars=yes",
+    "popup=yes,width=3500,height=600,resizable=yes,scrollbars=yes",
   );
 
   if (!popoutWindow) {
@@ -1474,7 +1476,16 @@ function handleKeyboardPopoutClick() {
         <title>Keyboard</title>
       </head>
       <body class="keyboard-popout-body">
-        <div id="keyboard-popout-root"></div>
+        <div id="keyboard-popout-root">
+          <button
+            id="keyboard-popout-fit-button"
+            class="toolbar-button keyboard-popout-fit-button"
+            type="button"
+          >
+            Fit window
+          </button>
+          <div id="keyboard-popout-content"></div>
+        </div>
       </body>
     </html>
   `);
@@ -1494,40 +1505,61 @@ function handleKeyboardPopoutClick() {
       --keyboard-black-key-width: calc(11px * var(--ui-scale));
       --keyboard-black-key-height: calc(72px * var(--ui-scale));
       margin: 0;
-      min-height: 100vh;
-      overflow: auto;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
-      align-items: stretch;
-      justify-content: stretch;
-      padding: 16px;
+      align-items: center;
+      justify-content: center;
       background: #f7f1e4;
       font-size: calc(1rem * var(--ui-scale));
     }
 
     #keyboard-popout-root {
-      flex: 1 1 auto;
-      display: flex;
-      min-width: 0;
-      min-height: 0;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: stretch;
+      justify-items: start;
+      padding: ${KEYBOARD_POPOUT_ROOT_PADDING}px;
+      overflow: hidden;
     }
 
-    #keyboard-popout-root .keyboard-display {
-      flex: 1 1 auto;
+    #keyboard-popout-content {
+      box-sizing: border-box;
       width: 100%;
       min-height: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #keyboard-popout-content .keyboard-frame {
+      margin: 0;
     }
 
     #keyboard-popout-root .panel-popout-button {
       display: none;
     }
+
+    .keyboard-popout-fit-button {
+      z-index: 1;
+    }
   `;
   popoutWindow.document.head.append(popoutStyle);
 
   const popoutContainer = popoutWindow.document.querySelector<HTMLDivElement>(
-    "#keyboard-popout-root",
+    "#keyboard-popout-content",
   );
+  const fitWindowButton =
+    popoutWindow.document.querySelector<HTMLButtonElement>(
+      "#keyboard-popout-fit-button",
+    );
 
-  if (!popoutContainer) {
+  if (!popoutContainer || !fitWindowButton) {
     popoutWindow.close();
     return;
   }
@@ -1542,16 +1574,21 @@ function handleKeyboardPopoutClick() {
 
   popoutWindow.addEventListener("resize", handleResize);
   popoutWindow.addEventListener("beforeunload", handleBeforeUnload);
+  fitWindowButton.addEventListener("click", () => {
+    fitKeyboardPopoutWindow(2);
+  });
 
   keyboardPopoutHandle = {
     window: popoutWindow,
     container: popoutContainer,
+    fitButton: fitWindowButton,
     handleResize,
     handleBeforeUnload,
   };
 
   syncKeyboardPopoutScale();
   renderKeyboardPopout(getCurrentKeyboardDisplayOptions());
+  fitKeyboardPopoutWindow(2);
   popoutWindow.focus();
 }
 
@@ -1566,7 +1603,57 @@ function renderKeyboardPopout(options = getCurrentKeyboardDisplayOptions()) {
     return;
   }
 
-  renderKeyboardDisplay(keyboardPopoutHandle.container, options);
+  renderKeyboardDisplay(keyboardPopoutHandle.container, {
+    ...options,
+    fitMode: "contain",
+  });
+}
+
+function fitKeyboardPopoutWindow(settlePasses = 0) {
+  if (!keyboardPopoutHandle || keyboardPopoutHandle.window.closed) {
+    cleanupKeyboardPopout();
+    return;
+  }
+
+  const popoutWindow = keyboardPopoutHandle.window;
+  const fitButtonHeight = keyboardPopoutHandle.fitButton.offsetHeight;
+  const renderedKeyboardFrame =
+    keyboardPopoutHandle.container.querySelector<HTMLDivElement>(
+      ".keyboard-frame",
+    );
+
+  if (!renderedKeyboardFrame) {
+    return;
+  }
+
+  const idealKeyboardHeight = renderedKeyboardFrame.offsetHeight;
+  const idealInnerHeight =
+    KEYBOARD_POPOUT_ROOT_PADDING * 2 + fitButtonHeight + idealKeyboardHeight;
+  const chromeHeight = Math.max(
+    0,
+    popoutWindow.outerHeight - popoutWindow.innerHeight,
+  );
+
+  try {
+    popoutWindow.resizeTo(
+      popoutWindow.outerWidth,
+      Math.max(idealInnerHeight + chromeHeight, 220),
+    );
+  } catch {
+    return;
+  }
+
+  if (settlePasses <= 0) {
+    return;
+  }
+
+  popoutWindow.setTimeout(() => {
+    if (!keyboardPopoutHandle || keyboardPopoutHandle.window !== popoutWindow) {
+      return;
+    }
+
+    fitKeyboardPopoutWindow(settlePasses - 1);
+  }, 120);
 }
 
 function syncKeyboardPopoutScale() {
@@ -1575,10 +1662,15 @@ function syncKeyboardPopoutScale() {
     return;
   }
 
-  const availableWidth = Math.max(1, keyboardPopoutHandle.window.innerWidth - 32);
+  const availableWidth = Math.max(
+    1,
+    keyboardPopoutHandle.window.innerWidth - KEYBOARD_POPOUT_ROOT_PADDING * 2,
+  );
   const availableHeight = Math.max(
     1,
-    keyboardPopoutHandle.window.innerHeight - 32,
+    keyboardPopoutHandle.window.innerHeight -
+      KEYBOARD_POPOUT_ROOT_PADDING * 2 -
+      keyboardPopoutHandle.fitButton.offsetHeight,
   );
   const widthScale = availableWidth / KEYBOARD_POPOUT_BASE_WIDTH;
   const heightScale = availableHeight / KEYBOARD_POPOUT_BASE_HEIGHT;
@@ -1685,8 +1777,7 @@ function handleExerciseToggleChange() {
 }
 
 function handleInputNameToggleChange() {
-  state.inputNameDisplay.visibleInApp =
-    settingsInputNameToggleElement.checked;
+  state.inputNameDisplay.visibleInApp = settingsInputNameToggleElement.checked;
   saveStoredSettings();
   renderApp();
 }
