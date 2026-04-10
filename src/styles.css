@@ -758,6 +758,8 @@ body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: calc(8px * var(--ui-scale));
+    min-height: 10dvh;
+    font-size: clamp(0.7rem, 2.2vh, 1.6rem);
   }
 
   .toolbar-actions {
@@ -782,10 +784,12 @@ body {
   }
 
   .status-pill {
-    width: min-content;
+    width: 100%;    
     justify-self: center;
     text-align: center;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .practice-area {
@@ -795,16 +799,37 @@ body {
     flex-direction: column;
   }
 
-.input-name-display {
-  flex: 0.8 1 0;
-}
+  .input-name-content-wrap,
+  .input-name-status-wrap {
+    flex: 0 0 auto;
+    align-items: center;
+    text-align: center;
+  }
 
-.notation {
-  flex: 2 1 0;
-}
+  .input-name-display {
+    flex: 0.8 1 0;
+    padding-top: calc(25px * var(--ui-scale));
+    font-size: clamp(1.3rem, 2.2vh, 1.6rem);
+    justify-content: center;
+  }
 
-.keyboard-display {
-  flex: 1 1 0;
-}
+  .input-name-pill {
+    font-size: 1em;
+  }
+
+  .input-name-note-list,
+  .input-name-longhand,
+  .input-name-status {
+    font-size: 1em;
+  }
+
+  .notation {
+    flex: 2 1 0;
+    font-size: clamp(1rem, 2.2vh, 1.6rem);
+  }
+
+  .keyboard-display {
+    flex: 1 1 0;
+  }
 
 }
