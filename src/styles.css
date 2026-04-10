@@ -679,6 +679,12 @@ body {
   margin: 0;
 }
 
+.settings-top-grid {
+  display: grid;
+  gap: calc(16px * var(--overlay-scale));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
 .settings-section {
   display: flex;
   gap: calc(14px * var(--overlay-scale));
@@ -715,6 +721,17 @@ body {
   margin: 0;
   accent-color: #a6401f;
   flex: 0 0 auto;
+}
+
+.settings-actions {
+  display: flex;
+  gap: calc(10px * var(--overlay-scale));
+  flex-direction: column;
+}
+
+.settings-action-button {
+  width: 100%;
+  justify-content: center;
 }
 
 @keyframes current-prompt-wiggle {
@@ -809,6 +826,11 @@ body {
     gap: 14px;
   }
 
+  :root:not([data-layout-mode="compact"]) .settings-top-grid {
+    gap: 16px;
+    grid-template-columns: 1fr;
+  }
+
   :root:not([data-layout-mode="compact"]) .settings-field {
     gap: 6px;
   }
@@ -825,5 +847,9 @@ body {
   :root:not([data-layout-mode="compact"]) .settings-toggle input {
     width: 16px;
     height: 16px;
+  }
+
+  :root:not([data-layout-mode="compact"]) .settings-actions {
+    gap: 10px;
   }
 }

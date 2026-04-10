@@ -205,26 +205,49 @@ app.innerHTML = `
     aria-label="Settings"
   >
     <div class="settings-header">
-      <h2>Display Settings</h2>
+      <h2>Settings</h2>
       <button id="settings-close" class="toolbar-button" type="button">
         Close
       </button>
     </div>
 
-    <section class="settings-section">
-      <label class="settings-toggle">
-        <input id="settings-exercise-toggle" type="checkbox" />
-        <span>Show exercise options</span>
-      </label>
-      <label class="settings-toggle">
-        <input id="settings-input-name-toggle" type="checkbox" />
-        <span>Show input name</span>
-      </label>
-      <label class="settings-toggle">
-        <input id="settings-keyboard-toggle" type="checkbox" />
-        <span>Show keyboard</span>
-      </label>
-    </section>
+    <div class="settings-top-grid">
+      <section class="settings-section">
+        <h3>Display</h3>
+        <label class="settings-toggle">
+          <input id="settings-exercise-toggle" type="checkbox" />
+          <span>Exercise panel</span>
+        </label>
+        <label class="settings-toggle">
+          <input id="settings-input-name-toggle" type="checkbox" />
+          <span>Input naming</span>
+        </label>
+        <label class="settings-toggle">
+          <input id="settings-keyboard-toggle" type="checkbox" />
+          <span>Keyboard</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h3>Popouts</h3>
+        <div class="settings-actions">
+          <button
+            id="settings-input-name-popout"
+            class="toolbar-button settings-action-button"
+            type="button"
+          >
+            Input naming
+          </button>
+          <button
+            id="settings-keyboard-popout"
+            class="toolbar-button settings-action-button"
+            type="button"
+          >
+            Keyboard
+          </button>
+        </div>
+      </section>
+    </div>
 
     <section class="settings-section">
       <h3 id="exercise-settings-heading">Exercise Settings</h3>
@@ -443,17 +466,31 @@ const settingsExerciseToggleElement = settingsExerciseToggle;
 const exerciseSettingsHeadingElement = exerciseSettingsHeading;
 const settingsKeyboardToggleElement = settingsKeyboardToggle;
 const settingsInputNameToggleElement = settingsInputNameToggle;
+const settingsInputNamePopoutButton = document.querySelector<HTMLButtonElement>(
+  "#settings-input-name-popout",
+);
+const settingsKeyboardPopoutButton = document.querySelector<HTMLButtonElement>(
+  "#settings-keyboard-popout",
+);
 const practiceModeField = practiceModeSelectElement.parentElement;
 const tonicField = tonicSelectElement.parentElement;
 const scaleTypeField = scaleTypeSelectElement.parentElement;
 
-if (!practiceModeField || !tonicField || !scaleTypeField) {
+if (
+  !practiceModeField ||
+  !tonicField ||
+  !scaleTypeField ||
+  !settingsInputNamePopoutButton ||
+  !settingsKeyboardPopoutButton
+) {
   throw new Error("Could not find settings field elements.");
 }
 
 const practiceModeFieldElement = practiceModeField;
 const tonicFieldElement = tonicField;
 const scaleTypeFieldElement = scaleTypeField;
+const settingsInputNamePopoutButtonElement = settingsInputNamePopoutButton;
+const settingsKeyboardPopoutButtonElement = settingsKeyboardPopoutButton;
 
 type InputNamePopoutHandle = {
   window: Window;
@@ -551,6 +588,14 @@ settingsInputNameToggleElement.addEventListener(
 settingsKeyboardToggleElement.addEventListener(
   "change",
   handleKeyboardToggleChange,
+);
+settingsInputNamePopoutButtonElement.addEventListener(
+  "click",
+  handleInputNamePopoutClick,
+);
+settingsKeyboardPopoutButtonElement.addEventListener(
+  "click",
+  handleKeyboardPopoutClick,
 );
 practiceModeSelectElement.addEventListener("change", handlePracticeModeChange);
 scaleHandsSelectElement.addEventListener("change", handleScaleHandsChange);
@@ -1250,7 +1295,7 @@ function handleInputNamePopoutClick() {
   const popoutWindow = window.open(
     "",
     "grand-staff-trainer-input-name",
-    "popup=yes,width=920,height=320,resizable=yes,scrollbars=yes",
+    "popup=yes,width=1500,height=1500,resizable=yes,scrollbars=yes",
   );
 
   if (!popoutWindow) {
