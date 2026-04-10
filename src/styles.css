@@ -756,7 +756,7 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: calc(8px * var(--ui-scale));
     min-height: 10dvh;
-    font-size: clamp(0.7rem, 2.2vh, 1.6rem);
+    font-size: clamp(0.7rem, 1.6vh, 1rem);
   }
 
   .toolbar-actions {
@@ -775,7 +775,7 @@ body {
     right: 2vw;
     padding: calc(12px * var(--overlay-scale));
     gap: calc(12px * var(--overlay-scale));
-    font-size: clamp(1rem, 2.2vh, 1.35rem);
+    font-size: clamp(0.7rem, 1.7vh, 1.35rem);
   }
 
   .settings-drawer input[type="checkbox"] {
@@ -784,7 +784,7 @@ body {
   }
 
   .midi-picker select {
-    min-width: 60px;
+    min-width: 70px;
   }
 
   .attempt-window-picker {
@@ -793,7 +793,7 @@ body {
 
   .attempt-window-picker input {
     width: calc(72px * var(--ui-scale));
-    min-width: 40px;
+    min-width: 50px;
   }
 
   .status-pill {
