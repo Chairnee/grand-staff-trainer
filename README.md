@@ -71,7 +71,7 @@ The example image below is based on the following exercise settings:
 3. Motion: contrary
 3. Octaves: 2
 4. Tonic: Ab
-5. Triad type: melodic minor
+5. Scale type: melodic minor
 
 ![An example of the Ab melodic minor scale for two hands in contrary motion across two octaves with optional G# melodic minor notation.](referenceImg/exercise_panel_5.png)
 
