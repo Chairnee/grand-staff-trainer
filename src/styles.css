@@ -810,8 +810,17 @@ body {
   .input-name-display {
     flex: 0.8 1 0;
     padding-top: calc(25px * var(--ui-scale));
-    font-size: clamp(1.3rem, 2.2vh, 1.6rem);
+    font-size: clamp(1rem, 2.2vh, 1.6rem);
     justify-content: center;
+  }
+
+  .input-name-note-list,
+  .input-name-longhand,
+  .input-name-status {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .input-name-pill {
@@ -843,6 +852,13 @@ body {
 
   .keyboard-display {
     flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .keyboard-display .panel-popout-buttons {
+    font-size: clamp(1rem, 2.2vh, 1.6rem);
   }
 
 }

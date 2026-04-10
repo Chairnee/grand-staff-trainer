@@ -1265,6 +1265,7 @@ function renderKeyboard() {
   } else {
     renderKeyboardDisplay(keyboardDisplayElement, {
       ...keyboardOptions,
+      fitMode: isPortraitViewport() ? "contain" : "width",
       showPopoutButton: true,
       onPopout: handleKeyboardPopoutClick,
       popoutButtonLabel: "Pop out",
