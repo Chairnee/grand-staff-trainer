@@ -13,10 +13,33 @@ import {
   getScaleRenderingOptions,
   getTriadNoteNames,
   getTriadRenderingOptions,
+  type RenderingPreference,
+  type ScaleDirection,
+  type ScaleHands,
+  type ScaleMotion,
+  type ScaleOctaves,
   type ScaleType,
   type Tonic,
   type TriadType,
 } from "../../theory/music";
+
+const SCALE_TYPES: ScaleType[] = [
+  "major",
+  "natural-minor",
+  "harmonic-minor",
+  "melodic-minor",
+];
+const TRIAD_TYPES: TriadType[] = [
+  "major",
+  "minor",
+  "diminished",
+  "augmented",
+];
+const CADENCE_TRIAD_TYPES: TriadType[] = ["major", "minor"];
+const SCALE_HANDS: ScaleHands[] = ["treble", "bass", "together"];
+const SCALE_DIRECTIONS: ScaleDirection[] = ["ascending", "descending"];
+const SCALE_MOTIONS: ScaleMotion[] = ["parallel", "contrary"];
+const SCALE_OCTAVES: ScaleOctaves[] = [1, 2];
 
 function createGenerationSettings(
   overrides: Partial<GenerationSettings> = {},
@@ -83,379 +106,249 @@ function getAllowedScaleExerciseNoteNamesForRenderedTonic(
   ]);
 }
 
+function getAllowedScaleExerciseNoteNamesForSettings(
+  generationSettings: GenerationSettings,
+) {
+  const renderedTonic = getScaleRenderingOptions(generationSettings).active.tonic.toLowerCase();
+
+  return getAllowedScaleExerciseNoteNamesForRenderedTonic(
+    renderedTonic,
+    generationSettings.scaleType,
+  );
+}
+
+function getAllowedNoteNamesForSettings(
+  generationSettings: GenerationSettings,
+) {
+  if (generationSettings.practiceMode === "scales") {
+    return getAllowedScaleExerciseNoteNamesForSettings(generationSettings);
+  }
+
+  if (
+    generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "arpeggios"
+  ) {
+    return getTriadNoteNames(
+      generationSettings.tonic,
+      generationSettings.triadType,
+      generationSettings.renderingPreference,
+    );
+  }
+
+  const renderedTonic = getCadenceRenderingOptions(
+    generationSettings,
+  ).active.tonic.toLowerCase();
+
+  return generationSettings.triadType === "major"
+    ? getScaleNoteNamesForRenderedTonicName(renderedTonic, "major")
+    : new Set([
+        ...getScaleNoteNamesForRenderedTonicName(
+          renderedTonic,
+          "natural-minor",
+        ),
+        ...getScaleNoteNamesForRenderedTonicName(
+          renderedTonic,
+          "harmonic-minor",
+        ),
+      ]);
+}
+
+function createPromptQueueForSettings(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    return createScalePracticeQueue(generationSettings);
+  }
+
+  if (generationSettings.practiceMode === "triads") {
+    return createTriadPracticeQueue(generationSettings);
+  }
+
+  if (generationSettings.practiceMode === "arpeggios") {
+    return createArpeggioPracticeQueue(generationSettings);
+  }
+
+  return createCadencePracticeQueue(generationSettings);
+}
+
+function hasAlternateRenderingOption(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "scales") {
+    return Boolean(getScaleRenderingOptions(generationSettings).alternate);
+  }
+
+  if (
+    generationSettings.practiceMode === "triads" ||
+    generationSettings.practiceMode === "arpeggios"
+  ) {
+    return Boolean(getTriadRenderingOptions(generationSettings).alternate);
+  }
+
+  return Boolean(getCadenceRenderingOptions(generationSettings).alternate);
+}
+
+function formatSettingsLabel(generationSettings: GenerationSettings) {
+  if (generationSettings.practiceMode === "cadences") {
+    return [
+      generationSettings.practiceMode,
+      generationSettings.tonic,
+      generationSettings.triadType,
+      generationSettings.scaleHands,
+      generationSettings.scaleOctaves,
+      generationSettings.scaleMotion,
+      generationSettings.scaleDirection,
+      generationSettings.renderingPreference,
+    ].join(" | ");
+  }
+
+  if (generationSettings.practiceMode === "scales") {
+    return [
+      generationSettings.practiceMode,
+      generationSettings.tonic,
+      generationSettings.scaleType,
+      generationSettings.scaleHands,
+      generationSettings.scaleOctaves,
+      generationSettings.scaleMotion,
+      generationSettings.scaleDirection,
+      generationSettings.renderingPreference,
+    ].join(" | ");
+  }
+
+  return [
+    generationSettings.practiceMode,
+    generationSettings.tonic,
+    generationSettings.triadType,
+    generationSettings.scaleHands,
+    generationSettings.scaleOctaves,
+    generationSettings.scaleMotion,
+    generationSettings.scaleDirection,
+    generationSettings.renderingPreference,
+  ].join(" | ");
+}
+
+function forEachExercisePermutation(
+  renderingPreference: RenderingPreference,
+  visit: (generationSettings: GenerationSettings) => void,
+) {
+  for (const tonic of getAllTonics()) {
+    for (const scaleType of SCALE_TYPES) {
+      for (const scaleHands of SCALE_HANDS) {
+        for (const scaleOctaves of SCALE_OCTAVES) {
+          for (const scaleDirection of SCALE_DIRECTIONS) {
+            for (const scaleMotion of SCALE_MOTIONS) {
+              visit(
+                createGenerationSettings({
+                  practiceMode: "scales",
+                  tonic,
+                  scaleType,
+                  scaleHands,
+                  scaleOctaves,
+                  scaleDirection,
+                  scaleMotion,
+                  renderingPreference,
+                }),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    for (const triadType of TRIAD_TYPES) {
+      for (const scaleHands of SCALE_HANDS) {
+        for (const scaleOctaves of SCALE_OCTAVES) {
+          for (const scaleDirection of SCALE_DIRECTIONS) {
+            for (const scaleMotion of SCALE_MOTIONS) {
+              visit(
+                createGenerationSettings({
+                  practiceMode: "triads",
+                  tonic,
+                  triadType,
+                  scaleHands,
+                  scaleOctaves,
+                  scaleDirection,
+                  scaleMotion,
+                  renderingPreference,
+                }),
+              );
+              visit(
+                createGenerationSettings({
+                  practiceMode: "arpeggios",
+                  tonic,
+                  triadType,
+                  scaleHands,
+                  scaleOctaves,
+                  scaleDirection,
+                  scaleMotion,
+                  renderingPreference,
+                }),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    for (const triadType of CADENCE_TRIAD_TYPES) {
+      for (const scaleHands of SCALE_HANDS) {
+        for (const scaleOctaves of SCALE_OCTAVES) {
+          for (const scaleDirection of SCALE_DIRECTIONS) {
+            for (const scaleMotion of SCALE_MOTIONS) {
+              visit(
+                createGenerationSettings({
+                  practiceMode: "cadences",
+                  tonic,
+                  triadType,
+                  scaleHands,
+                  scaleOctaves,
+                  scaleDirection,
+                  scaleMotion,
+                  renderingPreference,
+                }),
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function collectRenderingConsistencyLeaks(
+  renderingPreference: RenderingPreference,
+) {
+  const leaks: string[] = [];
+
+  forEachExercisePermutation(renderingPreference, (generationSettings) => {
+    if (
+      renderingPreference === "alternate" &&
+      !hasAlternateRenderingOption(generationSettings)
+    ) {
+      return;
+    }
+
+    const allowedNoteNames = getAllowedNoteNamesForSettings(generationSettings);
+    const actualNoteNames = getPromptNoteNames(
+      createPromptQueueForSettings(generationSettings),
+    );
+    const unexpectedNoteNames = getUnexpectedNoteNames(
+      actualNoteNames,
+      allowedNoteNames,
+    );
+
+    if (unexpectedNoteNames.length > 0) {
+      leaks.push(
+        `${formatSettingsLabel(generationSettings)}: ${unexpectedNoteNames.join(", ")}`,
+      );
+    }
+  });
+
+  return leaks;
+}
+
 describe("exercise rendering consistency", () => {
-  it("keeps scale exercises inside the chosen rendered scale spelling", () => {
-    const leaks: string[] = [];
-    const scaleTypes: ScaleType[] = [
-      "major",
-      "natural-minor",
-      "harmonic-minor",
-      "melodic-minor",
-    ];
-
-    for (const tonic of getAllTonics()) {
-      for (const scaleType of scaleTypes) {
-        for (const scaleHands of ["treble", "bass"] as const) {
-          for (const scaleDirection of ["ascending", "descending"] as const) {
-            const generationSettings = createGenerationSettings({
-              practiceMode: "scales",
-              tonic,
-              scaleType,
-              scaleHands,
-              scaleDirection,
-            });
-            const allowedNoteNames = getAllowedScaleExerciseNoteNames(
-              tonic,
-              scaleType,
-            );
-            const actualNoteNames = getPromptNoteNames(
-              createScalePracticeQueue(generationSettings),
-            );
-            const unexpectedNoteNames = getUnexpectedNoteNames(
-              actualNoteNames,
-              allowedNoteNames,
-            );
-
-            if (unexpectedNoteNames.length > 0) {
-              leaks.push(
-                `${tonic} ${scaleType} ${scaleHands} ${scaleDirection}: ${unexpectedNoteNames.join(", ")}`,
-              );
-            }
-          }
-        }
-
-        const togetherGenerationSettings = createGenerationSettings({
-          practiceMode: "scales",
-          tonic,
-          scaleType,
-          scaleHands: "together",
-          scaleDirection: "ascending",
-        });
-        const togetherAllowedNoteNames = getAllowedScaleExerciseNoteNames(
-          tonic,
-          scaleType,
-        );
-        const togetherActualNoteNames = getPromptNoteNames(
-          createScalePracticeQueue(togetherGenerationSettings),
-        );
-        const togetherUnexpectedNoteNames = getUnexpectedNoteNames(
-          togetherActualNoteNames,
-          togetherAllowedNoteNames,
-        );
-
-        if (togetherUnexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${scaleType} together: ${togetherUnexpectedNoteNames.join(", ")}`,
-          );
-        }
-      }
-    }
-
-    expect(leaks).toEqual([]);
+  it("keeps every preferred rendered exercise inside its chosen spelling across all valid permutations", () => {
+    expect(collectRenderingConsistencyLeaks("preferred")).toEqual([]);
   });
 
-  it("keeps triad exercises inside the chosen rendered triad spelling", () => {
-    const leaks: string[] = [];
-    const triadTypes: TriadType[] = [
-      "major",
-      "minor",
-      "diminished",
-      "augmented",
-    ];
-
-    for (const tonic of getAllTonics()) {
-      for (const triadType of triadTypes) {
-        const generationSettings = createGenerationSettings({
-          practiceMode: "triads",
-          tonic,
-          triadType,
-        });
-        const allowedNoteNames = getTriadNoteNames(
-          tonic,
-          triadType,
-          "preferred",
-        );
-        const actualNoteNames = getPromptNoteNames(
-          createTriadPracticeQueue(generationSettings),
-        );
-        const unexpectedNoteNames = getUnexpectedNoteNames(
-          actualNoteNames,
-          allowedNoteNames,
-        );
-
-        if (unexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`,
-          );
-        }
-      }
-    }
-
-    expect(leaks).toEqual([]);
-  });
-
-  it("keeps arpeggio exercises inside the chosen rendered arpeggio spelling", () => {
-    const leaks: string[] = [];
-    const triadTypes: TriadType[] = [
-      "major",
-      "minor",
-      "diminished",
-      "augmented",
-    ];
-
-    for (const tonic of getAllTonics()) {
-      for (const triadType of triadTypes) {
-        const generationSettings = createGenerationSettings({
-          practiceMode: "arpeggios",
-          tonic,
-          triadType,
-        });
-        const allowedNoteNames = getTriadNoteNames(
-          tonic,
-          triadType,
-          "preferred",
-        );
-        const actualNoteNames = getPromptNoteNames(
-          createArpeggioPracticeQueue(generationSettings),
-        );
-        const unexpectedNoteNames = getUnexpectedNoteNames(
-          actualNoteNames,
-          allowedNoteNames,
-        );
-
-        if (unexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${triadType} arpeggios: ${unexpectedNoteNames.join(", ")}`,
-          );
-        }
-      }
-    }
-
-    expect(leaks).toEqual([]);
-  });
-
-  it("keeps cadence exercises inside one rendered tonic spelling system", () => {
-    const leaks: string[] = [];
-    const cadenceTriadTypes: TriadType[] = ["major", "minor"];
-
-    for (const tonic of getAllTonics()) {
-      for (const triadType of cadenceTriadTypes) {
-        const generationSettings = createGenerationSettings({
-          practiceMode: "cadences",
-          tonic,
-          triadType,
-          scaleOctaves: 1,
-        });
-        const renderedTonic =
-          getCadenceRenderingOptions(
-            generationSettings,
-          ).active.tonic.toLowerCase();
-        const allowedNoteNames =
-          triadType === "major"
-            ? getScaleNoteNamesForRenderedTonicName(renderedTonic, "major")
-            : new Set([
-                ...getScaleNoteNamesForRenderedTonicName(
-                  renderedTonic,
-                  "natural-minor",
-                ),
-                ...getScaleNoteNamesForRenderedTonicName(
-                  renderedTonic,
-                  "harmonic-minor",
-                ),
-              ]);
-        const actualNoteNames = getPromptNoteNames(
-          createCadencePracticeQueue(generationSettings),
-        );
-        const unexpectedNoteNames = getUnexpectedNoteNames(
-          actualNoteNames,
-          allowedNoteNames,
-        );
-
-        if (unexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${triadType}: ${unexpectedNoteNames.join(", ")}`,
-          );
-        }
-      }
-    }
-
-    expect(leaks).toEqual([]);
-  });
-
-  it("keeps every alternate rendered exercise inside its alternate spelling too", () => {
-    const leaks: string[] = [];
-    const scaleTypes: ScaleType[] = [
-      "major",
-      "natural-minor",
-      "harmonic-minor",
-      "melodic-minor",
-    ];
-    const triadTypes: TriadType[] = [
-      "major",
-      "minor",
-      "diminished",
-      "augmented",
-    ];
-    const cadenceTriadTypes: TriadType[] = ["major", "minor"];
-
-    for (const tonic of getAllTonics()) {
-      for (const scaleType of scaleTypes) {
-        for (const scaleHands of ["treble", "bass"] as const) {
-          for (const scaleDirection of ["ascending", "descending"] as const) {
-            const generationSettings = createGenerationSettings({
-              practiceMode: "scales",
-              tonic,
-              scaleType,
-              scaleHands,
-              scaleDirection,
-              renderingPreference: "alternate",
-            });
-            const renderingOptions =
-              getScaleRenderingOptions(generationSettings);
-
-            if (!renderingOptions.alternate) {
-              continue;
-            }
-
-            const renderedTonic = renderingOptions.active.tonic.toLowerCase();
-            const allowedNoteNames =
-              getAllowedScaleExerciseNoteNamesForRenderedTonic(
-                renderedTonic,
-                scaleType,
-              );
-            const actualNoteNames = getPromptNoteNames(
-              createScalePracticeQueue(generationSettings),
-            );
-            const unexpectedNoteNames = getUnexpectedNoteNames(
-              actualNoteNames,
-              allowedNoteNames,
-            );
-
-            if (unexpectedNoteNames.length > 0) {
-              leaks.push(
-                `${tonic} ${scaleType} ${scaleHands} ${scaleDirection} scales: ${unexpectedNoteNames.join(", ")}`,
-              );
-            }
-          }
-        }
-      }
-
-      for (const triadType of triadTypes) {
-        const triadGenerationSettings = createGenerationSettings({
-          practiceMode: "triads",
-          tonic,
-          triadType,
-          renderingPreference: "alternate",
-        });
-        const triadRenderingOptions = getTriadRenderingOptions(
-          triadGenerationSettings,
-        );
-
-        if (!triadRenderingOptions.alternate) {
-          continue;
-        }
-
-        const triadAllowedNoteNames = getTriadNoteNames(
-          tonic,
-          triadType,
-          "alternate",
-        );
-        const triadActualNoteNames = getPromptNoteNames(
-          createTriadPracticeQueue(triadGenerationSettings),
-        );
-        const triadUnexpectedNoteNames = getUnexpectedNoteNames(
-          triadActualNoteNames,
-          triadAllowedNoteNames,
-        );
-
-        if (triadUnexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${triadType} triads: ${triadUnexpectedNoteNames.join(", ")}`,
-          );
-        }
-
-        const arpeggioGenerationSettings = createGenerationSettings({
-          practiceMode: "arpeggios",
-          tonic,
-          triadType,
-          renderingPreference: "alternate",
-        });
-        const arpeggioRenderingOptions = getTriadRenderingOptions(
-          arpeggioGenerationSettings,
-        );
-
-        if (arpeggioRenderingOptions.alternate) {
-          const arpeggioAllowedNoteNames = getTriadNoteNames(
-            tonic,
-            triadType,
-            "alternate",
-          );
-          const arpeggioActualNoteNames = getPromptNoteNames(
-            createArpeggioPracticeQueue(arpeggioGenerationSettings),
-          );
-          const arpeggioUnexpectedNoteNames = getUnexpectedNoteNames(
-            arpeggioActualNoteNames,
-            arpeggioAllowedNoteNames,
-          );
-
-          if (arpeggioUnexpectedNoteNames.length > 0) {
-            leaks.push(
-              `${tonic} ${triadType} arpeggios: ${arpeggioUnexpectedNoteNames.join(", ")}`,
-            );
-          }
-        }
-      }
-
-      for (const cadenceTriadType of cadenceTriadTypes) {
-        const cadenceGenerationSettings = createGenerationSettings({
-          practiceMode: "cadences",
-          tonic,
-          triadType: cadenceTriadType,
-          scaleOctaves: 1,
-          renderingPreference: "alternate",
-        });
-        const cadenceRenderingOptions = getCadenceRenderingOptions(
-          cadenceGenerationSettings,
-        );
-
-        if (!cadenceRenderingOptions.alternate) {
-          continue;
-        }
-
-        const cadenceRenderedTonic =
-          cadenceRenderingOptions.active.tonic.toLowerCase();
-        const cadenceAllowedNoteNames =
-          cadenceTriadType === "major"
-            ? getScaleNoteNamesForRenderedTonicName(
-                cadenceRenderedTonic,
-                "major",
-              )
-            : new Set([
-                ...getScaleNoteNamesForRenderedTonicName(
-                  cadenceRenderedTonic,
-                  "natural-minor",
-                ),
-                ...getScaleNoteNamesForRenderedTonicName(
-                  cadenceRenderedTonic,
-                  "harmonic-minor",
-                ),
-              ]);
-        const cadenceActualNoteNames = getPromptNoteNames(
-          createCadencePracticeQueue(cadenceGenerationSettings),
-        );
-        const cadenceUnexpectedNoteNames = getUnexpectedNoteNames(
-          cadenceActualNoteNames,
-          cadenceAllowedNoteNames,
-        );
-
-        if (cadenceUnexpectedNoteNames.length > 0) {
-          leaks.push(
-            `${tonic} ${cadenceTriadType} cadences: ${cadenceUnexpectedNoteNames.join(", ")}`,
-          );
-        }
-      }
-    }
-
-    expect(leaks).toEqual([]);
+  it("keeps every alternate rendered exercise inside its alternate spelling across all valid permutations", () => {
+    expect(collectRenderingConsistencyLeaks("alternate")).toEqual([]);
   });
 });
