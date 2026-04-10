@@ -10,6 +10,9 @@ Design philosophy:
 1. [Input analysis panel](#input-analysis)
 2. [Exercise panel](#exercise-engraving)
 
+Extra:
+1. [List of supported tonics](#full-tonic-list))
+
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
 ## Input Analysis Panel
