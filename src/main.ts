@@ -519,8 +519,6 @@ type CombinedPopoutHandle = {
   window: Window;
   inputContainer: HTMLDivElement;
   keyboardContainer: HTMLDivElement;
-  fitButton: HTMLButtonElement;
-  fitTrack: HTMLDivElement;
   handleResize: () => void;
   handleBeforeUnload: () => void;
 };
@@ -1552,17 +1550,6 @@ function handleCombinedPopoutClick() {
         <div id="combined-popout-root">
           <section id="combined-popout-input-section">
             <div id="combined-popout-input-content"></div>
-            <div id="combined-popout-fit-row">
-              <div id="combined-popout-fit-track">
-                <button
-                  id="combined-popout-fit-button"
-                  class="toolbar-button combined-popout-fit-button"
-                  type="button"
-                >
-                  Fit window
-                </button>
-              </div>
-            </div>
           </section>
           <div id="combined-popout-keyboard-content"></div>
         </div>
@@ -1598,13 +1585,16 @@ function handleCombinedPopoutClick() {
 
     #combined-popout-input-section {
       min-height: 0;
-      display: grid;
-      grid-template-rows: minmax(0, 1fr) auto;
+      display: flex;
+      align-items: stretch;
       overflow: hidden;
       background: #f7f1e4;
     }
 
     #combined-popout-input-content {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
       min-width: 0;
       min-height: 0;
       display: flex;
@@ -1649,24 +1639,6 @@ function handleCombinedPopoutClick() {
       display: none;
     }
 
-    #combined-popout-fit-row {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-    }
-
-    #combined-popout-fit-track {
-      width: fit-content;
-      max-width: 100%;
-      display: flex;
-      justify-content: flex-start;
-    }
-
-    .combined-popout-fit-button {
-      margin: 0 0 0 0;
-      z-index: 1;
-    }
-
     #combined-popout-keyboard-content {
       min-width: 0;
       min-height: 0;
@@ -1689,14 +1661,8 @@ function handleCombinedPopoutClick() {
   const keyboardContainer = popoutWindow.document.querySelector<HTMLDivElement>(
     "#combined-popout-keyboard-content",
   );
-  const fitButton = popoutWindow.document.querySelector<HTMLButtonElement>(
-    "#combined-popout-fit-button",
-  );
-  const fitTrack = popoutWindow.document.querySelector<HTMLDivElement>(
-    "#combined-popout-fit-track",
-  );
 
-  if (!inputContainer || !keyboardContainer || !fitButton || !fitTrack) {
+  if (!inputContainer || !keyboardContainer) {
     popoutWindow.close();
     return;
   }
@@ -1714,16 +1680,11 @@ function handleCombinedPopoutClick() {
 
   popoutWindow.addEventListener("resize", handleResize);
   popoutWindow.addEventListener("beforeunload", handleBeforeUnload);
-  fitButton.addEventListener("click", () => {
-    fitCombinedPopoutWindow(2);
-  });
 
   combinedPopoutHandle = {
     window: popoutWindow,
     inputContainer,
     keyboardContainer,
-    fitButton,
-    fitTrack,
     handleResize,
     handleBeforeUnload,
   };
@@ -1733,7 +1694,6 @@ function handleCombinedPopoutClick() {
     getCurrentInputAnalysis(),
     getCurrentKeyboardDisplayOptions(),
   );
-  fitCombinedPopoutWindow(2);
   popoutWindow.focus();
 }
 
@@ -1990,7 +1950,6 @@ function renderCombinedPopout(
     ...keyboardOptions,
     fitMode: "width",
   });
-  syncCombinedPopoutFitTrack();
 }
 
 function syncCombinedPopoutScale() {
@@ -2049,80 +2008,6 @@ function syncCombinedPopoutScale() {
     "--keyboard-black-key-height",
     `calc(72px * ${keyboardScale.toFixed(3)})`,
   );
-}
-
-function syncCombinedPopoutFitTrack() {
-  if (!combinedPopoutHandle) {
-    return;
-  }
-
-  if (combinedPopoutHandle.window.closed) {
-    cleanupCombinedPopout();
-    return;
-  }
-
-  const renderedKeyboardFrame =
-    combinedPopoutHandle.keyboardContainer.querySelector<HTMLDivElement>(
-      ".keyboard-frame",
-    );
-
-  if (!renderedKeyboardFrame) {
-    combinedPopoutHandle.fitTrack.style.width = "";
-    return;
-  }
-
-  combinedPopoutHandle.fitTrack.style.width = `${renderedKeyboardFrame.offsetWidth}px`;
-}
-
-function fitCombinedPopoutWindow(settlePasses = 0) {
-  if (!combinedPopoutHandle || combinedPopoutHandle.window.closed) {
-    cleanupCombinedPopout();
-    return;
-  }
-
-  const renderedInputDisplay =
-    combinedPopoutHandle.inputContainer.querySelector<HTMLDivElement>(
-      ".input-name-display",
-    );
-  const renderedKeyboardFrame =
-    combinedPopoutHandle.keyboardContainer.querySelector<HTMLDivElement>(
-      ".keyboard-frame",
-    );
-
-  if (!renderedInputDisplay || !renderedKeyboardFrame) {
-    return;
-  }
-
-  const popoutWindow = combinedPopoutHandle.window;
-  const idealInnerHeight =
-    renderedInputDisplay.offsetHeight +
-    combinedPopoutHandle.fitButton.offsetHeight +
-    renderedKeyboardFrame.offsetHeight;
-  const chromeHeight = Math.max(
-    0,
-    popoutWindow.outerHeight - popoutWindow.innerHeight,
-  );
-
-  try {
-    popoutWindow.resizeTo(
-      popoutWindow.outerWidth,
-      Math.max(idealInnerHeight + chromeHeight, 240),
-    );
-  } catch {
-    return;
-  }
-
-  if (settlePasses <= 0) {
-    return;
-  }
-
-  popoutWindow.setTimeout(() => {
-    if (!combinedPopoutHandle || combinedPopoutHandle.window !== popoutWindow) {
-      return;
-    }
-
-    fitCombinedPopoutWindow(settlePasses - 1);
-  }, 120);
 }
 
 function cleanupCombinedPopout() {
