@@ -97,7 +97,7 @@ This is the current exercise suite:
         - 1
         - 2
     - Tonic
-        - Every practical tonic
+        - Every practical tonic ([refer to tonic list](#full-tonic-list))
     - Scale type
         - Major
         - Natural minor
@@ -120,7 +120,7 @@ This is the current exercise suite:
         - 1
         - 2
     - Tonic
-        - Every practical tonic
+        - Every practical tonic ([refer to tonic list](#full-tonic-list))
     - Triad type
         - Major
         - Minor
@@ -143,7 +143,7 @@ This is the current exercise suite:
         - 1
         - 2
     - Tonic
-        - Every practical tonic
+        - Every practical tonic ([refer to tonic list](#full-tonic-list))
     - Arpeggio type
         - Major
         - Minor
@@ -156,7 +156,7 @@ This is the current exercise suite:
         - Bass only
         - Together
     - Tonic
-        - Every practical tonic
+        - Every practical tonic ([refer to tonic list](#full-tonic-list))
     - Cadence type
         - Major
         - Minor
@@ -208,3 +208,25 @@ Repeated chord tones are recognised and taken into account. They do not always c
  
 ### Exercise Engraving
 **Incomplete**
+
+# Additional Notes
+
+## Full Tonic List
+- C
+- G
+- D
+- A
+- E
+- B
+- F#
+- C#
+- G#
+- D#
+- A#
+- F
+- Bb
+- Eb
+- Ab
+- Db
+- Gb
+- Cb
