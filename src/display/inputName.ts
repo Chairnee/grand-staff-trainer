@@ -1,11 +1,31 @@
 import type { InputAnalysis } from "../analysis/inputAnalysis";
 
+type RenderInputNameDisplayOptions = {
+  showPopoutButton?: boolean;
+  onPopout?: () => void;
+  popoutButtonLabel?: string;
+  popoutButtonTitle?: string;
+};
+
 export function renderInputNameDisplay(
   container: HTMLDivElement,
   analysis: InputAnalysis,
+  options: RenderInputNameDisplayOptions = {},
 ) {
   container.replaceChildren();
   container.classList.remove("is-status");
+  container.classList.toggle("has-utility", Boolean(options.showPopoutButton));
+
+  if (options.showPopoutButton && options.onPopout) {
+    const popoutButton = document.createElement("button");
+    popoutButton.type = "button";
+    popoutButton.className = "input-name-popout-button";
+    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+    popoutButton.title =
+      options.popoutButtonTitle ?? "Open the input name display in a new window.";
+    popoutButton.addEventListener("click", options.onPopout);
+    container.append(popoutButton);
+  }
 
   if (!analysis.noteLabel && !analysis.primary) {
     container.classList.add("is-status");

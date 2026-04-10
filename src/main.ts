@@ -66,6 +66,8 @@ const UI_BASE_HEIGHT = 720;
 const UI_SHELL_PADDING_INLINE = 7;
 const UI_SHELL_PADDING_BLOCK = 4;
 const DEFAULT_RENDER_HEIGHT = 340;
+const INPUT_NAME_POPOUT_BASE_WIDTH = 270;
+const INPUT_NAME_POPOUT_BASE_HEIGHT = 72;
 const STAFF_ANNOTATION_MAX_ABOVE_TOP_TEXT_LINE = 1.8;
 const OTTAVA_VIEWPORT_PADDING = 18;
 const STAVE_GAP = 76;
@@ -445,9 +447,17 @@ const practiceModeFieldElement = practiceModeField;
 const tonicFieldElement = tonicField;
 const scaleTypeFieldElement = scaleTypeField;
 
+type InputNamePopoutHandle = {
+  window: Window;
+  container: HTMLDivElement;
+  handleResize: () => void;
+  handleBeforeUnload: () => void;
+};
+
 let renderedAttemptFeedbackCount = 0;
 let attemptTimer: ReturnType<typeof setTimeout> | null = null;
 let areNotationFontsReady = !("fonts" in document);
+let inputNamePopoutHandle: InputNamePopoutHandle | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
@@ -531,6 +541,7 @@ tonicSelectElement.addEventListener("change", handleTonicChange);
 scaleTypeSelectElement.addEventListener("change", handleScaleTypeChange);
 triadTypeSelectElement.addEventListener("change", handleTriadTypeChange);
 window.addEventListener("resize", handleWindowResize);
+window.addEventListener("beforeunload", handleWindowBeforeUnload);
 
 if (state.promptQueue.length === 0) {
   throw new Error("Prompt queue is empty.");
@@ -1168,16 +1179,216 @@ function renderKeyboard() {
 }
 
 function renderInputName() {
+  const analysis = getCurrentInputAnalysis();
+
   inputNameDisplayElement.hidden = !state.isInputNameVisible;
 
   if (!state.isInputNameVisible) {
     inputNameDisplayElement.replaceChildren();
+  } else {
+    renderInputNameDisplay(inputNameDisplayElement, analysis, {
+      showPopoutButton: true,
+      onPopout: handleInputNamePopoutClick,
+      popoutButtonLabel: "Pop out",
+      popoutButtonTitle: "Open the input name display in a separate window.",
+    });
+  }
+
+  renderInputNamePopout(analysis);
+}
+
+function getCurrentInputAnalysis() {
+  return analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
+}
+
+function handleInputNamePopoutClick() {
+  if (inputNamePopoutHandle && !inputNamePopoutHandle.window.closed) {
+    inputNamePopoutHandle.window.focus();
+    renderInputNamePopout(getCurrentInputAnalysis());
     return;
   }
 
-  const analysis = analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
+  const popoutWindow = window.open(
+    "",
+    "grand-staff-trainer-input-name",
+    "popup=yes,width=920,height=320,resizable=yes,scrollbars=yes",
+  );
 
-  renderInputNameDisplay(inputNameDisplayElement, analysis);
+  if (!popoutWindow) {
+    return;
+  }
+
+  popoutWindow.document.open();
+  popoutWindow.document.write(`
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>Input Name</title>
+      </head>
+      <body class="input-name-popout-body">
+        <div id="input-name-popout-root"></div>
+      </body>
+    </html>
+  `);
+  popoutWindow.document.close();
+
+  for (const node of document.head.querySelectorAll(
+    'link[rel="stylesheet"], style',
+  )) {
+    popoutWindow.document.head.append(node.cloneNode(true));
+  }
+
+  const popoutStyle = popoutWindow.document.createElement("style");
+  popoutStyle.textContent = `
+    body.input-name-popout-body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: #f7f1e4;
+      font-size: calc(1rem * var(--ui-scale));
+    }
+
+    #input-name-popout-root {
+      flex: 1 1 auto;
+      display: flex;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #input-name-popout-root .input-name-display {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      max-width: 100%;
+    }
+
+    #input-name-popout-root .input-name-content-wrap,
+    #input-name-popout-root .input-name-status-wrap {
+      align-items: center;
+      text-align: center;
+    }
+
+    #input-name-popout-root .input-name-reading-row {
+      justify-content: center;
+    }
+
+    #input-name-popout-root .input-name-note-list,
+    #input-name-popout-root .input-name-longhand,
+    #input-name-popout-root .input-name-status {
+      text-align: center;
+    }
+
+    #input-name-popout-root .input-name-longhand {
+      max-width: min(100%, calc(640px * var(--ui-scale)));
+      min-height: 0;
+    }
+
+    #input-name-popout-root .input-name-popout-button {
+      display: none;
+    }
+  `;
+  popoutWindow.document.head.append(popoutStyle);
+
+  const popoutContainer = popoutWindow.document.querySelector<HTMLDivElement>(
+    "#input-name-popout-root",
+  );
+
+  if (!popoutContainer) {
+    popoutWindow.close();
+    return;
+  }
+
+  const handleResize = () => {
+    syncInputNamePopoutScale();
+    renderInputNamePopout(getCurrentInputAnalysis());
+  };
+  const handleBeforeUnload = () => {
+    cleanupInputNamePopout();
+  };
+
+  popoutWindow.addEventListener("resize", handleResize);
+  popoutWindow.addEventListener("beforeunload", handleBeforeUnload);
+
+  inputNamePopoutHandle = {
+    window: popoutWindow,
+    container: popoutContainer,
+    handleResize,
+    handleBeforeUnload,
+  };
+
+  syncInputNamePopoutScale();
+  renderInputNamePopout(getCurrentInputAnalysis());
+  popoutWindow.focus();
+}
+
+function renderInputNamePopout(analysis = getCurrentInputAnalysis()) {
+  if (!inputNamePopoutHandle || inputNamePopoutHandle.window.closed) {
+    cleanupInputNamePopout();
+    return;
+  }
+
+  renderInputNameDisplay(inputNamePopoutHandle.container, analysis);
+}
+
+function syncInputNamePopoutScale() {
+  if (!inputNamePopoutHandle || inputNamePopoutHandle.window.closed) {
+    cleanupInputNamePopout();
+    return;
+  }
+
+  const availableWidth = Math.max(
+    1,
+    inputNamePopoutHandle.window.innerWidth - 32,
+  );
+  const availableHeight = Math.max(
+    1,
+    inputNamePopoutHandle.window.innerHeight - 32,
+  );
+  const widthScale = availableWidth / INPUT_NAME_POPOUT_BASE_WIDTH;
+  const heightScale = availableHeight / INPUT_NAME_POPOUT_BASE_HEIGHT;
+  const uiScale = Math.max(0.8, Math.min(widthScale, heightScale));
+
+  inputNamePopoutHandle.window.document.documentElement.style.setProperty(
+    "--ui-scale",
+    uiScale.toFixed(3),
+  );
+}
+
+function cleanupInputNamePopout() {
+  if (!inputNamePopoutHandle) {
+    return;
+  }
+
+  if (!inputNamePopoutHandle.window.closed) {
+    inputNamePopoutHandle.window.removeEventListener(
+      "resize",
+      inputNamePopoutHandle.handleResize,
+    );
+    inputNamePopoutHandle.window.removeEventListener(
+      "beforeunload",
+      inputNamePopoutHandle.handleBeforeUnload,
+    );
+  }
+
+  inputNamePopoutHandle = null;
+}
+
+function handleWindowBeforeUnload() {
+  if (!inputNamePopoutHandle || inputNamePopoutHandle.window.closed) {
+    return;
+  }
+
+  inputNamePopoutHandle.window.close();
 }
 
 function renderTonicOptions() {
