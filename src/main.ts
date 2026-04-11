@@ -4297,10 +4297,13 @@ function drawOttavaBracketSegment(
     const mainLabel = label.charAt(0);
     const superLabel = label.slice(1);
 
-    context.fillText(mainLabel, labelAnchorX, startY);
+    // New
+    const labelYOffset = placement === "below" ? 7 : 0;
+
+    context.fillText(mainLabel, labelAnchorX, startY + labelYOffset);
     const mainWidth = context.measureText(mainLabel).width;
     const mainHeight = mainFontSize;
-    const superY = startY - mainHeight / 2.5;
+    const superY = startY + labelYOffset - mainHeight / 2.5;
 
     context.setFont(undefined, superscriptFontSize, "normal", "italic");
     context.fillText(superLabel, labelAnchorX + mainWidth + 1, superY);
