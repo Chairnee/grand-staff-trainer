@@ -66,6 +66,32 @@ const MAX_ATTEMPT_WINDOW_MS = 250;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
 const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const SETTINGS_SCHEMA_VERSION = 1;
+const DEFAULT_GUIDE_URL =
+  "https://github.com/Chairnee/grand-staff-trainer/blob/main/README.md";
+const LANDSCAPE_SETTINGS_COACHMARK_MESSAGE = `
+  <p>
+    The input analysis, exercise and keyboard panels are currently visible.
+    You can change what's shown in Settings. Press the Full Guide button below
+    for full app capabilities.
+  </p>
+  <ol>
+    <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
+    <li>Exercise: configure exactly what you want from Settings.</li>
+    <li>
+      Keyboard: shows both your played notes and also the expected exercise
+      notes when the exercise panel is open.
+    </li>
+  </ol>
+  <div class="settings-coachmark-actions">
+    <button
+      id="settings-coachmark-guide-button"
+      type="button"
+      class="toolbar-button"
+    >
+      Full Guide
+    </button>
+  </div>
+`;
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
@@ -102,7 +128,7 @@ const STAVE_BRACE_CENTER_OFFSET =
   (STAVE_BRACE_TOP_OFFSET + STAVE_BRACE_BOTTOM_OFFSET) / 2;
 const STAVE_VERTICAL_OPTICAL_OFFSET = 1;
 const IS_DEV = import.meta.env.DEV;
-const GUIDE_URL = import.meta.env.VITE_DOCUMENTATION_URL;
+const GUIDE_URL = import.meta.env.VITE_DOCUMENTATION_URL || DEFAULT_GUIDE_URL;
 const SHOW_GUIDE_BUTTON = IS_DEV || Boolean(GUIDE_URL);
 const PRACTICE_MODES: PracticeMode[] = [
   "scales",
@@ -147,6 +173,8 @@ type AppState = {
   isExerciseVisible: boolean;
   inputNameDisplay: PanelDisplayState;
   keyboardDisplay: PanelDisplayState;
+  hasSeenLandscapeSettingsCoachmark: boolean;
+  isSettingsCoachmarkOpen: boolean;
   midi: MidiState;
   simulatedHeldNotes: number[];
   heldOverlayHands: Map<number, "treble" | "bass">;
@@ -160,6 +188,7 @@ type StoredSettingsSnapshot = {
   isExerciseVisible: boolean;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
+  hasSeenLandscapeSettingsCoachmark: boolean;
 };
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -211,6 +240,21 @@ app.innerHTML = `
   </div>
 
   <div id="midi-debug" class="midi-debug" hidden></div>
+
+  <div
+    id="settings-coachmark-overlay"
+    class="settings-coachmark-overlay"
+    hidden
+  ></div>
+  <div
+    id="settings-coachmark-callout"
+    class="settings-coachmark-callout"
+    hidden
+    role="note"
+    aria-live="polite"
+  >
+    ${LANDSCAPE_SETTINGS_COACHMARK_MESSAGE}
+  </div>
 
   <div id="settings-backdrop" class="settings-backdrop" hidden></div>
 
@@ -357,6 +401,16 @@ const attemptWindowInput = document.querySelector<HTMLInputElement>(
   "#attempt-window-input",
 );
 const midiDebug = document.querySelector<HTMLDivElement>("#midi-debug");
+const toolbar = document.querySelector<HTMLElement>(".toolbar");
+const settingsCoachmarkOverlay = document.querySelector<HTMLDivElement>(
+  "#settings-coachmark-overlay",
+);
+const settingsCoachmarkCallout = document.querySelector<HTMLDivElement>(
+  "#settings-coachmark-callout",
+);
+const settingsCoachmarkGuideButton = document.querySelector<HTMLButtonElement>(
+  "#settings-coachmark-guide-button",
+);
 const settingsToggle =
   document.querySelector<HTMLButtonElement>("#settings-toggle");
 const debugToggle = document.querySelector<HTMLButtonElement>("#debug-toggle");
@@ -436,6 +490,8 @@ if (
   !midiInputSelect ||
   !attemptWindowInput ||
   !midiDebug ||
+  !settingsCoachmarkOverlay ||
+  !settingsCoachmarkCallout ||
   !settingsToggle ||
   !debugToggle ||
   !midiStatus ||
@@ -477,6 +533,9 @@ const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
 const attemptWindowInputElement = attemptWindowInput;
 const midiDebugElement = midiDebug;
+const settingsCoachmarkOverlayElement = settingsCoachmarkOverlay;
+const settingsCoachmarkCalloutElement = settingsCoachmarkCallout;
+const settingsCoachmarkGuideButtonElement = settingsCoachmarkGuideButton;
 const settingsToggleElement = settingsToggle;
 const debugToggleElement = debugToggle;
 const midiStatusElement = midiStatus;
@@ -583,6 +642,10 @@ const state: AppState = {
     visibleInApp: initialStoredSettings.isKeyboardVisible,
     popoutMode: "none",
   },
+  hasSeenLandscapeSettingsCoachmark:
+    initialStoredSettings.hasSeenLandscapeSettingsCoachmark,
+  isSettingsCoachmarkOpen:
+    !initialStoredSettings.hasSeenLandscapeSettingsCoachmark,
   midi: {
     status: "idle",
     deviceId: null,
@@ -607,6 +670,18 @@ const midiConnection = connectMidi(handleMidiStateChange, {
 midiInputSelectElement.addEventListener("change", handleMidiInputChange);
 attemptWindowInputElement.addEventListener("change", handleAttemptWindowChange);
 settingsToggleElement.addEventListener("click", toggleSettingsDrawer);
+settingsCoachmarkOverlayElement.addEventListener(
+  "click",
+  handleSettingsCoachmarkDismiss,
+);
+settingsCoachmarkCalloutElement.addEventListener(
+  "click",
+  handleSettingsCoachmarkDismiss,
+);
+settingsCoachmarkGuideButtonElement?.addEventListener(
+  "click",
+  handleSettingsCoachmarkGuideButtonClick,
+);
 settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
 debugToggleElement.addEventListener("click", handleUtilityButtonClick);
@@ -725,6 +800,7 @@ function renderApp() {
   practiceAreaElement.dataset.debugVisible = String(state.isDebugVisible);
   renderMidiInputOptions();
   renderToolbar();
+  renderSettingsCoachmark();
   renderSettingsDrawer();
   renderMidiDebug();
   renderExerciseNotice();
@@ -881,6 +957,102 @@ function renderToolbar() {
   settingsToggleElement.setAttribute(
     "aria-expanded",
     String(state.isSettingsOpen),
+  );
+  settingsToggleElement.classList.toggle(
+    "is-coachmark-highlighted",
+    isSettingsCoachmarkVisible(),
+  );
+}
+
+function isSettingsCoachmarkVisible() {
+  return state.isSettingsCoachmarkOpen && !state.isSettingsOpen;
+}
+
+function renderSettingsCoachmark() {
+  const isVisible = isSettingsCoachmarkVisible();
+
+  settingsCoachmarkOverlayElement.hidden = !isVisible;
+  settingsCoachmarkCalloutElement.hidden = !isVisible;
+  settingsCoachmarkCalloutElement.classList.toggle(
+    "is-portrait",
+    isVisible && isPortraitViewport(),
+  );
+
+  if (!isVisible) {
+    settingsCoachmarkCalloutElement.style.removeProperty("top");
+    settingsCoachmarkCalloutElement.style.removeProperty("left");
+    settingsCoachmarkCalloutElement.style.removeProperty(
+      "--settings-coachmark-arrow-left",
+    );
+    return;
+  }
+
+  const { overlayScale, portraitUiScale } = getLayoutMetrics();
+  const isPortrait = isPortraitViewport();
+
+  if (isPortrait) {
+    const toolbarRect = toolbar?.getBoundingClientRect();
+    if (!toolbarRect) {
+      return;
+    }
+    const coachmarkGap = 12 * portraitUiScale;
+    const coachmarkMargin = 8 * portraitUiScale;
+    const coachmarkRect =
+      settingsCoachmarkCalloutElement.getBoundingClientRect();
+    const coachmarkHeight = coachmarkRect.height;
+    const top = Math.min(
+      toolbarRect.bottom + coachmarkGap,
+      Math.max(
+        coachmarkMargin,
+        window.innerHeight - coachmarkHeight - coachmarkMargin,
+      ),
+    );
+
+    settingsCoachmarkCalloutElement.style.left = "50%";
+    settingsCoachmarkCalloutElement.style.top = `${top}px`;
+    settingsCoachmarkCalloutElement.style.removeProperty(
+      "--settings-coachmark-arrow-left",
+    );
+    return;
+  }
+
+  const settingsButtonRect = settingsToggleElement.getBoundingClientRect();
+  const coachmarkMargin = 16 * overlayScale;
+  const coachmarkGap = 14 * overlayScale;
+  const arrowSize = 16 * overlayScale;
+  const coachmarkRect = settingsCoachmarkCalloutElement.getBoundingClientRect();
+  const coachmarkWidth = coachmarkRect.width;
+  const coachmarkHeight = coachmarkRect.height;
+  const left = Math.min(
+    Math.max(coachmarkMargin, settingsButtonRect.left),
+    Math.max(
+      coachmarkMargin,
+      window.innerWidth - coachmarkWidth - coachmarkMargin,
+    ),
+  );
+  const top = Math.min(
+    settingsButtonRect.bottom + coachmarkGap,
+    Math.max(
+      coachmarkMargin,
+      window.innerHeight - coachmarkHeight - coachmarkMargin,
+    ),
+  );
+  const arrowLeft = Math.min(
+    Math.max(
+      20 * overlayScale,
+      settingsButtonRect.left +
+        settingsButtonRect.width / 2 -
+        left -
+        arrowSize / 2,
+    ),
+    Math.max(20 * overlayScale, coachmarkWidth - 20 * overlayScale - arrowSize),
+  );
+
+  settingsCoachmarkCalloutElement.style.left = `${left}px`;
+  settingsCoachmarkCalloutElement.style.top = `${top}px`;
+  settingsCoachmarkCalloutElement.style.setProperty(
+    "--settings-coachmark-arrow-left",
+    `${arrowLeft}px`,
   );
 }
 
@@ -2150,6 +2322,7 @@ function handlePromptAttempt() {
 }
 
 function toggleSettingsDrawer() {
+  dismissSettingsCoachmark(false);
   state.isSettingsOpen = !state.isSettingsOpen;
   renderApp();
 }
@@ -2171,11 +2344,30 @@ function handleUtilityButtonClick() {
     return;
   }
 
+  if (!SHOW_GUIDE_BUTTON) {
+    return;
+  }
+
+  state.isSettingsCoachmarkOpen = true;
+  renderApp();
+}
+
+function handleSettingsCoachmarkDismiss() {
+  dismissSettingsCoachmark();
+}
+
+function handleSettingsCoachmarkGuideButtonClick(event: MouseEvent) {
+  event.stopPropagation();
+
+  dismissSettingsCoachmark(false);
+
   if (!GUIDE_URL) {
+    renderApp();
     return;
   }
 
   window.open(GUIDE_URL, "_blank", "noopener,noreferrer");
+  renderApp();
 }
 
 function handleKeyboardToggleChange() {
@@ -4485,6 +4677,7 @@ function createDefaultStoredSettings() {
     isExerciseVisible: true,
     isInputNameVisible: true,
     isKeyboardVisible: true,
+    hasSeenLandscapeSettingsCoachmark: false,
   };
 }
 
@@ -4525,7 +4718,9 @@ function isStoredSettingsSnapshotValid(
     typeof parsedSettings.isDebugVisible === "boolean" &&
     typeof parsedSettings.isExerciseVisible === "boolean" &&
     typeof parsedSettings.isInputNameVisible === "boolean" &&
-    typeof parsedSettings.isKeyboardVisible === "boolean"
+    typeof parsedSettings.isKeyboardVisible === "boolean" &&
+    (typeof parsedSettings.hasSeenLandscapeSettingsCoachmark === "boolean" ||
+      typeof parsedSettings.hasSeenLandscapeSettingsCoachmark === "undefined")
   );
 }
 
@@ -4536,6 +4731,7 @@ function saveStoredSettingsSnapshot(settings: {
   isExerciseVisible: boolean;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
+  hasSeenLandscapeSettingsCoachmark: boolean;
 }) {
   const {
     renderingPreference: _renderingPreference,
@@ -4550,6 +4746,8 @@ function saveStoredSettingsSnapshot(settings: {
     isExerciseVisible: settings.isExerciseVisible,
     isInputNameVisible: settings.isInputNameVisible,
     isKeyboardVisible: settings.isKeyboardVisible,
+    hasSeenLandscapeSettingsCoachmark:
+      settings.hasSeenLandscapeSettingsCoachmark,
   };
 
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(snapshot));
@@ -4562,6 +4760,7 @@ function loadStoredSettings(): {
   isExerciseVisible: boolean;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
+  hasSeenLandscapeSettingsCoachmark: boolean;
 } {
   try {
     const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -4610,6 +4809,10 @@ function loadStoredSettings(): {
         typeof parsedSettings?.isKeyboardVisible === "boolean"
           ? parsedSettings.isKeyboardVisible
           : true,
+      hasSeenLandscapeSettingsCoachmark:
+        typeof parsedSettings?.hasSeenLandscapeSettingsCoachmark === "boolean"
+          ? parsedSettings.hasSeenLandscapeSettingsCoachmark
+          : false,
     };
   } catch {
     const defaultSettings = createDefaultStoredSettings();
@@ -4633,8 +4836,23 @@ function saveStoredSettings() {
       isExerciseVisible: state.isExerciseVisible,
       isInputNameVisible: state.inputNameDisplay.visibleInApp,
       isKeyboardVisible: state.keyboardDisplay.visibleInApp,
+      hasSeenLandscapeSettingsCoachmark:
+        state.hasSeenLandscapeSettingsCoachmark,
     });
   } catch {
     // Ignore storage issues and continue without persistence.
+  }
+}
+
+function dismissSettingsCoachmark(shouldRender = true) {
+  state.isSettingsCoachmarkOpen = false;
+
+  if (!state.hasSeenLandscapeSettingsCoachmark) {
+    state.hasSeenLandscapeSettingsCoachmark = true;
+    saveStoredSettings();
+  }
+
+  if (shouldRender) {
+    renderApp();
   }
 }
