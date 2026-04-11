@@ -65,6 +65,11 @@ const UI_BASE_WIDTH = 1280;
 const UI_BASE_HEIGHT = 720;
 const UI_SHELL_PADDING_INLINE = 7;
 const UI_SHELL_PADDING_BLOCK = 4;
+const NOTATION_ZOOM_MIN = 1;
+const NOTATION_ZOOM_MAX = 3;
+const PORTRAIT_UI_BASE_HEIGHT = 568;
+const PORTRAIT_UI_SCALE_MIN = 1;
+const PORTRAIT_UI_SCALE_MAX = 10;
 const DEFAULT_RENDER_HEIGHT = 340;
 const MIN_RENDER_WIDTH = 640;
 const PORTRAIT_MIN_RENDER_WIDTH = 0;
@@ -674,6 +679,14 @@ function renderApp() {
     "--overlay-scale",
     layoutMetrics.overlayScale.toFixed(3),
   );
+  document.documentElement.style.setProperty(
+    "--portrait-ui-scale",
+    layoutMetrics.portraitUiScale.toFixed(3),
+  );
+  document.documentElement.style.setProperty(
+    "--notation-zoom",
+    layoutMetrics.notationZoom.toFixed(3),
+  );
 
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
@@ -742,6 +755,8 @@ function getLayoutMetrics(): {
   stageScale: number;
   shellScale: number;
   overlayScale: number;
+  portraitUiScale: number;
+  notationZoom: number;
 } {
   const baselineScale = getViewportBaselineScale();
   const layoutMode: LayoutMode = "responsive";
@@ -749,6 +764,19 @@ function getLayoutMetrics(): {
   const stageScale = 1;
   const shellScale = uiScale;
   const overlayScale = uiScale;
+  const portraitUiScale = isPortraitViewport()
+    ? Math.min(
+        PORTRAIT_UI_SCALE_MAX,
+        Math.max(
+          PORTRAIT_UI_SCALE_MIN,
+          window.innerHeight / PORTRAIT_UI_BASE_HEIGHT,
+        ),
+      )
+    : 1;
+  const notationZoom = Math.min(
+    NOTATION_ZOOM_MAX,
+    Math.max(NOTATION_ZOOM_MIN, 1 / uiScale),
+  );
 
   return {
     layoutMode,
@@ -756,6 +784,8 @@ function getLayoutMetrics(): {
     stageScale,
     shellScale,
     overlayScale,
+    portraitUiScale,
+    notationZoom,
   };
 }
 

@@ -3,6 +3,7 @@
   --stage-scale: 1;
   --shell-scale: 1;
   --overlay-scale: 1;
+  --notation-zoom: 1;
   color-scheme: light;
   font-family: Georgia, "Times New Roman", serif;
   line-height: 1.5;
@@ -754,37 +755,69 @@ body {
   .toolbar {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: calc(8px * var(--ui-scale));
-    min-height: 10dvh;
-    font-size: clamp(0.7rem, 1.6vh, 1rem);
+    grid-auto-rows: minmax(calc(30px * var(--portrait-ui-scale)), 5dvh);
+    align-items: stretch;
+    gap: calc(8px * var(--portrait-ui-scale));
+    font-size: calc(0.6rem * var(--portrait-ui-scale));
   }
 
   .toolbar-actions {
     grid-column: 1 / -1;
+    gap: calc(3px * var(--portrait-ui-scale));
   }
 
   .toolbar-button {
     flex: 1 1 0;
+    padding: calc(20px * var(--overlay-scale));
+  }
+
+  .toolbar-button {
+    min-height: calc(30px * var(--portrait-ui-scale));
   }
 
   .settings-drawer {
-    width: min(96vw, 720px);
+    width: 96vw;
     height: auto;
     max-height: calc(100dvh - 12px);
-    top: 6px;
-    right: 2vw;
-    padding: calc(12px * var(--overlay-scale));
-    gap: calc(12px * var(--overlay-scale));
-    font-size: clamp(0.7rem, 1.7vh, 1.35rem);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: calc(5px * var(--portrait-ui-scale));
+    gap: calc(12px * var(--portrait-ui-scale));
+    font-size: calc(1rem * var(--portrait-ui-scale));
   }
 
   .settings-drawer input[type="checkbox"] {
-    width: 0.8em;
-    height: 0.8em;
+    width: calc(1em * var(--portrait-ui-scale));
+    height: calc(1em * var(--portrait-ui-scale))
+  }
+
+  .settings-section > .settings-toggle + .settings-toggle {
+    margin-top: calc(6px * var(--portrait-ui-scale));
+  }
+
+  .settings-toggle {
+    font-size: calc(1.1rem * var(--portrait-ui-scale));
+  }
+
+  .settings-action-button {
+    padding: calc(5px * var(--portrait-ui-scale))
+  }
+
+  .midi-picker,
+  .attempt-window-picker,
+  .status-pill {
+    min-height: calc(30px * var(--portrait-ui-scale));
   }
 
   .midi-picker select {
-    min-width: 70px;
+    min-width: 85px;
+    width: 100%;
+  }
+
+  .midi-picker select,
+  .attempt-window-picker input {
+    padding: calc(6px * var(--portrait-ui-scale))
   }
 
   .attempt-window-picker {
@@ -792,15 +825,22 @@ body {
   }
 
   .attempt-window-picker input {
-    width: calc(72px * var(--ui-scale));
-    min-width: 50px;
+    width: calc(35px * var(--portrait-ui-scale));
+    min-width: 28px;
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .attempt-window-picker input::-webkit-outer-spin-button,
+  .attempt-window-picker input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
   }
 
   .status-pill {
     width: 100%;
-    justify-self: center;
-    text-align: center;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -822,32 +862,25 @@ body {
   .input-name-display {
     flex: 0.8 1 0;
     padding-top: calc(25px * var(--ui-scale));
-    font-size: clamp(1rem, 2.2vh, 1.6rem);
     justify-content: center;
-  }
-
-  .input-name-note-list,
-  .input-name-longhand,
-  .input-name-status {
-    max-width: 100%;
     overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
 
-  .input-name-pill {
-    font-size: 1em;
+  .panel-popout-buttons {
+    font-size: 2.5em;
   }
 
-  .input-name-note-list,
-  .input-name-longhand,
-  .input-name-status {
-    font-size: 1em;
+  .input-name-status-wrap {
+    font-size: 4em
+  }
+
+  .input-name-content-wrap {
+    font-size: 3.4em
   }
 
   .notation {
     flex: 2 1 0;
-    font-size: clamp(1rem, 2.2vh, 1.6rem);
+    font-size: 3em;
   }
 
   .notation-canvas {
@@ -858,7 +891,7 @@ body {
 
   .notation-canvas svg {
     max-width: none;
-    width: 300%;
+    width: calc(100% * var(--notation-zoom));
     flex: 0 0 auto;
   }
 
@@ -867,9 +900,5 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-
-  .keyboard-display .panel-popout-buttons {
-    font-size: clamp(1rem, 2.2vh, 1.6rem);
   }
 }
