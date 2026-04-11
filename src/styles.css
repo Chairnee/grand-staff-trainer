@@ -153,15 +153,21 @@ body {
 }
 
 .attempt-window-picker input {
-  width: calc(78px * var(--ui-scale));
-  min-width: 50px;
+  width: calc(45px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
   border: 1px solid rgba(70, 52, 28, 0.2);
   border-radius: calc(10px * var(--ui-scale));
   background: #fffdf7;
   color: #1f1d1b;
   font: inherit;
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
+
+  .attempt-window-picker input::-webkit-outer-spin-button,
+  .attempt-window-picker input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
 
 .midi-debug {
   position: fixed;
@@ -827,13 +833,6 @@ body {
   .attempt-window-picker input {
     width: calc(35px * var(--portrait-ui-scale));
     min-width: 28px;
-    appearance: textfield;
-    -moz-appearance: textfield;
-  }
-
-  .attempt-window-picker input::-webkit-outer-spin-button,
-  .attempt-window-picker input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
   }
 
   .status-pill {
