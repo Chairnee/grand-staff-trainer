@@ -1,5 +1,6 @@
 # Grand Staff Trainer
 [Grand Staff Trainer Webpage](chairnee.github.io/grand-staff-trainer/)
+
 **Mobile is fully supported**
 
  Grand Staff Trainer is a highly customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences. The settings button opens the menu that contains all configuration settings.
