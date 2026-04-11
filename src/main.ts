@@ -63,6 +63,9 @@ import {
 const DEFAULT_ATTEMPT_WINDOW_MS = 40;
 const MIN_ATTEMPT_WINDOW_MS = 10;
 const MAX_ATTEMPT_WINDOW_MS = 250;
+const DEFAULT_OCTAVE_OFFSET = 0;
+const MIN_OCTAVE_OFFSET = -3;
+const MAX_OCTAVE_OFFSET = 3;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
 const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const SETTINGS_SCHEMA_VERSION = 1;
@@ -153,6 +156,7 @@ type AppState = {
   isSettingsOpen: boolean;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
+  octaveOffset: number;
   inputNameDisplay: PanelDisplayState;
   keyboardDisplay: PanelDisplayState;
   hasSeenLandscapeSettingsCoachmark: boolean;
@@ -168,6 +172,7 @@ type StoredSettingsSnapshot = {
   attemptWindowMs: number;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
+  octaveOffset: number;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   hasSeenLandscapeSettingsCoachmark: boolean;
@@ -610,6 +615,7 @@ const state: AppState = {
   isSettingsOpen: false,
   isDebugVisible: IS_DEV && initialStoredSettings.isDebugVisible,
   isExerciseVisible: initialStoredSettings.isExerciseVisible,
+  octaveOffset: initialStoredSettings.octaveOffset,
   inputNameDisplay: {
     visibleInApp: initialStoredSettings.isInputNameVisible,
     popoutMode: "none",
@@ -4653,6 +4659,10 @@ function createPromptQueue(
   return createExercisePromptQueue(length, generationSettings);
 }
 
+function clampOctaveOffset(offset: number) {
+  return Math.min(MAX_OCTAVE_OFFSET, Math.max(MIN_OCTAVE_OFFSET, offset));
+}
+
 function fillQueueToLength(
   promptQueue: PromptSlot[],
   length: number,
@@ -4689,6 +4699,7 @@ function createDefaultStoredSettings() {
     attemptWindowMs: DEFAULT_ATTEMPT_WINDOW_MS,
     isDebugVisible: false,
     isExerciseVisible: true,
+    octaveOffset: DEFAULT_OCTAVE_OFFSET,
     isInputNameVisible: true,
     isKeyboardVisible: true,
     hasSeenLandscapeSettingsCoachmark: false,
@@ -4731,6 +4742,8 @@ function isStoredSettingsSnapshotValid(
     typeof parsedSettings.attemptWindowMs === "number" &&
     typeof parsedSettings.isDebugVisible === "boolean" &&
     typeof parsedSettings.isExerciseVisible === "boolean" &&
+    (typeof parsedSettings.octaveOffset === "number" ||
+      typeof parsedSettings.octaveOffset === "undefined") &&
     typeof parsedSettings.isInputNameVisible === "boolean" &&
     typeof parsedSettings.isKeyboardVisible === "boolean" &&
     (typeof parsedSettings.hasSeenLandscapeSettingsCoachmark === "boolean" ||
@@ -4743,6 +4756,7 @@ function saveStoredSettingsSnapshot(settings: {
   attemptWindowMs: number;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
+  octaveOffset: number;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   hasSeenLandscapeSettingsCoachmark: boolean;
@@ -4758,6 +4772,7 @@ function saveStoredSettingsSnapshot(settings: {
     attemptWindowMs: settings.attemptWindowMs,
     isDebugVisible: settings.isDebugVisible,
     isExerciseVisible: settings.isExerciseVisible,
+    octaveOffset: settings.octaveOffset,
     isInputNameVisible: settings.isInputNameVisible,
     isKeyboardVisible: settings.isKeyboardVisible,
     hasSeenLandscapeSettingsCoachmark:
@@ -4772,6 +4787,7 @@ function loadStoredSettings(): {
   attemptWindowMs: number;
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
+  octaveOffset: number;
   isInputNameVisible: boolean;
   isKeyboardVisible: boolean;
   hasSeenLandscapeSettingsCoachmark: boolean;
@@ -4815,6 +4831,10 @@ function loadStoredSettings(): {
         typeof parsedSettings?.isExerciseVisible === "boolean"
           ? parsedSettings.isExerciseVisible
           : true,
+      octaveOffset:
+        typeof parsedSettings?.octaveOffset === "number"
+          ? clampOctaveOffset(parsedSettings.octaveOffset)
+          : DEFAULT_OCTAVE_OFFSET,
       isInputNameVisible:
         typeof parsedSettings?.isInputNameVisible === "boolean"
           ? parsedSettings.isInputNameVisible
@@ -4848,6 +4868,7 @@ function saveStoredSettings() {
       attemptWindowMs: state.attemptWindowMs,
       isDebugVisible: state.isDebugVisible,
       isExerciseVisible: state.isExerciseVisible,
+      octaveOffset: state.octaveOffset,
       isInputNameVisible: state.inputNameDisplay.visibleInApp,
       isKeyboardVisible: state.keyboardDisplay.visibleInApp,
       hasSeenLandscapeSettingsCoachmark:
