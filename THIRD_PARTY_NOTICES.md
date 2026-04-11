@@ -1,6 +1,6 @@
 Grand Staff Trainer uses third-party licences that may be distributed under licences different than the Grand Staff Trainer app.
 
-1) Licence Notice for the VexFlow library
+\1) Licence Notice for the VexFlow library
 
 Copyright (c) 2023-present VexFlow contributors (see AUTHORS.md).
 Copyright (c) 2010-2022 Mohit Muthanna Cheppudira
