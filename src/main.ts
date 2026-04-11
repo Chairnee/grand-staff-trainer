@@ -66,6 +66,8 @@ const MAX_ATTEMPT_WINDOW_MS = 250;
 const DEFAULT_OCTAVE_OFFSET = 0;
 const MIN_OCTAVE_OFFSET = -3;
 const MAX_OCTAVE_OFFSET = 3;
+const MIDI_NOTE_NUMBER_MIN = 0;
+const MIDI_NOTE_NUMBER_MAX = 127;
 const MIDI_DEVICE_STORAGE_KEY = "piano-tool-midi-device-id";
 const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const SETTINGS_SCHEMA_VERSION = 1;
@@ -788,17 +790,33 @@ function renderApp() {
   renderKeyboard();
 }
 
+function getDisplayedSimulatedHeldNotes(appState: AppState) {
+  return applyMidiInputOffsetToNotes(
+    appState.simulatedHeldNotes,
+    appState.octaveOffset,
+  );
+}
+
 function getDisplayedHeldNotes(appState: AppState) {
   return [
-    ...new Set([...appState.midi.heldNotes, ...appState.simulatedHeldNotes]),
+    ...new Set([
+      ...applyMidiInputOffsetToNotes(
+        appState.midi.heldNotes,
+        appState.octaveOffset,
+      ),
+      ...getDisplayedSimulatedHeldNotes(appState),
+    ]),
   ].sort((left, right) => left - right);
 }
 
 function getDisplayedAnalysisHeldNotes(appState: AppState) {
   return [
     ...new Set([
-      ...appState.midi.analysisHeldNotes,
-      ...appState.simulatedHeldNotes,
+      ...applyMidiInputOffsetToNotes(
+        appState.midi.analysisHeldNotes,
+        appState.octaveOffset,
+      ),
+      ...getDisplayedSimulatedHeldNotes(appState),
     ]),
   ].sort((left, right) => left - right);
 }
@@ -1144,14 +1162,15 @@ function renderMidiDebug() {
   const currentPrompt = state.promptQueue[state.currentPromptIndex] ?? null;
   const displayedHeldNotes = getDisplayedHeldNotes(state);
   const displayedAnalysisHeldNotes = getDisplayedAnalysisHeldNotes(state);
-  const simulatedHeldKeys = state.simulatedHeldNotes.map((noteNumber) =>
+  const displayedSimulatedHeldNotes = getDisplayedSimulatedHeldNotes(state);
+  const simulatedHeldKeys = displayedSimulatedHeldNotes.map((noteNumber) =>
     midiNoteNumberToKey(noteNumber, "sharps"),
   );
   const expectedMidiNotes = currentPrompt
     ? getPromptMidiNotes(currentPrompt)
     : [];
   const lastEvent = state.midi.lastEvent
-    ? `${state.midi.lastEvent.type} ${state.midi.lastEvent.noteNumber} velocity ${state.midi.lastEvent.velocity}`
+    ? `${state.midi.lastEvent.type} ${applyMidiInputOffset(state.midi.lastEvent.noteNumber)} velocity ${state.midi.lastEvent.velocity}`
     : "none";
   const lines = [
     `Status: ${state.midi.status}`,
@@ -1173,7 +1192,7 @@ function renderMidiDebug() {
     }`,
     `Simulated held keys: ${simulatedHeldKeys.join(", ") || "none"}`,
     `Simulated held notes: ${
-      state.simulatedHeldNotes.map((note) => note.toString()).join(", ") ||
+      displayedSimulatedHeldNotes.map((note) => note.toString()).join(", ") ||
       "none"
     }`,
     `Analysis held keys: ${
@@ -2323,7 +2342,9 @@ function handlePromptAttempt() {
     return;
   }
 
-  state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt);
+  state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt).map((noteNumber) =>
+    removeMidiInputOffset(noteNumber),
+  );
   syncHeldOverlayHands();
   const attempt = createFakeAttempt(currentPrompt);
 
@@ -2540,7 +2561,11 @@ function resetRenderingPreference() {
 
 function createFakeAttempt(prompt: PromptSlot): PromptAttempt {
   return {
-    midiNotes: getPromptMidiNotes(prompt),
+    midiNotes: applyMidiInputOffsetToNotes(
+      getPromptMidiNotes(prompt).map((noteNumber) =>
+        removeMidiInputOffset(noteNumber),
+      ),
+    ),
   };
 }
 
@@ -2562,7 +2587,7 @@ function isPromptMatch(prompt: PromptSlot, attempt: PromptAttempt) {
 }
 
 function handleMidiNoteOn(noteNumber: number) {
-  pendingAttemptMidiNotes.add(noteNumber);
+  pendingAttemptMidiNotes.add(applyMidiInputOffset(noteNumber));
 
   if (attemptTimer) {
     clearTimeout(attemptTimer);
@@ -4661,6 +4686,40 @@ function createPromptQueue(
 
 function clampOctaveOffset(offset: number) {
   return Math.min(MAX_OCTAVE_OFFSET, Math.max(MIN_OCTAVE_OFFSET, offset));
+}
+
+function clampMidiNoteNumber(noteNumber: number) {
+  return Math.min(
+    MIDI_NOTE_NUMBER_MAX,
+    Math.max(MIDI_NOTE_NUMBER_MIN, noteNumber),
+  );
+}
+
+function getOctaveOffsetSemitones(octaveOffset = state.octaveOffset) {
+  return octaveOffset * 12;
+}
+
+function applyMidiInputOffset(
+  noteNumber: number,
+  octaveOffset = state.octaveOffset,
+) {
+  return clampMidiNoteNumber(noteNumber + getOctaveOffsetSemitones(octaveOffset));
+}
+
+function applyMidiInputOffsetToNotes(
+  noteNumbers: number[],
+  octaveOffset = state.octaveOffset,
+) {
+  return noteNumbers.map((noteNumber) =>
+    applyMidiInputOffset(noteNumber, octaveOffset),
+  );
+}
+
+function removeMidiInputOffset(
+  noteNumber: number,
+  octaveOffset = state.octaveOffset,
+) {
+  return clampMidiNoteNumber(noteNumber - getOctaveOffsetSemitones(octaveOffset));
 }
 
 function fillQueueToLength(
