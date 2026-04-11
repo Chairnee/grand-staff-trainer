@@ -213,6 +213,28 @@ app.innerHTML = `
           />
           <span>ms</span>
         </label>
+        <div class="octave-offset-picker" aria-label="Octave offset">
+          <span>Octave offset</span>
+          <div class="octave-offset-controls">
+            <button
+              id="octave-offset-decrease"
+              class="toolbar-button"
+              type="button"
+              aria-label="Decrease octave offset"
+            >
+              -
+            </button>
+            <span id="octave-offset-value" class="octave-offset-value">0</span>
+            <button
+              id="octave-offset-increase"
+              class="toolbar-button"
+              type="button"
+              aria-label="Increase octave offset"
+            >
+              +
+            </button>
+          </div>
+        </div>
         <div id="midi-status" class="status-pill"></div>
       </header>
 
@@ -387,6 +409,14 @@ const midiInputSelect =
 const attemptWindowInput = document.querySelector<HTMLInputElement>(
   "#attempt-window-input",
 );
+const octaveOffsetDecrease = document.querySelector<HTMLButtonElement>(
+  "#octave-offset-decrease",
+);
+const octaveOffsetValue =
+  document.querySelector<HTMLSpanElement>("#octave-offset-value");
+const octaveOffsetIncrease = document.querySelector<HTMLButtonElement>(
+  "#octave-offset-increase",
+);
 const midiDebug = document.querySelector<HTMLDivElement>("#midi-debug");
 const toolbar = document.querySelector<HTMLElement>(".toolbar");
 const settingsCoachmarkOverlay = document.querySelector<HTMLDivElement>(
@@ -473,6 +503,9 @@ if (
   !keyboardDisplay ||
   !midiInputSelect ||
   !attemptWindowInput ||
+  !octaveOffsetDecrease ||
+  !octaveOffsetValue ||
+  !octaveOffsetIncrease ||
   !midiDebug ||
   !settingsCoachmarkOverlay ||
   !settingsCoachmarkCallout ||
@@ -516,6 +549,9 @@ const inputNameDisplayElement = inputNameDisplay;
 const keyboardDisplayElement = keyboardDisplay;
 const midiInputSelectElement = midiInputSelect;
 const attemptWindowInputElement = attemptWindowInput;
+const octaveOffsetDecreaseElement = octaveOffsetDecrease;
+const octaveOffsetValueElement = octaveOffsetValue;
+const octaveOffsetIncreaseElement = octaveOffsetIncrease;
 const midiDebugElement = midiDebug;
 const settingsCoachmarkOverlayElement = settingsCoachmarkOverlay;
 const settingsCoachmarkCalloutElement = settingsCoachmarkCallout;
@@ -653,6 +689,12 @@ const midiConnection = connectMidi(handleMidiStateChange, {
 });
 midiInputSelectElement.addEventListener("change", handleMidiInputChange);
 attemptWindowInputElement.addEventListener("change", handleAttemptWindowChange);
+octaveOffsetDecreaseElement.addEventListener("click", () => {
+  changeOctaveOffset(-1);
+});
+octaveOffsetIncreaseElement.addEventListener("click", () => {
+  changeOctaveOffset(1);
+});
 settingsToggleElement.addEventListener("click", toggleSettingsDrawer);
 settingsCoachmarkOverlayElement.addEventListener(
   "click",
@@ -917,6 +959,26 @@ function handleMidiInputChange() {
   midiConnection.selectInput(midiInputSelectElement.value);
 }
 
+function changeOctaveOffset(delta: number) {
+  const nextOffset = clampOctaveOffset(state.octaveOffset + delta);
+
+  if (nextOffset === state.octaveOffset) {
+    return;
+  }
+
+  state.octaveOffset = nextOffset;
+  pendingAttemptMidiNotes.clear();
+
+  if (attemptTimer) {
+    clearTimeout(attemptTimer);
+    attemptTimer = null;
+  }
+
+  syncHeldOverlayHands();
+  saveStoredSettings();
+  renderApp();
+}
+
 function renderMidiInputOptions() {
   midiInputSelectElement.replaceChildren();
 
@@ -950,6 +1012,14 @@ function renderToolbar() {
       : "Show Debug"
     : "Guide";
   attemptWindowInputElement.value = state.attemptWindowMs.toString();
+  octaveOffsetValueElement.textContent =
+    state.octaveOffset > 0
+      ? `+${state.octaveOffset}`
+      : state.octaveOffset.toString();
+  octaveOffsetDecreaseElement.disabled =
+    state.octaveOffset <= MIN_OCTAVE_OFFSET;
+  octaveOffsetIncreaseElement.disabled =
+    state.octaveOffset >= MAX_OCTAVE_OFFSET;
   settingsToggleElement.setAttribute(
     "aria-expanded",
     String(state.isSettingsOpen),
