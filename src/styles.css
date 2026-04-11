@@ -874,7 +874,7 @@ body {
 
   .toolbar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: minmax(calc(30px * var(--portrait-ui-scale)), 5dvh);
     align-items: stretch;
     gap: calc(8px * var(--portrait-ui-scale));

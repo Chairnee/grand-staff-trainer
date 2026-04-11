@@ -198,21 +198,6 @@ app.innerHTML = `
             Debug
           </button>
         </div>
-        <label class="midi-picker">
-          <span>MIDI Input</span>
-          <select id="midi-input-select"></select>
-        </label>
-        <label class="attempt-window-picker">
-          <span>Chord window</span>
-          <input
-            id="attempt-window-input"
-            type="number"
-            min="${MIN_ATTEMPT_WINDOW_MS}"
-            max="${MAX_ATTEMPT_WINDOW_MS}"
-            step="5"
-          />
-          <span>ms</span>
-        </label>
         <div class="octave-offset-picker" aria-label="Octave offset">
           <span>Octave offset</span>
           <div class="octave-offset-controls">
@@ -235,6 +220,21 @@ app.innerHTML = `
             </button>
           </div>
         </div>
+        <label class="attempt-window-picker">
+          <span>Chord window</span>
+          <input
+            id="attempt-window-input"
+            type="number"
+            min="${MIN_ATTEMPT_WINDOW_MS}"
+            max="${MAX_ATTEMPT_WINDOW_MS}"
+            step="5"
+          />
+          <span>ms</span>
+        </label>
+          <label class="midi-picker">
+          <span>MIDI Input</span>
+          <select id="midi-input-select"></select>
+        </label>
         <div id="midi-status" class="status-pill"></div>
       </header>
 
@@ -412,8 +412,9 @@ const attemptWindowInput = document.querySelector<HTMLInputElement>(
 const octaveOffsetDecrease = document.querySelector<HTMLButtonElement>(
   "#octave-offset-decrease",
 );
-const octaveOffsetValue =
-  document.querySelector<HTMLSpanElement>("#octave-offset-value");
+const octaveOffsetValue = document.querySelector<HTMLSpanElement>(
+  "#octave-offset-value",
+);
 const octaveOffsetIncrease = document.querySelector<HTMLButtonElement>(
   "#octave-offset-increase",
 );
@@ -2412,8 +2413,8 @@ function handlePromptAttempt() {
     return;
   }
 
-  state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt).map((noteNumber) =>
-    removeMidiInputOffset(noteNumber),
+  state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt).map(
+    (noteNumber) => removeMidiInputOffset(noteNumber),
   );
   syncHeldOverlayHands();
   const attempt = createFakeAttempt(currentPrompt);
@@ -4773,7 +4774,9 @@ function applyMidiInputOffset(
   noteNumber: number,
   octaveOffset = state.octaveOffset,
 ) {
-  return clampMidiNoteNumber(noteNumber + getOctaveOffsetSemitones(octaveOffset));
+  return clampMidiNoteNumber(
+    noteNumber + getOctaveOffsetSemitones(octaveOffset),
+  );
 }
 
 function applyMidiInputOffsetToNotes(
@@ -4789,7 +4792,9 @@ function removeMidiInputOffset(
   noteNumber: number,
   octaveOffset = state.octaveOffset,
 ) {
-  return clampMidiNoteNumber(noteNumber - getOctaveOffsetSemitones(octaveOffset));
+  return clampMidiNoteNumber(
+    noteNumber - getOctaveOffsetSemitones(octaveOffset),
+  );
 }
 
 function fillQueueToLength(
