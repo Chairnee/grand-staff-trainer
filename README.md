@@ -1,5 +1,8 @@
 # Grand Staff Trainer
-Grand Staff Trainer is a highly customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences. The settings button opens the menu that contains all configuration settings.
+[Grand Staff Trainer Webpage](chairnee.github.io/grand-staff-trainer/)
+**Mobile is fully supported**
+
+ Grand Staff Trainer is a highly customisable piano practice tool for learning how notes, scales, chords, arpeggios and cadences are read and played from the grand staff in all keys. It provides live MIDI input analysis with readable notation and visual feedback to help connect the player's input with practical sheet music. There are three primary features and each can be toggled in accordance with the player's preferences. The settings button opens the menu that contains all configuration settings.
 
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
@@ -27,7 +30,7 @@ Every analysis consists of three lines:
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
-This feature can be popped out and used in isolation or with the keyboard display. ([keyboard](#keyboard-display-panel))
+This feature can be popped out and used in isolation or with the [keyboard display](#keyboard-display-panel).
 
 ![An example of the input analysis feature popped out with the keyboard display](referenceImg/input_naming_2.png)
 
@@ -170,7 +173,7 @@ This is the current exercise suite:
 ## Keyboard Display Panel
 The keyboard display panel is the bottommost panel when visible. It is a representation of the physical keyboard and its keys light up blue in response to the player's input. If the exercise panel is in use, the exercise's expected input is also highlighted in orange. This allows a new player to become familiar with how grand staff notation and common musical structures in all keys are mapped to the physical keyboard.
 
-This feature can be popped out and used in isolation or in tandem with input analysis. ([input analysis](#input-analysis-panel))
+This feature can be popped out and used in isolation or in tandem with [input analysis](#input-analysis-panel).
 
 ![An example of the keyboard panel showing the player's input and the expected input of the exercise.](referenceImg/keyboard_panel.png)
 

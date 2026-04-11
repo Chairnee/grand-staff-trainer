@@ -778,7 +778,7 @@ body {
   .settings-drawer {
     width: 96vw;
     height: auto;
-    max-height: calc(100dvh - 12px);
+    max-height: 95dvh;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
