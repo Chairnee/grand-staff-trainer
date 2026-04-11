@@ -68,30 +68,12 @@ const SETTINGS_STORAGE_KEY = "piano-tool-settings";
 const SETTINGS_SCHEMA_VERSION = 1;
 const DEFAULT_GUIDE_URL =
   "https://github.com/Chairnee/grand-staff-trainer/blob/main/README.md";
-const LANDSCAPE_SETTINGS_COACHMARK_MESSAGE = `
-  <p>
-    The input analysis, exercise and keyboard panels are currently visible.
-    You can change what's shown in Settings. Press the Full Guide button below
-    for full app capabilities.
-  </p>
-  <ol>
-    <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
-    <li>Exercise: configure exactly what you want from Settings.</li>
-    <li>
-      Keyboard: shows both your played notes and also the expected exercise
-      notes when the exercise panel is open.
-    </li>
-  </ol>
-  <div class="settings-coachmark-actions">
-    <button
-      id="settings-coachmark-guide-button"
-      type="button"
-      class="toolbar-button"
-    >
-      Full Guide
-    </button>
-  </div>
-`;
+const SETTINGS_COACHMARK_FIRST_RUN_INTRO =
+  "The input analysis, exercise and keyboard panels are currently visible. You can change what's shown in Settings.";
+const SETTINGS_COACHMARK_RETURNING_INTRO =
+  "This app can show three main panels. You can choose what’s visible in Settings.";
+const SETTINGS_COACHMARK_MESSAGE_SUFFIX =
+  "Press the Full Guide button below for full app capabilities.";
 const PROMPT_QUEUE_LENGTH = 8;
 const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
@@ -252,9 +234,7 @@ app.innerHTML = `
     hidden
     role="note"
     aria-live="polite"
-  >
-    ${LANDSCAPE_SETTINGS_COACHMARK_MESSAGE}
-  </div>
+  ></div>
 
   <div id="settings-backdrop" class="settings-backdrop" hidden></div>
 
@@ -408,9 +388,6 @@ const settingsCoachmarkOverlay = document.querySelector<HTMLDivElement>(
 const settingsCoachmarkCallout = document.querySelector<HTMLDivElement>(
   "#settings-coachmark-callout",
 );
-const settingsCoachmarkGuideButton = document.querySelector<HTMLButtonElement>(
-  "#settings-coachmark-guide-button",
-);
 const settingsToggle =
   document.querySelector<HTMLButtonElement>("#settings-toggle");
 const debugToggle = document.querySelector<HTMLButtonElement>("#debug-toggle");
@@ -535,7 +512,6 @@ const attemptWindowInputElement = attemptWindowInput;
 const midiDebugElement = midiDebug;
 const settingsCoachmarkOverlayElement = settingsCoachmarkOverlay;
 const settingsCoachmarkCalloutElement = settingsCoachmarkCallout;
-const settingsCoachmarkGuideButtonElement = settingsCoachmarkGuideButton;
 const settingsToggleElement = settingsToggle;
 const debugToggleElement = debugToggle;
 const midiStatusElement = midiStatus;
@@ -676,11 +652,7 @@ settingsCoachmarkOverlayElement.addEventListener(
 );
 settingsCoachmarkCalloutElement.addEventListener(
   "click",
-  handleSettingsCoachmarkDismiss,
-);
-settingsCoachmarkGuideButtonElement?.addEventListener(
-  "click",
-  handleSettingsCoachmarkGuideButtonClick,
+  handleSettingsCoachmarkCalloutClick,
 );
 settingsCloseElement.addEventListener("click", closeSettingsDrawer);
 settingsBackdropElement.addEventListener("click", closeSettingsDrawer);
@@ -968,6 +940,35 @@ function isSettingsCoachmarkVisible() {
   return state.isSettingsCoachmarkOpen && !state.isSettingsOpen;
 }
 
+function getSettingsCoachmarkMessage() {
+  const intro = state.hasSeenLandscapeSettingsCoachmark
+    ? SETTINGS_COACHMARK_RETURNING_INTRO
+    : SETTINGS_COACHMARK_FIRST_RUN_INTRO;
+
+  return `
+    <p>
+      ${intro} ${SETTINGS_COACHMARK_MESSAGE_SUFFIX}
+    </p>
+    <ol>
+      <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
+      <li>Exercise: configure exactly what you want from Settings.</li>
+      <li>
+        Keyboard: shows both your played notes and also the expected exercise
+        notes when the exercise panel is open.
+      </li>
+    </ol>
+    <div class="settings-coachmark-actions">
+      <button
+        id="settings-coachmark-guide-button"
+        type="button"
+        class="toolbar-button"
+      >
+        Full Guide
+      </button>
+    </div>
+  `;
+}
+
 function renderSettingsCoachmark() {
   const isVisible = isSettingsCoachmarkVisible();
 
@@ -986,6 +987,8 @@ function renderSettingsCoachmark() {
     );
     return;
   }
+
+  settingsCoachmarkCalloutElement.innerHTML = getSettingsCoachmarkMessage();
 
   const { overlayScale, portraitUiScale } = getLayoutMetrics();
   const isPortrait = isPortraitViewport();
@@ -2356,17 +2359,28 @@ function handleSettingsCoachmarkDismiss() {
   dismissSettingsCoachmark();
 }
 
-function handleSettingsCoachmarkGuideButtonClick(event: MouseEvent) {
-  event.stopPropagation();
+function handleSettingsCoachmarkCalloutClick(event: MouseEvent) {
+  const target = event.target;
 
-  dismissSettingsCoachmark(false);
+  if (
+    target instanceof Element &&
+    target.closest("#settings-coachmark-guide-button")
+  ) {
+    event.stopPropagation();
 
-  if (!GUIDE_URL) {
+    dismissSettingsCoachmark(false);
+
+    if (!GUIDE_URL) {
+      renderApp();
+      return;
+    }
+
+    window.open(GUIDE_URL, "_blank", "noopener,noreferrer");
     renderApp();
     return;
   }
 
-  window.open(GUIDE_URL, "_blank", "noopener,noreferrer");
+  dismissSettingsCoachmark(false);
   renderApp();
 }
 
