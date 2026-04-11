@@ -2,6 +2,7 @@ import "./styles.css";
 import {
   Accidental,
   ClefNote,
+  Font,
   Formatter,
   ModifierContext,
   NoteSubGroup,
@@ -9,8 +10,15 @@ import {
   Stave,
   StaveConnector,
   StaveNote,
+  VexFlow,
   Voice,
-} from "vexflow";
+} from "vexflow/core";
+// @ts-expect-error Probe local VexFlow font payload imports for bundle sizing.
+import { Academico } from "../node_modules/vexflow/build/esm/src/fonts/academico.js";
+// @ts-expect-error Probe local VexFlow font payload imports for bundle sizing.
+import { AcademicoBold } from "../node_modules/vexflow/build/esm/src/fonts/academicobold.js";
+// @ts-expect-error Probe local VexFlow font payload imports for bundle sizing.
+import { Bravura } from "../node_modules/vexflow/build/esm/src/fonts/bravura.js";
 import { analyzeHeldInput } from "./analysis/inputAnalysis";
 import { renderInputNameDisplay } from "./display/inputName";
 import { renderKeyboardDisplay } from "./display/keyboard";
@@ -640,22 +648,33 @@ triadTypeSelectElement.addEventListener("change", handleTriadTypeChange);
 window.addEventListener("resize", handleWindowResize);
 window.addEventListener("beforeunload", handleWindowBeforeUnload);
 
+VexFlow.setFonts("Bravura", "Academico");
+
 if (state.promptQueue.length === 0) {
   throw new Error("Prompt queue is empty.");
 }
 
-renderApp();
-
 if ("fonts" in document) {
-  void document.fonts.ready.then(() => {
-    if (areNotationFontsReady) {
-      return;
-    }
+  void Promise.allSettled([
+    Font.load("Bravura", Bravura, { display: "block" }),
+    Font.load("Academico", Academico, { display: "swap" }),
+    Font.load("Academico", AcademicoBold, {
+      display: "swap",
+      weight: "bold",
+    }),
+  ])
+    .then(() => document.fonts.ready)
+    .then(() => {
+      if (areNotationFontsReady) {
+        return;
+      }
 
-    areNotationFontsReady = true;
-    renderApp();
-  });
+      areNotationFontsReady = true;
+      renderApp();
+    });
 }
+
+renderApp();
 
 function renderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
