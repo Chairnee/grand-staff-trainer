@@ -702,7 +702,7 @@ body {
 
 .settings-drawer {
   position: fixed;
-  overflow-y: auto;
+  overflow-y: hidden;
   top: 0;
   right: 0;
   width: min(calc(360px * var(--overlay-scale)), 100vw);
@@ -907,6 +907,7 @@ body {
     width: 96vw;
     height: auto;
     max-height: calc(100dvh - 12px);
+    overflow-y: auto;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
