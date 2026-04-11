@@ -951,7 +951,7 @@ function getSettingsCoachmarkMessage() {
     </p>
     <ol>
       <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
-      <li>Exercise: configure exactly what you want from Settings.</li>
+      <li>Exercise: configure exactly what you want from Settings and play along.</li>
       <li>
         Keyboard: shows both your played notes and also the expected exercise
         notes when the exercise panel is open.
