@@ -186,6 +186,8 @@ if (!app) {
   throw new Error("Could not find app container.");
 }
 
+document.body.classList.add("grand-staff-trainer-app");
+
 app.innerHTML = `
   <div class="stage-shell">
     <main class="layout">

@@ -826,6 +826,7 @@ body {
 }
 
 @media (orientation: portrait) {
+  body.grand-staff-trainer-app {
   .settings-coachmark-callout::before {
     display: none;
   }
@@ -1039,4 +1040,5 @@ body {
     justify-content: center;
     align-items: center;
   }
+}
 }
