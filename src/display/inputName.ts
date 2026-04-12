@@ -22,6 +22,13 @@ type InputNameDisplayCache = {
   utilityGroup: HTMLDivElement;
   popoutButton: HTMLButtonElement;
   secondaryButton: HTMLButtonElement;
+  contentWrapper: HTMLDivElement;
+  noteList: HTMLParagraphElement;
+  readingRow: HTMLDivElement;
+  longhand: HTMLParagraphElement;
+  statusWrapper: HTMLDivElement;
+  statusNoteList: HTMLParagraphElement;
+  statusText: HTMLParagraphElement;
 };
 
 const inputNameDisplayCache = new WeakMap<
@@ -48,33 +55,21 @@ export function renderInputNameDisplay(
 
   if (!analysis.noteLabel && !analysis.primary) {
     container.classList.add("is-status");
-    cache.contentHost.replaceChildren(createStatusWrapper("No input to analyse"));
+    cache.statusNoteList.textContent = "";
+    cache.statusText.textContent = "No input to analyse";
+    showInputNameStatus(cache);
     return;
   }
 
   if (!analysis.primary) {
     container.classList.add("is-status");
-    const statusWrapper = document.createElement("div");
-    statusWrapper.className = "input-name-status-wrap";
-
-    const notesValue = document.createElement("p");
-    notesValue.className = "input-name-note-list";
-    notesValue.textContent = analysis.noteLabel ?? "";
-
-    statusWrapper.append(notesValue, createStatusElement("Unknown input"));
-    cache.contentHost.replaceChildren(statusWrapper);
+    cache.statusNoteList.textContent = analysis.noteLabel ?? "";
+    cache.statusText.textContent = "Unknown input";
+    showInputNameStatus(cache);
     return;
   }
 
-  const contentWrapper = document.createElement("div");
-  contentWrapper.className = "input-name-content-wrap";
-
-  const notesValue = document.createElement("p");
-  notesValue.className = "input-name-note-list";
-  notesValue.textContent = analysis.noteLabel ?? "";
-
   const readingRow = document.createElement("div");
-  readingRow.className = "input-name-reading-row";
   const variants: InputNameVariant[] = [analysis.primary, ...analysis.alternates];
   const selectedVariant =
     variants.find(
@@ -116,13 +111,10 @@ export function renderInputNameDisplay(
     namingNoteBadge.title = selectedVariant.namingNote ?? analysis.namingNote ?? "";
     readingRow.append(namingNoteBadge);
   }
-
-  const longhand = document.createElement("p");
-  longhand.className = "input-name-longhand";
-  longhand.textContent = selectedVariant.longhand;
-
-  contentWrapper.append(readingRow, notesValue, longhand);
-  cache.contentHost.replaceChildren(contentWrapper);
+  cache.readingRow.replaceChildren(...readingRow.childNodes);
+  cache.noteList.textContent = analysis.noteLabel ?? "";
+  cache.longhand.textContent = selectedVariant.longhand;
+  showInputNameContent(cache);
 }
 
 function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
@@ -148,6 +140,31 @@ function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
 
   const contentHost = document.createElement("div");
   contentHost.className = "input-name-content-host";
+
+  const contentWrapper = document.createElement("div");
+  contentWrapper.className = "input-name-content-wrap";
+
+  const readingRow = document.createElement("div");
+  readingRow.className = "input-name-reading-row";
+
+  const noteList = document.createElement("p");
+  noteList.className = "input-name-note-list";
+
+  const longhand = document.createElement("p");
+  longhand.className = "input-name-longhand";
+
+  contentWrapper.append(readingRow, noteList, longhand);
+
+  const statusWrapper = document.createElement("div");
+  statusWrapper.className = "input-name-status-wrap";
+
+  const statusNoteList = document.createElement("p");
+  statusNoteList.className = "input-name-note-list";
+
+  const statusText = createStatusElement("");
+
+  statusWrapper.append(statusNoteList, statusText);
+  contentHost.append(contentWrapper, statusWrapper);
   utilityGroup.append(popoutButton, secondaryButton);
   container.append(utilityGroup, contentHost);
 
@@ -156,6 +173,13 @@ function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
     utilityGroup,
     popoutButton,
     secondaryButton,
+    contentWrapper,
+    noteList,
+    readingRow,
+    longhand,
+    statusWrapper,
+    statusNoteList,
+    statusText,
   };
   inputNameDisplayCache.set(container, cache);
   return cache;
@@ -197,16 +221,19 @@ function syncInputNameUtilityGroup(
     : null;
 }
 
+function showInputNameContent(cache: InputNameDisplayCache) {
+  cache.contentWrapper.hidden = false;
+  cache.statusWrapper.hidden = true;
+}
+
+function showInputNameStatus(cache: InputNameDisplayCache) {
+  cache.contentWrapper.hidden = true;
+  cache.statusWrapper.hidden = false;
+}
+
 function createStatusElement(text: string) {
   const status = document.createElement("p");
   status.className = "input-name-status";
   status.textContent = text;
   return status;
-}
-
-function createStatusWrapper(text: string) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "input-name-status-wrap";
-  wrapper.append(createStatusElement(text));
-  return wrapper;
 }
