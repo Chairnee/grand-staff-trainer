@@ -1049,7 +1049,7 @@ function getSettingsCoachmarkMessage() {
 
   return `
     <p>
-      ${intro} ${SETTINGS_COACHMARK_MESSAGE_SUFFIX}
+      ${intro} ${SETTINGS_COACHMARK_MESSAGE_SUFFIX} Click anywhere to close this popup.
     </p>
     <ol>
       <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
