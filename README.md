@@ -8,14 +8,16 @@ Most features can also be popped out into a scalable window and used in isolatio
 
 ![An example image of the Grand Staff Trainer layout.](referenceImg/layout.png)
 
+<a id="primary-features"></a>
 Primary feature explanations:
 1. [Input analysis panel](#input-analysis-panel) (popout friendly)
 2. [Exercise panel](#exercise-panel) (related to [chord window](#chord-window))
 3. [Keyboard display panel](#keyboard-display-panel) (popout friendly)
 
 Extra references:
-1. [Complete list of exercises](#exercise-list)
-2. [List of supported tonics](#full-tonic-list) (every practical tonic)
+1. [Explanation of user interface and all settings](#settings-explanations)
+2. [Complete list of exercises](#exercise-list)
+3. [List of supported tonics](#full-tonic-list) (every practical tonic)
 
 Design philosophy:
 1. [Input analysis panel](#input-analysis)
@@ -178,6 +180,37 @@ The keyboard display panel is the bottommost panel when visible. It is a represe
 This feature can be popped out and used in isolation or in tandem with [input analysis](#input-analysis-panel).
 
 ![An example of the keyboard panel showing the player's input and the expected input of the exercise.](referenceImg/keyboard_panel.png)
+
+## Settings Explanations
+1. The octave offset moves the position of middle C up or down the keyboard to support keyboards with less keys. An octave offset of -1 would mean that playing C5 is now considered C4. The default offset is 0.
+
+![An example of the octave offset setting.](referenceImg/settings_1.png)
+
+2. The chord window setting is only relevant during exercises. If an exercise requires two or more notes to be pressed at once, this is the amount of time Grand Staff Trainer will wait after detecting the first note down before validating the input. The smaller the chord window, the more precisely the player must play all notes at the same time. The default chord window is 40ms.
+
+![An example of the chord window setting.](referenceImg/exercise_panel_4.png)
+
+3. The MIDI Input selection is where the desired MIDI device is selected. The selected device is what Grand Staff Trainer will listen to for inputs.
+
+![An example of the MIDI Input selection](referenceImg/settings_2.png)
+
+4. The status pill displays the connection state of the selected MIDI Input.
+
+![An example of the status pill.](referenceImg/settings_3.png)
+
+5. The Settings button opens the settings menu where the majority of customisation options exist.
+
+6. In the settings menu, the display settings determine which primary feature panels Grand Staff Trainer displays. For explanations of the primary features, refer to [here](#primary-features).
+
+![An example of the display settings.](referenceImg/settings_4.png)
+
+7. In the settings menu, the popout buttons can be used to pop the input analysis and keyboard display features into separate scalable windows. These features can be popped out regardless of the display settings.
+
+![An example of the popout buttons.](referenceImg/settings_5.png)
+
+8. In the settings menu, the exercise settings can be used to customise the exercise to be played and its difficulty.
+
+![An example of the exercise settings.](referenceImg/settings_6.png)
 
 ## Design Rationale
 Music is complex and many perspectives can be taken for any problem. Great effort has been put into making each feature feel as intuitive and consistent as possible, but there will no doubt be moments of confusion. This section is to explain the logic driving the features and the known shortcomings/tradeoffs.
