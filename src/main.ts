@@ -636,6 +636,7 @@ let areNotationFontsReady = !("fonts" in document);
 let inputNamePopoutHandle: InputNamePopoutHandle | null = null;
 let keyboardPopoutHandle: KeyboardPopoutHandle | null = null;
 let combinedPopoutHandle: CombinedPopoutHandle | null = null;
+let pendingRenderFrame: number | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
@@ -787,7 +788,7 @@ if ("fonts" in document) {
 
 renderApp();
 
-function renderApp() {
+function performRenderApp() {
   const displayedHeldNotes = getDisplayedHeldNotes(state);
   const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
   const layoutMetrics = getLayoutMetrics();
@@ -844,6 +845,17 @@ function renderApp() {
   renderInputName();
   renderNotation();
   renderKeyboard();
+}
+
+function renderApp() {
+  if (pendingRenderFrame !== null) {
+    return;
+  }
+
+  pendingRenderFrame = window.requestAnimationFrame(() => {
+    pendingRenderFrame = null;
+    performRenderApp();
+  });
 }
 
 function getDisplayedSimulatedHeldNotes(appState: AppState) {
