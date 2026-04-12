@@ -1,6 +1,7 @@
 export type InputNameVariant = {
   shorthand: string;
   longhand: string;
+  namingNote?: string;
 };
 
 export type InputAnalysis = {
@@ -9,6 +10,10 @@ export type InputAnalysis = {
   alternates: InputNameVariant[];
   namingNote?: string;
 };
+
+export function getInputNameVariantKey(variant: InputNameVariant) {
+  return `${variant.shorthand}::${variant.longhand}`;
+}
 
 type InputAnalysisCandidate = InputNameVariant & {
   bassPitchClass: number;

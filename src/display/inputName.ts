@@ -1,4 +1,8 @@
-import type { InputAnalysis } from "../analysis/inputAnalysis";
+import {
+  getInputNameVariantKey,
+  type InputAnalysis,
+  type InputNameVariant,
+} from "../analysis/inputAnalysis";
 
 type RenderInputNameDisplayOptions = {
   showPopoutButton?: boolean;
@@ -9,6 +13,8 @@ type RenderInputNameDisplayOptions = {
   onSecondaryPopout?: () => void;
   secondaryPopoutButtonLabel?: string;
   secondaryPopoutButtonTitle?: string;
+  selectedVariantKey?: string | null;
+  onSelectVariant?: (variantKey: string) => void;
 };
 
 export function renderInputNameDisplay(
@@ -91,40 +97,51 @@ export function renderInputNameDisplay(
 
   const readingRow = document.createElement("div");
   readingRow.className = "input-name-reading-row";
+  const variants: InputNameVariant[] = [analysis.primary, ...analysis.alternates];
+  const selectedVariant =
+    variants.find(
+      (variant) =>
+        getInputNameVariantKey(variant) === options.selectedVariantKey,
+    ) ?? analysis.primary;
 
-  const primaryPill = document.createElement("button");
-  primaryPill.className = "input-name-pill input-name-pill-primary";
-  primaryPill.type = "button";
-  primaryPill.textContent = analysis.primary.shorthand;
-  primaryPill.setAttribute("aria-pressed", "true");
-  readingRow.append(primaryPill);
+  variants.forEach((variant, index) => {
+    const pill = document.createElement("button");
+    const isSelected =
+      getInputNameVariantKey(variant) === getInputNameVariantKey(selectedVariant);
+    pill.className = `input-name-pill ${
+      isSelected ? "input-name-pill-primary" : "input-name-pill-alternate"
+    }`;
+    pill.type = "button";
+    pill.textContent = variant.shorthand;
+    pill.setAttribute("aria-pressed", String(isSelected));
 
-  if (analysis.namingNote) {
+    if (options.onSelectVariant) {
+      pill.addEventListener("click", () => {
+        options.onSelectVariant?.(getInputNameVariantKey(variant));
+      });
+    }
+
+    readingRow.append(pill);
+
+    if (index === 0 && analysis.alternates.length > 0) {
+      const separator = document.createElement("span");
+      separator.className = "input-name-separator";
+      separator.textContent = "|";
+      readingRow.append(separator);
+    }
+  });
+
+  if (selectedVariant.namingNote ?? analysis.namingNote) {
     const namingNoteBadge = document.createElement("span");
     namingNoteBadge.className = "input-name-naming-note-badge";
     namingNoteBadge.textContent = "voicing";
-    namingNoteBadge.title = analysis.namingNote;
+    namingNoteBadge.title = selectedVariant.namingNote ?? analysis.namingNote ?? "";
     readingRow.append(namingNoteBadge);
-  }
-
-  if (analysis.alternates.length > 0) {
-    const separator = document.createElement("span");
-    separator.className = "input-name-separator";
-    separator.textContent = "|";
-    readingRow.append(separator);
-  }
-
-  for (const alternate of analysis.alternates) {
-    const alternatePill = document.createElement("button");
-    alternatePill.className = "input-name-pill input-name-pill-alternate";
-    alternatePill.type = "button";
-    alternatePill.textContent = alternate.shorthand;
-    readingRow.append(alternatePill);
   }
 
   const longhand = document.createElement("p");
   longhand.className = "input-name-longhand";
-  longhand.textContent = analysis.primary.longhand;
+  longhand.textContent = selectedVariant.longhand;
 
   contentWrapper.append(readingRow, notesValue, longhand);
 

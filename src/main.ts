@@ -19,7 +19,11 @@ import { Academico } from "../node_modules/vexflow/build/esm/src/fonts/academico
 import { AcademicoBold } from "../node_modules/vexflow/build/esm/src/fonts/academicobold.js";
 // @ts-expect-error Probe local VexFlow font payload imports for bundle sizing.
 import { Bravura } from "../node_modules/vexflow/build/esm/src/fonts/bravura.js";
-import { analyzeHeldInput } from "./analysis/inputAnalysis";
+import {
+  analyzeHeldInput,
+  getInputNameVariantKey,
+  type InputAnalysis,
+} from "./analysis/inputAnalysis";
 import { renderInputNameDisplay } from "./display/inputName";
 import { renderKeyboardDisplay } from "./display/keyboard";
 import {
@@ -164,6 +168,7 @@ type AppState = {
   isDebugVisible: boolean;
   isExerciseVisible: boolean;
   octaveOffset: number;
+  selectedInputNameVariantKey: string | null;
   inputNameDisplay: PanelDisplayState;
   keyboardDisplay: PanelDisplayState;
   hasSeenLandscapeSettingsCoachmark: boolean;
@@ -662,6 +667,7 @@ const state: AppState = {
   isDebugVisible: IS_DEV && initialStoredSettings.isDebugVisible,
   isExerciseVisible: initialStoredSettings.isExerciseVisible,
   octaveOffset: initialStoredSettings.octaveOffset,
+  selectedInputNameVariantKey: null,
   inputNameDisplay: {
     visibleInApp: initialStoredSettings.isInputNameVisible,
     popoutMode: "none",
@@ -1625,6 +1631,7 @@ function getCurrentKeyboardDisplayOptions() {
 
 function renderInputName() {
   const analysis = getCurrentInputAnalysis();
+  const selectedVariantKey = syncSelectedInputNameVariant(analysis);
 
   inputNameDisplayElement.hidden = !state.inputNameDisplay.visibleInApp;
 
@@ -1641,6 +1648,8 @@ function renderInputName() {
       secondaryPopoutButtonLabel: "w/ keyboard",
       secondaryPopoutButtonTitle:
         "Open the input name display with the keyboard in a separate window.",
+      selectedVariantKey,
+      onSelectVariant: handleInputNameVariantSelect,
     });
   }
 
@@ -1649,6 +1658,40 @@ function renderInputName() {
 
 function getCurrentInputAnalysis() {
   return analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
+}
+
+function syncSelectedInputNameVariant(analysis: InputAnalysis) {
+  const variants = analysis.primary
+    ? [analysis.primary, ...analysis.alternates]
+    : [];
+
+  if (variants.length === 0) {
+    state.selectedInputNameVariantKey = null;
+    return null;
+  }
+
+  if (
+    state.selectedInputNameVariantKey &&
+    variants.some(
+      (variant) =>
+        getInputNameVariantKey(variant) === state.selectedInputNameVariantKey,
+    )
+  ) {
+    return state.selectedInputNameVariantKey;
+  }
+
+  const primaryKey = getInputNameVariantKey(variants[0]);
+  state.selectedInputNameVariantKey = primaryKey;
+  return primaryKey;
+}
+
+function handleInputNameVariantSelect(variantKey: string) {
+  if (state.selectedInputNameVariantKey === variantKey) {
+    return;
+  }
+
+  state.selectedInputNameVariantKey = variantKey;
+  renderApp();
 }
 
 function handleInputNamePopoutClick() {
@@ -1795,7 +1838,10 @@ function renderInputNamePopout(analysis = getCurrentInputAnalysis()) {
     return;
   }
 
-  renderInputNameDisplay(inputNamePopoutHandle.container, analysis);
+  renderInputNameDisplay(inputNamePopoutHandle.container, analysis, {
+    selectedVariantKey: syncSelectedInputNameVariant(analysis),
+    onSelectVariant: handleInputNameVariantSelect,
+  });
 }
 
 function syncInputNamePopoutScale() {
@@ -2290,7 +2336,10 @@ function renderCombinedPopout(
     return;
   }
 
-  renderInputNameDisplay(combinedPopoutHandle.inputContainer, analysis);
+  renderInputNameDisplay(combinedPopoutHandle.inputContainer, analysis, {
+    selectedVariantKey: syncSelectedInputNameVariant(analysis),
+    onSelectVariant: handleInputNameVariantSelect,
+  });
   renderKeyboardDisplay(combinedPopoutHandle.keyboardContainer, {
     ...keyboardOptions,
     fitMode: "width",
