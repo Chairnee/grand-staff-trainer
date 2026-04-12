@@ -638,6 +638,8 @@ let keyboardPopoutHandle: KeyboardPopoutHandle | null = null;
 let combinedPopoutHandle: CombinedPopoutHandle | null = null;
 let pendingRenderFrame: number | null = null;
 let pendingRenderMask = 0;
+let cachedInputAnalysisSignature: string | null = null;
+let cachedInputAnalysis: InputAnalysis | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -1749,7 +1751,19 @@ function renderInputName(analysis = getCurrentInputAnalysis()) {
 }
 
 function getCurrentInputAnalysis() {
-  return analyzeHeldInput(getDisplayedAnalysisHeldNotes(state));
+  const displayedAnalysisHeldNotes = getDisplayedAnalysisHeldNotes(state);
+  const analysisSignature = displayedAnalysisHeldNotes.join(",");
+
+  if (
+    cachedInputAnalysis &&
+    cachedInputAnalysisSignature === analysisSignature
+  ) {
+    return cachedInputAnalysis;
+  }
+
+  cachedInputAnalysisSignature = analysisSignature;
+  cachedInputAnalysis = analyzeHeldInput(displayedAnalysisHeldNotes);
+  return cachedInputAnalysis;
 }
 
 function syncSelectedInputNameVariant(analysis: InputAnalysis) {
