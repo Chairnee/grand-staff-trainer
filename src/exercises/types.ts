@@ -22,6 +22,8 @@ export type PromptSlot = {
   displayedBassKeys?: string[];
   trebleDisplayedClef?: "treble" | "bass";
   bassDisplayedClef?: "treble" | "bass";
+  trebleOttavaActive?: boolean;
+  bassOttavaActive?: boolean;
   trebleOttavaStart?: boolean;
   trebleOttavaEnd?: boolean;
   bassOttavaStart?: boolean;

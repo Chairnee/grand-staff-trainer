@@ -3472,6 +3472,8 @@ function getDisplayedPromptSlot(
     trebleRestVisible: prompt.trebleRestVisible,
     bassRestVisible: prompt.bassRestVisible,
     accidentalOverrides: prompt.accidentalOverrides,
+    trebleOttavaActive: prompt.trebleOttavaActive,
+    bassOttavaActive: prompt.bassOttavaActive,
     trebleDisplayedClef: prompt.trebleDisplayedClef,
     bassDisplayedClef: prompt.bassDisplayedClef,
     trebleOttavaStart: prompt.trebleOttavaStart,
@@ -3968,7 +3970,7 @@ function isTrebleNotationTransformActive(
   prompt: PromptSlot,
 ) {
   return (
-    Boolean(prompt.displayedTrebleKeys) &&
+    Boolean(prompt.trebleOttavaActive) &&
     (appState.generationSettings.scaleHands === "treble" ||
       appState.generationSettings.scaleHands === "together")
   );
@@ -3987,7 +3989,7 @@ function isBassNotationTransformActive(
 
 function isBassOttavaTransformActive(appState: AppState, prompt: PromptSlot) {
   return (
-    Boolean(prompt.displayedBassKeys) &&
+    Boolean(prompt.bassOttavaActive) &&
     (appState.generationSettings.scaleHands === "bass" ||
       appState.generationSettings.scaleHands === "together")
   );
@@ -4011,7 +4013,7 @@ function getSpecialNotationCandidates(
     score: number;
   }> = [];
 
-  if ((prompt.trebleKeys?.length ?? 0) > 0 && prompt.displayedTrebleKeys) {
+  if ((prompt.trebleKeys?.length ?? 0) > 0 && prompt.trebleOttavaActive) {
     candidates.push({
       hand: "treble",
       key: shiftKeyByOctaves(literalKey, -1),
@@ -4020,7 +4022,7 @@ function getSpecialNotationCandidates(
     });
   }
 
-  if ((prompt.bassKeys?.length ?? 0) > 0 && prompt.displayedBassKeys) {
+  if ((prompt.bassKeys?.length ?? 0) > 0 && prompt.bassOttavaActive) {
     candidates.push({
       hand: "bass",
       key: shiftKeyByOctaves(literalKey, 1),
@@ -4309,7 +4311,7 @@ function drawTrebleOttavaBracket(
     {
       placement: "above",
       label: "8va",
-      isActive: (prompt) => Boolean(prompt.displayedTrebleKeys),
+      isActive: (prompt) => Boolean(prompt.trebleOttavaActive),
       isEnd: (prompt) => Boolean(prompt.trebleOttavaEnd),
     },
   );
@@ -4331,7 +4333,7 @@ function drawBassOttavaBracket(
     {
       placement: "below",
       label: "8vb",
-      isActive: (prompt) => Boolean(prompt.displayedBassKeys),
+      isActive: (prompt) => Boolean(prompt.bassOttavaActive),
       isEnd: (prompt) => Boolean(prompt.bassOttavaEnd),
     },
   );

@@ -188,6 +188,7 @@ function createTriadPromptsForHands(
         ...prompt,
         bassKeys: undefined,
         displayedBassKeys: undefined,
+        bassOttavaActive: undefined,
         bassDisplayedClef: undefined,
       };
     }
@@ -197,6 +198,7 @@ function createTriadPromptsForHands(
         ...prompt,
         trebleKeys: undefined,
         displayedTrebleKeys: undefined,
+        trebleOttavaActive: undefined,
         trebleOttavaStart: undefined,
         trebleOttavaEnd: undefined,
       };
@@ -235,6 +237,7 @@ function createContraryTriadPrompts(
         prompt.displayedTrebleKeys = trebleKeys.map((key) =>
           shiftKeyByOctaves(key, -1),
         );
+        prompt.trebleOttavaActive = true;
       }
 
       prompt.trebleOttavaStart = direction === "ascending" && index === 3;
@@ -274,6 +277,7 @@ function createTriadPrompt(
     trebleKeys,
     bassKeys,
     displayedTrebleKeys,
+    trebleOttavaActive: isWithinTrebleOttavaSpan || undefined,
     bassDisplayedClef,
     trebleOttavaStart: direction === "ascending" && index === 3,
     trebleOttavaEnd: direction === "descending" && index === 2,
@@ -518,6 +522,7 @@ function applyTrebleOttavaToHighSingleHandTriadPrompts(
     prompt.displayedTrebleKeys = prompt.trebleKeys.map((key) =>
       shiftKeyByOctaves(key, -1),
     );
+    prompt.trebleOttavaActive = true;
   }
 
   let currentSpanStartIndex = ottavaStartIndex;
@@ -583,6 +588,7 @@ function applyBassOttavaToLowTriadPrompts(promptQueue: PromptSlot[]) {
     prompt.displayedBassKeys = prompt.bassKeys.map((key) =>
       shiftKeyByOctaves(key, 1),
     );
+    prompt.bassOttavaActive = true;
   }
 
   const startPrompt = promptQueue[ottavaStartIndex];
