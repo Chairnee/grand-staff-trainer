@@ -1020,7 +1020,8 @@ body {
   }
 
   .input-name-display {
-    flex: 0.8 1 0;
+    flex: 1 1 0;
+
     padding-top: calc(25px * var(--ui-scale));
     justify-content: center;
     overflow: hidden;
@@ -1053,6 +1054,13 @@ body {
     max-width: none;
     width: calc(100% * var(--notation-zoom));
     flex: 0 0 auto;
+  }
+
+  .keyboard-display:not([hidden]) {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 }
 }
