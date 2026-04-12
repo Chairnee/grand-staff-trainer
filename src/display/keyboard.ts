@@ -19,6 +19,9 @@ const DEFAULT_END_MIDI_NOTE = 108;
 type KeyboardDisplayCache = {
   startMidiNote: number;
   endMidiNote: number;
+  utilityGroup: HTMLDivElement;
+  popoutButton: HTMLButtonElement;
+  secondaryButton: HTMLButtonElement;
   keyboardFrameElement: HTMLDivElement;
   keyboardElement: HTMLDivElement;
   keyElements: Map<number, HTMLDivElement>;
@@ -73,6 +76,18 @@ function buildKeyboardDisplayCache(
   activeNotes: Set<number>,
   heldNotes: Set<number>,
 ) {
+  const utilityGroup = document.createElement("div");
+  utilityGroup.className = "panel-popout-buttons";
+
+  const popoutButton = document.createElement("button");
+  popoutButton.type = "button";
+  popoutButton.className = "panel-popout-button";
+
+  const secondaryButton = document.createElement("button");
+  secondaryButton.type = "button";
+  secondaryButton.className =
+    "panel-popout-button panel-popout-button-secondary";
+
   const keyboardFrameElement = document.createElement("div");
   keyboardFrameElement.className = "keyboard-frame";
 
@@ -132,6 +147,9 @@ function buildKeyboardDisplayCache(
   return {
     startMidiNote,
     endMidiNote,
+    utilityGroup,
+    popoutButton,
+    secondaryButton,
     keyboardFrameElement,
     keyboardElement,
     keyElements,
@@ -142,44 +160,47 @@ function syncKeyboardUtilityGroup(
   container: HTMLDivElement,
   options: KeyboardDisplayOptions,
 ) {
-  container.querySelector(".panel-popout-buttons")?.remove();
+  const cache = keyboardDisplayCache.get(container);
 
-  if (
-    !(options.showPopoutButton && options.onPopout) &&
-    !(options.showSecondaryPopoutButton && options.onSecondaryPopout)
-  ) {
+  if (!cache) {
     return;
   }
 
-  const utilityGroup = document.createElement("div");
-  utilityGroup.className = "panel-popout-buttons";
+  const showPopoutButton = Boolean(options.showPopoutButton && options.onPopout);
+  const showSecondaryButton = Boolean(
+    options.showSecondaryPopoutButton && options.onSecondaryPopout,
+  );
+  const hasUtility = showPopoutButton || showSecondaryButton;
 
-  if (options.showPopoutButton && options.onPopout) {
-    const popoutButton = document.createElement("button");
-    popoutButton.type = "button";
-    popoutButton.className = "panel-popout-button";
-    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
-    popoutButton.title =
-      options.popoutButtonTitle ?? "Open the keyboard display in a new window.";
-    popoutButton.addEventListener("click", options.onPopout);
-    utilityGroup.append(popoutButton);
+  cache.utilityGroup.hidden = !hasUtility;
+
+  cache.popoutButton.hidden = !showPopoutButton;
+  cache.popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+  cache.popoutButton.title =
+    options.popoutButtonTitle ?? "Open the keyboard display in a new window.";
+  cache.popoutButton.onclick = showPopoutButton
+    ? () => {
+        options.onPopout?.();
+      }
+    : null;
+
+  cache.secondaryButton.hidden = !showSecondaryButton;
+  cache.secondaryButton.textContent =
+    options.secondaryPopoutButtonLabel ?? "w/ input naming";
+  cache.secondaryButton.title =
+    options.secondaryPopoutButtonTitle ??
+    "Open the keyboard with input naming in a new window.";
+  cache.secondaryButton.onclick = showSecondaryButton
+    ? () => {
+        options.onSecondaryPopout?.();
+      }
+    : null;
+
+  cache.utilityGroup.replaceChildren(cache.popoutButton, cache.secondaryButton);
+
+  if (cache.utilityGroup.parentElement !== container) {
+    container.prepend(cache.utilityGroup);
   }
-
-  if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
-    const secondaryButton = document.createElement("button");
-    secondaryButton.type = "button";
-    secondaryButton.className =
-      "panel-popout-button panel-popout-button-secondary";
-    secondaryButton.textContent =
-      options.secondaryPopoutButtonLabel ?? "w/ input naming";
-    secondaryButton.title =
-      options.secondaryPopoutButtonTitle ??
-      "Open the keyboard with input naming in a new window.";
-    secondaryButton.addEventListener("click", options.onSecondaryPopout);
-    utilityGroup.append(secondaryButton);
-  }
-
-  container.prepend(utilityGroup);
 }
 
 function updateKeyboardKeyStates(

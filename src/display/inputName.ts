@@ -19,6 +19,9 @@ type RenderInputNameDisplayOptions = {
 
 type InputNameDisplayCache = {
   contentHost: HTMLDivElement;
+  utilityGroup: HTMLDivElement;
+  popoutButton: HTMLButtonElement;
+  secondaryButton: HTMLButtonElement;
 };
 
 const inputNameDisplayCache = new WeakMap<
@@ -131,12 +134,28 @@ function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
 
   container.replaceChildren();
 
+  const utilityGroup = document.createElement("div");
+  utilityGroup.className = "panel-popout-buttons";
+
+  const popoutButton = document.createElement("button");
+  popoutButton.type = "button";
+  popoutButton.className = "panel-popout-button";
+
+  const secondaryButton = document.createElement("button");
+  secondaryButton.type = "button";
+  secondaryButton.className =
+    "panel-popout-button panel-popout-button-secondary";
+
   const contentHost = document.createElement("div");
   contentHost.className = "input-name-content-host";
-  container.append(contentHost);
+  utilityGroup.append(popoutButton, secondaryButton);
+  container.append(utilityGroup, contentHost);
 
   const cache = {
     contentHost,
+    utilityGroup,
+    popoutButton,
+    secondaryButton,
   };
   inputNameDisplayCache.set(container, cache);
   return cache;
@@ -146,44 +165,36 @@ function syncInputNameUtilityGroup(
   container: HTMLDivElement,
   options: RenderInputNameDisplayOptions,
 ) {
-  container.querySelector(".panel-popout-buttons")?.remove();
+  const cache = getOrCreateInputNameDisplayCache(container);
+  const showPopoutButton = Boolean(options.showPopoutButton && options.onPopout);
+  const showSecondaryButton = Boolean(
+    options.showSecondaryPopoutButton && options.onSecondaryPopout,
+  );
+  const hasUtility = showPopoutButton || showSecondaryButton;
 
-  if (
-    !(options.showPopoutButton && options.onPopout) &&
-    !(options.showSecondaryPopoutButton && options.onSecondaryPopout)
-  ) {
-    return;
-  }
+  cache.utilityGroup.hidden = !hasUtility;
 
-  const utilityGroup = document.createElement("div");
-  utilityGroup.className = "panel-popout-buttons";
+  cache.popoutButton.hidden = !showPopoutButton;
+  cache.popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+  cache.popoutButton.title =
+    options.popoutButtonTitle ?? "Open the input name display in a new window.";
+  cache.popoutButton.onclick = showPopoutButton
+    ? () => {
+        options.onPopout?.();
+      }
+    : null;
 
-  if (options.showPopoutButton && options.onPopout) {
-    const popoutButton = document.createElement("button");
-    popoutButton.type = "button";
-    popoutButton.className = "panel-popout-button";
-    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
-    popoutButton.title =
-      options.popoutButtonTitle ?? "Open the input name display in a new window.";
-    popoutButton.addEventListener("click", options.onPopout);
-    utilityGroup.append(popoutButton);
-  }
-
-  if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
-    const secondaryButton = document.createElement("button");
-    secondaryButton.type = "button";
-    secondaryButton.className =
-      "panel-popout-button panel-popout-button-secondary";
-    secondaryButton.textContent =
-      options.secondaryPopoutButtonLabel ?? "w/ keyboard";
-    secondaryButton.title =
-      options.secondaryPopoutButtonTitle ??
-      "Open the input name display with the keyboard in a new window.";
-    secondaryButton.addEventListener("click", options.onSecondaryPopout);
-    utilityGroup.append(secondaryButton);
-  }
-
-  container.prepend(utilityGroup);
+  cache.secondaryButton.hidden = !showSecondaryButton;
+  cache.secondaryButton.textContent =
+    options.secondaryPopoutButtonLabel ?? "w/ keyboard";
+  cache.secondaryButton.title =
+    options.secondaryPopoutButtonTitle ??
+    "Open the input name display with the keyboard in a new window.";
+  cache.secondaryButton.onclick = showSecondaryButton
+    ? () => {
+        options.onSecondaryPopout?.();
+      }
+    : null;
 }
 
 function createStatusElement(text: string) {
