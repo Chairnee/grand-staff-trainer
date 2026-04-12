@@ -3405,6 +3405,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   if (svgElement) {
     svgElement.removeAttribute("width");
     svgElement.removeAttribute("height");
+    svgElement.style.width = "";
+    svgElement.style.height = "";
     svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
   }
