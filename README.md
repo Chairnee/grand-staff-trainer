@@ -31,7 +31,7 @@ The input analysis panel is the topmost panel when visible. It analyses the play
 
 Every analysis consists of three lines:
 
-1. A shorthand line that displays a best-effort primary reading and any reasonable alternatives/ambiguities.
+1. A shorthand line that displays a best-effort primary reading and any reasonable alternatives/ambiguities. You can click on alternate names to swap to their details.
 2. A line that displays the exact notes.
 3. A longhand line that displays a full name.
 
