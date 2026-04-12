@@ -670,6 +670,8 @@ let cachedIsPortraitViewport: boolean | null = null;
 let cachedLayoutMetricsSignature: string | null = null;
 let cachedLayoutMetrics: LayoutMetrics | null = null;
 let grandStaffStaticRenderCache: GrandStaffStaticRenderCache | null = null;
+let cachedGrandStaffStaticSignature: string | null = null;
+let cachedGrandStaffOverlaySignature: string | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -1779,12 +1781,16 @@ function renderNotation(mode: "full" | "overlay" = "full") {
   if (!state.isExerciseVisible) {
     notationCanvasElement.replaceChildren();
     grandStaffStaticRenderCache = null;
+    cachedGrandStaffStaticSignature = null;
+    cachedGrandStaffOverlaySignature = null;
     return;
   }
 
   if (!areNotationFontsReady) {
     notationCanvasElement.replaceChildren();
     grandStaffStaticRenderCache = null;
+    cachedGrandStaffStaticSignature = null;
+    cachedGrandStaffOverlaySignature = null;
 
     const loadingMessage = document.createElement("p");
     loadingMessage.className = "notation-loading";
@@ -1793,21 +1799,44 @@ function renderNotation(mode: "full" | "overlay" = "full") {
     return;
   }
 
-  if (
-    mode === "overlay" &&
+  const staticSignature = getGrandStaffStaticSignature(notationCanvasElement, state);
+  const canReuseStaticRender =
     grandStaffStaticRenderCache &&
     grandStaffStaticRenderCache.container === notationCanvasElement &&
-    grandStaffStaticRenderCache.svgElement.isConnected
-  ) {
-    renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+    grandStaffStaticRenderCache.svgElement.isConnected &&
+    cachedGrandStaffStaticSignature === staticSignature;
+
+  if (!canReuseStaticRender) {
+    grandStaffStaticRenderCache = renderGrandStaffStatic(notationCanvasElement, state);
+    cachedGrandStaffStaticSignature = grandStaffStaticRenderCache
+      ? staticSignature
+      : null;
+    cachedGrandStaffOverlaySignature = null;
+  }
+
+  if (!grandStaffStaticRenderCache) {
     return;
   }
 
-  grandStaffStaticRenderCache = renderGrandStaffStatic(notationCanvasElement, state);
+  const overlaySignature = getGrandStaffOverlaySignature(state);
 
-  if (grandStaffStaticRenderCache) {
-    renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+  if (
+    mode === "overlay" &&
+    cachedGrandStaffOverlaySignature === overlaySignature
+  ) {
+    return;
   }
+
+  if (
+    mode === "full" &&
+    canReuseStaticRender &&
+    cachedGrandStaffOverlaySignature === overlaySignature
+  ) {
+    return;
+  }
+
+  renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+  cachedGrandStaffOverlaySignature = overlaySignature;
 }
 
 function renderKeyboard(
@@ -3281,6 +3310,42 @@ type GrandStaffStaticRenderCache = {
   staticSnapshot: GrandStaffStaticSnapshot;
   displayedKeySignature: KeySignature | null;
 };
+
+function getGrandStaffStaticSignature(
+  container: HTMLDivElement,
+  appState: AppState,
+) {
+  return JSON.stringify({
+    generationSettings: appState.generationSettings,
+    promptQueue: appState.promptQueue,
+    currentPromptIndex: appState.currentPromptIndex,
+    currentMeasureOffsetBeats: appState.currentMeasureOffsetBeats,
+    isExerciseVisible: appState.isExerciseVisible,
+    areNotationFontsReady,
+    containerWidth: container.clientWidth,
+    containerHeight: container.clientHeight,
+    uiScale: getUiScale(),
+    portrait: isPortraitViewport(),
+  });
+}
+
+function getGrandStaffOverlaySignature(appState: AppState) {
+  const heldOverlayPresentations = [...appState.heldOverlayPresentations.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([noteNumber, presentation]) => [
+      noteNumber,
+      presentation.hand,
+      presentation.key,
+      presentation.clef,
+    ]);
+
+  return JSON.stringify({
+    heldNotes: getDisplayedHeldNotes(appState),
+    heldOverlayPresentations,
+    lastAttemptResult: appState.lastAttemptResult,
+    attemptFeedbackCount: appState.attemptFeedbackCount,
+  });
+}
 
 function renderGrandStaffStatic(
   container: HTMLDivElement,
