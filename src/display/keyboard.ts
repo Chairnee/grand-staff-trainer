@@ -16,56 +16,63 @@ type KeyboardDisplayOptions = {
 
 const DEFAULT_START_MIDI_NOTE = 21;
 const DEFAULT_END_MIDI_NOTE = 108;
+type KeyboardDisplayCache = {
+  startMidiNote: number;
+  endMidiNote: number;
+  keyboardFrameElement: HTMLDivElement;
+  keyboardElement: HTMLDivElement;
+  keyElements: Map<number, HTMLDivElement>;
+};
+
+const keyboardDisplayCache = new WeakMap<HTMLDivElement, KeyboardDisplayCache>();
 
 export function renderKeyboardDisplay(
   container: HTMLDivElement,
   options: KeyboardDisplayOptions,
 ) {
-  container.replaceChildren();
-  container.classList.toggle(
-    "has-utility",
-    Boolean(
-      (options.showPopoutButton && options.onPopout) ||
-        (options.showSecondaryPopoutButton && options.onSecondaryPopout),
-    ),
+  const startMidiNote = options.startMidiNote ?? DEFAULT_START_MIDI_NOTE;
+  const endMidiNote = options.endMidiNote ?? DEFAULT_END_MIDI_NOTE;
+  const activeNotes = new Set(options.activeNotes);
+  const heldNotes = new Set(options.heldNotes ?? []);
+  const hasUtility = Boolean(
+    (options.showPopoutButton && options.onPopout) ||
+      (options.showSecondaryPopoutButton && options.onSecondaryPopout),
   );
+  let cache = keyboardDisplayCache.get(container);
+
+  container.classList.toggle("has-utility", hasUtility);
 
   if (
-    (options.showPopoutButton && options.onPopout) ||
-    (options.showSecondaryPopoutButton && options.onSecondaryPopout)
+    !cache ||
+    cache.startMidiNote !== startMidiNote ||
+    cache.endMidiNote !== endMidiNote
   ) {
-    const utilityGroup = document.createElement("div");
-    utilityGroup.className = "panel-popout-buttons";
-
-    if (options.showPopoutButton && options.onPopout) {
-      const popoutButton = document.createElement("button");
-      popoutButton.type = "button";
-      popoutButton.className = "panel-popout-button";
-      popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
-      popoutButton.title =
-        options.popoutButtonTitle ??
-        "Open the keyboard display in a new window.";
-      popoutButton.addEventListener("click", options.onPopout);
-      utilityGroup.append(popoutButton);
-    }
-
-    if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
-      const secondaryButton = document.createElement("button");
-      secondaryButton.type = "button";
-      secondaryButton.className =
-        "panel-popout-button panel-popout-button-secondary";
-      secondaryButton.textContent =
-        options.secondaryPopoutButtonLabel ?? "w/ input naming";
-      secondaryButton.title =
-        options.secondaryPopoutButtonTitle ??
-        "Open the keyboard with input naming in a new window.";
-      secondaryButton.addEventListener("click", options.onSecondaryPopout);
-      utilityGroup.append(secondaryButton);
-    }
-
-    container.append(utilityGroup);
+    cache = buildKeyboardDisplayCache(startMidiNote, endMidiNote, activeNotes, heldNotes);
+    keyboardDisplayCache.set(container, cache);
+  } else {
+    updateKeyboardKeyStates(cache.keyElements, activeNotes, heldNotes);
   }
 
+  syncKeyboardUtilityGroup(container, options);
+
+  if (cache.keyboardFrameElement.parentElement !== container) {
+    container.append(cache.keyboardFrameElement);
+  }
+
+  fitKeyboardToContainer(
+    container,
+    cache.keyboardFrameElement,
+    cache.keyboardElement,
+    options.fitMode ?? "width",
+  );
+}
+
+function buildKeyboardDisplayCache(
+  startMidiNote: number,
+  endMidiNote: number,
+  activeNotes: Set<number>,
+  heldNotes: Set<number>,
+) {
   const keyboardFrameElement = document.createElement("div");
   keyboardFrameElement.className = "keyboard-frame";
 
@@ -77,11 +84,7 @@ export function renderKeyboardDisplay(
 
   const blackKeyLayer = document.createElement("div");
   blackKeyLayer.className = "keyboard-black-keys";
-
-  const activeNotes = new Set(options.activeNotes);
-  const heldNotes = new Set(options.heldNotes ?? []);
-  const startMidiNote = options.startMidiNote ?? DEFAULT_START_MIDI_NOTE;
-  const endMidiNote = options.endMidiNote ?? DEFAULT_END_MIDI_NOTE;
+  const keyElements = new Map<number, HTMLDivElement>();
   let whiteKeyIndex = 0;
 
   for (
@@ -99,6 +102,7 @@ export function renderKeyboardDisplay(
       );
       blackKeyElement.style.left = `calc(${whiteKeyIndex} * var(--keyboard-white-key-width) - var(--keyboard-black-key-width) / 2)`;
       blackKeyLayer.append(blackKeyElement);
+      keyElements.set(midiNoteNumber, blackKeyElement);
       continue;
     }
 
@@ -118,19 +122,75 @@ export function renderKeyboardDisplay(
     }
 
     whiteKeyLayer.append(whiteKeyElement);
+    keyElements.set(midiNoteNumber, whiteKeyElement);
     whiteKeyIndex += 1;
   }
 
   keyboardElement.append(whiteKeyLayer, blackKeyLayer);
   keyboardFrameElement.append(keyboardElement);
-  container.append(keyboardFrameElement);
 
-  fitKeyboardToContainer(
-    container,
+  return {
+    startMidiNote,
+    endMidiNote,
     keyboardFrameElement,
     keyboardElement,
-    options.fitMode ?? "width",
-  );
+    keyElements,
+  };
+}
+
+function syncKeyboardUtilityGroup(
+  container: HTMLDivElement,
+  options: KeyboardDisplayOptions,
+) {
+  container.querySelector(".panel-popout-buttons")?.remove();
+
+  if (
+    !(options.showPopoutButton && options.onPopout) &&
+    !(options.showSecondaryPopoutButton && options.onSecondaryPopout)
+  ) {
+    return;
+  }
+
+  const utilityGroup = document.createElement("div");
+  utilityGroup.className = "panel-popout-buttons";
+
+  if (options.showPopoutButton && options.onPopout) {
+    const popoutButton = document.createElement("button");
+    popoutButton.type = "button";
+    popoutButton.className = "panel-popout-button";
+    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+    popoutButton.title =
+      options.popoutButtonTitle ?? "Open the keyboard display in a new window.";
+    popoutButton.addEventListener("click", options.onPopout);
+    utilityGroup.append(popoutButton);
+  }
+
+  if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
+    const secondaryButton = document.createElement("button");
+    secondaryButton.type = "button";
+    secondaryButton.className =
+      "panel-popout-button panel-popout-button-secondary";
+    secondaryButton.textContent =
+      options.secondaryPopoutButtonLabel ?? "w/ input naming";
+    secondaryButton.title =
+      options.secondaryPopoutButtonTitle ??
+      "Open the keyboard with input naming in a new window.";
+    secondaryButton.addEventListener("click", options.onSecondaryPopout);
+    utilityGroup.append(secondaryButton);
+  }
+
+  container.prepend(utilityGroup);
+}
+
+function updateKeyboardKeyStates(
+  keyElements: Map<number, HTMLDivElement>,
+  activeNotes: Set<number>,
+  heldNotes: Set<number>,
+) {
+  for (const [midiNoteNumber, keyElement] of keyElements) {
+    keyElement.classList.toggle("is-active", activeNotes.has(midiNoteNumber));
+    keyElement.classList.toggle("is-held", heldNotes.has(midiNoteNumber));
+  }
 }
 
 function getKeyClassName(
