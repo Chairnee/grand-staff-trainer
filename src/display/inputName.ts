@@ -17,12 +17,22 @@ type RenderInputNameDisplayOptions = {
   onSelectVariant?: (variantKey: string) => void;
 };
 
+type InputNameDisplayCache = {
+  contentHost: HTMLDivElement;
+};
+
+const inputNameDisplayCache = new WeakMap<
+  HTMLDivElement,
+  InputNameDisplayCache
+>();
+
 export function renderInputNameDisplay(
   container: HTMLDivElement,
   analysis: InputAnalysis,
   options: RenderInputNameDisplayOptions = {},
 ) {
-  container.replaceChildren();
+  const cache = getOrCreateInputNameDisplayCache(container);
+
   container.classList.remove("is-status");
   container.classList.toggle(
     "has-utility",
@@ -31,46 +41,11 @@ export function renderInputNameDisplay(
         (options.showSecondaryPopoutButton && options.onSecondaryPopout),
     ),
   );
-
-  if (
-    (options.showPopoutButton && options.onPopout) ||
-    (options.showSecondaryPopoutButton && options.onSecondaryPopout)
-  ) {
-    const utilityGroup = document.createElement("div");
-    utilityGroup.className = "panel-popout-buttons";
-
-    if (options.showPopoutButton && options.onPopout) {
-      const popoutButton = document.createElement("button");
-      popoutButton.type = "button";
-      popoutButton.className = "panel-popout-button";
-      popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
-      popoutButton.title =
-        options.popoutButtonTitle ??
-        "Open the input name display in a new window.";
-      popoutButton.addEventListener("click", options.onPopout);
-      utilityGroup.append(popoutButton);
-    }
-
-    if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
-      const secondaryButton = document.createElement("button");
-      secondaryButton.type = "button";
-      secondaryButton.className =
-        "panel-popout-button panel-popout-button-secondary";
-      secondaryButton.textContent =
-        options.secondaryPopoutButtonLabel ?? "w/ keyboard";
-      secondaryButton.title =
-        options.secondaryPopoutButtonTitle ??
-        "Open the input name display with the keyboard in a new window.";
-      secondaryButton.addEventListener("click", options.onSecondaryPopout);
-      utilityGroup.append(secondaryButton);
-    }
-
-    container.append(utilityGroup);
-  }
+  syncInputNameUtilityGroup(container, options);
 
   if (!analysis.noteLabel && !analysis.primary) {
     container.classList.add("is-status");
-    container.append(createStatusWrapper("No input to analyse"));
+    cache.contentHost.replaceChildren(createStatusWrapper("No input to analyse"));
     return;
   }
 
@@ -84,7 +59,7 @@ export function renderInputNameDisplay(
     notesValue.textContent = analysis.noteLabel ?? "";
 
     statusWrapper.append(notesValue, createStatusElement("Unknown input"));
-    container.append(statusWrapper);
+    cache.contentHost.replaceChildren(statusWrapper);
     return;
   }
 
@@ -144,8 +119,71 @@ export function renderInputNameDisplay(
   longhand.textContent = selectedVariant.longhand;
 
   contentWrapper.append(readingRow, notesValue, longhand);
+  cache.contentHost.replaceChildren(contentWrapper);
+}
 
-  container.append(contentWrapper);
+function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
+  const cachedDisplay = inputNameDisplayCache.get(container);
+
+  if (cachedDisplay) {
+    return cachedDisplay;
+  }
+
+  container.replaceChildren();
+
+  const contentHost = document.createElement("div");
+  contentHost.className = "input-name-content-host";
+  container.append(contentHost);
+
+  const cache = {
+    contentHost,
+  };
+  inputNameDisplayCache.set(container, cache);
+  return cache;
+}
+
+function syncInputNameUtilityGroup(
+  container: HTMLDivElement,
+  options: RenderInputNameDisplayOptions,
+) {
+  container.querySelector(".panel-popout-buttons")?.remove();
+
+  if (
+    !(options.showPopoutButton && options.onPopout) &&
+    !(options.showSecondaryPopoutButton && options.onSecondaryPopout)
+  ) {
+    return;
+  }
+
+  const utilityGroup = document.createElement("div");
+  utilityGroup.className = "panel-popout-buttons";
+
+  if (options.showPopoutButton && options.onPopout) {
+    const popoutButton = document.createElement("button");
+    popoutButton.type = "button";
+    popoutButton.className = "panel-popout-button";
+    popoutButton.textContent = options.popoutButtonLabel ?? "Pop out";
+    popoutButton.title =
+      options.popoutButtonTitle ?? "Open the input name display in a new window.";
+    popoutButton.addEventListener("click", options.onPopout);
+    utilityGroup.append(popoutButton);
+  }
+
+  if (options.showSecondaryPopoutButton && options.onSecondaryPopout) {
+    const secondaryButton = document.createElement("button");
+    secondaryButton.type = "button";
+    secondaryButton.className =
+      "panel-popout-button panel-popout-button-secondary";
+    secondaryButton.textContent =
+      options.secondaryPopoutButtonLabel ?? "w/ keyboard";
+    secondaryButton.title =
+      options.secondaryPopoutButtonTitle ??
+      "Open the input name display with the keyboard in a new window.";
+    secondaryButton.addEventListener("click", options.onSecondaryPopout);
+    utilityGroup.append(secondaryButton);
+  }
+
+  container.prepend(utilityGroup);
 }
 
 function createStatusElement(text: string) {
