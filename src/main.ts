@@ -2344,6 +2344,18 @@ function handleCombinedPopoutClick() {
     #combined-popout-keyboard-content .panel-popout-button {
       display: none;
     }
+
+    @media (hover: none) and (pointer: coarse) {
+      body.combined-popout-body {
+        min-height: 100svh;
+        height: 100svh;
+      }
+
+      #combined-popout-root {
+        min-height: 100svh;
+        height: 100svh;
+      }
+    }
   `;
   popoutWindow.document.head.append(popoutStyle);
 
