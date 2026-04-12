@@ -950,20 +950,26 @@ body {
 
   .octave-offset-picker {
     gap: calc(6px * var(--portrait-ui-scale));
+    width: 100%
+  }
+
+  .octave-offset-picker > span:first-of-type {
+    flex: 1 1 auto;
   }
 
   .octave-offset-controls {
-    gap: calc(4px * var(--portrait-ui-scale));
+    gap: 0px;
+    flex: 1 1 auto;
   }
 
   .octave-offset-controls .toolbar-button {
-    min-width: calc(30px * var(--portrait-ui-scale));
+    min-width: calc(25px * var(--portrait-ui-scale));
     padding: calc(4px * var(--portrait-ui-scale))
       calc(8px * var(--portrait-ui-scale));
   }
 
   .octave-offset-value {
-    min-width: calc(28px * var(--portrait-ui-scale));
+    min-width: calc(19px * var(--portrait-ui-scale));
   }
 
   .settings-action-button {
