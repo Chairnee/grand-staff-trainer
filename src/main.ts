@@ -669,6 +669,7 @@ let cachedViewportSignature: string | null = null;
 let cachedIsPortraitViewport: boolean | null = null;
 let cachedLayoutMetricsSignature: string | null = null;
 let cachedLayoutMetrics: LayoutMetrics | null = null;
+let grandStaffStaticRenderCache: GrandStaffStaticRenderCache | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -870,7 +871,7 @@ function performMidiPanelsRender() {
 
   renderNotationMetadata(displayedHeldKeys);
   renderInputName(analysis);
-  renderNotation();
+  renderNotation("overlay");
   renderKeyboard(keyboardOptions, analysis);
   if (IS_DEV) {
     renderMidiDebug();
@@ -904,7 +905,7 @@ function performFullRender() {
   renderExerciseNotice();
   renderExerciseSummary();
   renderInputName(analysis);
-  renderNotation();
+  renderNotation("full");
   renderKeyboard(keyboardOptions, analysis);
 }
 
@@ -1772,16 +1773,18 @@ function capitalizeWord(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function renderNotation() {
+function renderNotation(mode: "full" | "overlay" = "full") {
   notationElement.hidden = !state.isExerciseVisible;
 
   if (!state.isExerciseVisible) {
     notationCanvasElement.replaceChildren();
+    grandStaffStaticRenderCache = null;
     return;
   }
 
   if (!areNotationFontsReady) {
     notationCanvasElement.replaceChildren();
+    grandStaffStaticRenderCache = null;
 
     const loadingMessage = document.createElement("p");
     loadingMessage.className = "notation-loading";
@@ -1790,7 +1793,21 @@ function renderNotation() {
     return;
   }
 
-  renderGrandStaff(notationCanvasElement, state);
+  if (
+    mode === "overlay" &&
+    grandStaffStaticRenderCache &&
+    grandStaffStaticRenderCache.container === notationCanvasElement &&
+    grandStaffStaticRenderCache.svgElement.isConnected
+  ) {
+    renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+    return;
+  }
+
+  grandStaffStaticRenderCache = renderGrandStaffStatic(notationCanvasElement, state);
+
+  if (grandStaffStaticRenderCache) {
+    renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+  }
 }
 
 function renderKeyboard(
@@ -3255,8 +3272,20 @@ type GrandStaffOverlaySnapshot = {
   currentTrebleHeldOverlayNotes: StaveNote[];
   currentBassHeldOverlayNotes: StaveNote[];
 };
+type GrandStaffStaticRenderCache = {
+  container: HTMLDivElement;
+  svgElement: SVGSVGElement;
+  context: ReturnType<Renderer["getContext"]>;
+  trebleStave: Stave;
+  bassStave: Stave;
+  staticSnapshot: GrandStaffStaticSnapshot;
+  displayedKeySignature: KeySignature | null;
+};
 
-function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
+function renderGrandStaffStatic(
+  container: HTMLDivElement,
+  appState: AppState,
+): GrandStaffStaticRenderCache | null {
   container.replaceChildren();
 
   const uiScale = getUiScale();
@@ -3317,16 +3346,11 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     .draw();
 
   if (appState.promptQueue.length === 0) {
-    return;
+    return null;
   }
 
   const staticSnapshot = createGrandStaffStaticSnapshot(
     appState,
-    displayedKeySignature,
-  );
-  const overlaySnapshot = createGrandStaffOverlaySnapshot(
-    appState,
-    staticSnapshot,
     displayedKeySignature,
   );
 
@@ -3424,44 +3448,28 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     height,
   );
 
-  if (staticSnapshot.currentTrebleTickable) {
-    for (const currentTrebleHeldOverlayNote of overlaySnapshot.currentTrebleHeldOverlayNotes) {
-      drawHeldOverlayNote(
-        currentTrebleHeldOverlayNote,
-        staticSnapshot.currentTrebleTickable,
-        trebleStave,
-        context,
-      );
-    }
-  }
-
-  if (staticSnapshot.currentBassTickable) {
-    for (const currentBassHeldOverlayNote of overlaySnapshot.currentBassHeldOverlayNotes) {
-      drawHeldOverlayNote(
-        currentBassHeldOverlayNote,
-        staticSnapshot.currentBassTickable,
-        bassStave,
-        context,
-      );
-    }
-  }
-
-  applyWrongAttemptFeedback([
-    staticSnapshot.currentTreblePromptNote,
-    staticSnapshot.currentBassPromptNote,
-    ...staticSnapshot.currentSecondaryPromptNotes,
-  ]);
-
   const svgElement = container.querySelector<SVGSVGElement>("svg");
 
-  if (svgElement) {
-    svgElement.removeAttribute("width");
-    svgElement.removeAttribute("height");
-    svgElement.style.width = "";
-    svgElement.style.height = "";
-    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  if (!svgElement) {
+    return null;
   }
+
+  svgElement.removeAttribute("width");
+  svgElement.removeAttribute("height");
+  svgElement.style.width = "";
+  svgElement.style.height = "";
+  svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  return {
+    container,
+    svgElement,
+    context,
+    trebleStave,
+    bassStave,
+    staticSnapshot,
+    displayedKeySignature,
+  };
 }
 
 function createGrandStaffStaticSnapshot(
@@ -3718,6 +3726,55 @@ function createGrandStaffOverlaySnapshot(
     currentTrebleHeldOverlayNotes,
     currentBassHeldOverlayNotes,
   };
+}
+
+function renderGrandStaffOverlay(
+  staticRenderCache: GrandStaffStaticRenderCache,
+  appState: AppState,
+) {
+  clearHeldOverlayNotes(staticRenderCache.svgElement);
+
+  const overlaySnapshot = createGrandStaffOverlaySnapshot(
+    appState,
+    staticRenderCache.staticSnapshot,
+    staticRenderCache.displayedKeySignature,
+  );
+
+  if (staticRenderCache.staticSnapshot.currentTrebleTickable) {
+    for (const currentTrebleHeldOverlayNote of overlaySnapshot.currentTrebleHeldOverlayNotes) {
+      drawHeldOverlayNote(
+        currentTrebleHeldOverlayNote,
+        staticRenderCache.staticSnapshot.currentTrebleTickable,
+        staticRenderCache.trebleStave,
+        staticRenderCache.context,
+        "held-overlay-note",
+      );
+    }
+  }
+
+  if (staticRenderCache.staticSnapshot.currentBassTickable) {
+    for (const currentBassHeldOverlayNote of overlaySnapshot.currentBassHeldOverlayNotes) {
+      drawHeldOverlayNote(
+        currentBassHeldOverlayNote,
+        staticRenderCache.staticSnapshot.currentBassTickable,
+        staticRenderCache.bassStave,
+        staticRenderCache.context,
+        "held-overlay-note",
+      );
+    }
+  }
+
+  applyWrongAttemptFeedback([
+    staticRenderCache.staticSnapshot.currentTreblePromptNote,
+    staticRenderCache.staticSnapshot.currentBassPromptNote,
+    ...staticRenderCache.staticSnapshot.currentSecondaryPromptNotes,
+  ]);
+}
+
+function clearHeldOverlayNotes(svgElement: SVGSVGElement) {
+  for (const overlayElement of svgElement.querySelectorAll(".held-overlay-note")) {
+    overlayElement.remove();
+  }
 }
 
 function getDisplayedPromptSlot(
@@ -4646,6 +4703,7 @@ function drawHeldOverlayNote(
   anchorTickable: StaveNote,
   stave: Stave,
   context: ReturnType<Renderer["getContext"]>,
+  className?: string,
 ) {
   const modifierContext = new ModifierContext();
 
@@ -4655,6 +4713,10 @@ function drawHeldOverlayNote(
   note.setStave(stave);
   note.preFormat();
   note.setContext(context).draw();
+
+  if (className) {
+    note.getSVGElement()?.classList.add(className);
+  }
 }
 
 function drawTrebleOttavaBracket(
