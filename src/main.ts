@@ -155,6 +155,15 @@ type HeldOverlayPresentation = {
   key: string;
   clef: "treble" | "bass";
 };
+type LayoutMetrics = {
+  layoutMode: LayoutMode;
+  uiScale: number;
+  stageScale: number;
+  shellScale: number;
+  overlayScale: number;
+  portraitUiScale: number;
+  notationZoom: number;
+};
 type KeyboardDisplayRenderOptions = {
   activeNotes: number[];
   heldNotes: number[];
@@ -652,8 +661,14 @@ let cachedDisplayedHeldNotesSignature: string | null = null;
 let cachedDisplayedHeldNotes: number[] | null = null;
 let cachedDisplayedAnalysisHeldNotesSignature: string | null = null;
 let cachedDisplayedAnalysisHeldNotes: number[] | null = null;
+let cachedDisplayedHeldKeysSignature: string | null = null;
+let cachedDisplayedHeldKeys: string[] | null = null;
 let cachedKeyboardDisplayOptionsSignature: string | null = null;
 let cachedKeyboardDisplayOptions: KeyboardDisplayRenderOptions | null = null;
+let cachedViewportSignature: string | null = null;
+let cachedIsPortraitViewport: boolean | null = null;
+let cachedLayoutMetricsSignature: string | null = null;
+let cachedLayoutMetrics: LayoutMetrics | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -1020,9 +1035,20 @@ function getDisplayedHeldKeys(
   appState: AppState,
   heldNotes = getDisplayedHeldNotes(appState),
 ) {
-  return heldNotes.map((noteNumber) =>
+  const signature = heldNotes.join(",");
+
+  if (
+    cachedDisplayedHeldKeys &&
+    cachedDisplayedHeldKeysSignature === signature
+  ) {
+    return cachedDisplayedHeldKeys;
+  }
+
+  cachedDisplayedHeldKeysSignature = signature;
+  cachedDisplayedHeldKeys = heldNotes.map((noteNumber) =>
     midiNoteNumberToKey(noteNumber, "sharps"),
   );
+  return cachedDisplayedHeldKeys;
 }
 
 function getViewportBaselineScale() {
@@ -1035,15 +1061,17 @@ function getViewportBaselineScale() {
   );
 }
 
-function getLayoutMetrics(): {
-  layoutMode: LayoutMode;
-  uiScale: number;
-  stageScale: number;
-  shellScale: number;
-  overlayScale: number;
-  portraitUiScale: number;
-  notationZoom: number;
-} {
+function getViewportSignature() {
+  return `${window.innerWidth}x${window.innerHeight}`;
+}
+
+function getLayoutMetrics(): LayoutMetrics {
+  const signature = getViewportSignature();
+
+  if (cachedLayoutMetrics && cachedLayoutMetricsSignature === signature) {
+    return cachedLayoutMetrics;
+  }
+
   const baselineScale = getViewportBaselineScale();
   const layoutMode: LayoutMode = "responsive";
   const uiScale = baselineScale;
@@ -1064,7 +1092,8 @@ function getLayoutMetrics(): {
     Math.max(NOTATION_ZOOM_MIN, 1 / uiScale),
   );
 
-  return {
+  cachedLayoutMetricsSignature = signature;
+  cachedLayoutMetrics = {
     layoutMode,
     uiScale,
     stageScale,
@@ -1073,6 +1102,7 @@ function getLayoutMetrics(): {
     portraitUiScale,
     notationZoom,
   };
+  return cachedLayoutMetrics;
 }
 
 function getUiScale() {
@@ -1080,7 +1110,18 @@ function getUiScale() {
 }
 
 function isPortraitViewport() {
-  return window.matchMedia("(orientation: portrait)").matches;
+  const signature = getViewportSignature();
+
+  if (
+    cachedIsPortraitViewport !== null &&
+    cachedViewportSignature === signature
+  ) {
+    return cachedIsPortraitViewport;
+  }
+
+  cachedViewportSignature = signature;
+  cachedIsPortraitViewport = window.matchMedia("(orientation: portrait)").matches;
+  return cachedIsPortraitViewport;
 }
 
 function handleWindowResize() {
