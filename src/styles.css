@@ -883,7 +883,7 @@ body {
     position: static;
     inset: auto;
     place-items: start center;
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: calc(2px * var(--shell-scale)) calc(4px * var(--shell-scale));
   }
 
