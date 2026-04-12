@@ -348,7 +348,7 @@ body {
 .input-name-display {
   position: relative;
   padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
-  min-height: calc(98.89px * var(--ui-scale));
+  min-height: calc(103px * var(--ui-scale));
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(70, 52, 28, 0.12);
