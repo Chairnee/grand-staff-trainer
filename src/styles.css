@@ -860,7 +860,7 @@ body {
     padding: calc(12px * var(--portrait-ui-scale))
       calc(14px * var(--portrait-ui-scale));
     border-radius: calc(14px * var(--portrait-ui-scale));
-    font-size: calc(0.88rem * var(--portrait-ui-scale));
+    font-size: calc(0.83rem * var(--portrait-ui-scale));
     text-align: left;
     transform: translateX(-50%);
   }    
