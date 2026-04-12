@@ -155,6 +155,12 @@ type HeldOverlayPresentation = {
   key: string;
   clef: "treble" | "bass";
 };
+type KeyboardDisplayRenderOptions = {
+  activeNotes: number[];
+  heldNotes: number[];
+  startMidiNote: number;
+  endMidiNote: number;
+};
 
 type AppState = {
   promptQueue: PromptSlot[];
@@ -640,6 +646,14 @@ let pendingRenderFrame: number | null = null;
 let pendingRenderMask = 0;
 let cachedInputAnalysisSignature: string | null = null;
 let cachedInputAnalysis: InputAnalysis | null = null;
+let cachedDisplayedSimulatedHeldNotesSignature: string | null = null;
+let cachedDisplayedSimulatedHeldNotes: number[] | null = null;
+let cachedDisplayedHeldNotesSignature: string | null = null;
+let cachedDisplayedHeldNotes: number[] | null = null;
+let cachedDisplayedAnalysisHeldNotesSignature: string | null = null;
+let cachedDisplayedAnalysisHeldNotes: number[] | null = null;
+let cachedKeyboardDisplayOptionsSignature: string | null = null;
+let cachedKeyboardDisplayOptions: KeyboardDisplayRenderOptions | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -915,15 +929,53 @@ function renderApp() {
   scheduleRender(RENDER_FULL);
 }
 
+function createDisplayedNotesSignature(notes: number[], octaveOffset: number) {
+  return `${octaveOffset}|${notes.join(",")}`;
+}
+
+function createMergedDisplayedNotesSignature(
+  primarySignature: string,
+  secondarySignature: string,
+) {
+  return `${primarySignature}||${secondarySignature}`;
+}
+
 function getDisplayedSimulatedHeldNotes(appState: AppState) {
-  return applyMidiInputOffsetToNotes(
+  const signature = createDisplayedNotesSignature(
     appState.simulatedHeldNotes,
     appState.octaveOffset,
   );
+
+  if (
+    cachedDisplayedSimulatedHeldNotes &&
+    cachedDisplayedSimulatedHeldNotesSignature === signature
+  ) {
+    return cachedDisplayedSimulatedHeldNotes;
+  }
+
+  cachedDisplayedSimulatedHeldNotesSignature = signature;
+  cachedDisplayedSimulatedHeldNotes = applyMidiInputOffsetToNotes(
+    appState.simulatedHeldNotes,
+    appState.octaveOffset,
+  );
+  return cachedDisplayedSimulatedHeldNotes;
 }
 
 function getDisplayedHeldNotes(appState: AppState) {
-  return [
+  const signature = createMergedDisplayedNotesSignature(
+    createDisplayedNotesSignature(appState.midi.heldNotes, appState.octaveOffset),
+    createDisplayedNotesSignature(appState.simulatedHeldNotes, appState.octaveOffset),
+  );
+
+  if (
+    cachedDisplayedHeldNotes &&
+    cachedDisplayedHeldNotesSignature === signature
+  ) {
+    return cachedDisplayedHeldNotes;
+  }
+
+  cachedDisplayedHeldNotesSignature = signature;
+  cachedDisplayedHeldNotes = [
     ...new Set([
       ...applyMidiInputOffsetToNotes(
         appState.midi.heldNotes,
@@ -932,10 +984,27 @@ function getDisplayedHeldNotes(appState: AppState) {
       ...getDisplayedSimulatedHeldNotes(appState),
     ]),
   ].sort((left, right) => left - right);
+  return cachedDisplayedHeldNotes;
 }
 
 function getDisplayedAnalysisHeldNotes(appState: AppState) {
-  return [
+  const signature = createMergedDisplayedNotesSignature(
+    createDisplayedNotesSignature(
+      appState.midi.analysisHeldNotes,
+      appState.octaveOffset,
+    ),
+    createDisplayedNotesSignature(appState.simulatedHeldNotes, appState.octaveOffset),
+  );
+
+  if (
+    cachedDisplayedAnalysisHeldNotes &&
+    cachedDisplayedAnalysisHeldNotesSignature === signature
+  ) {
+    return cachedDisplayedAnalysisHeldNotes;
+  }
+
+  cachedDisplayedAnalysisHeldNotesSignature = signature;
+  cachedDisplayedAnalysisHeldNotes = [
     ...new Set([
       ...applyMidiInputOffsetToNotes(
         appState.midi.analysisHeldNotes,
@@ -944,6 +1013,7 @@ function getDisplayedAnalysisHeldNotes(appState: AppState) {
       ...getDisplayedSimulatedHeldNotes(appState),
     ]),
   ].sort((left, right) => left - right);
+  return cachedDisplayedAnalysisHeldNotes;
 }
 
 function getDisplayedHeldKeys(
@@ -1710,18 +1780,37 @@ function renderKeyboard(
   renderCombinedPopout(analysis, keyboardOptions);
 }
 
-function getCurrentKeyboardDisplayOptions() {
+function getCurrentKeyboardDisplayOptions(): KeyboardDisplayRenderOptions {
   const currentPrompt = state.promptQueue[state.currentPromptIndex];
+  const activeNotes =
+    state.isExerciseVisible && currentPrompt
+      ? getPromptMidiNotes(currentPrompt)
+      : [];
+  const heldNotes = getDisplayedHeldNotes(state);
+  const signature = [
+    state.isExerciseVisible ? "visible" : "hidden",
+    state.currentPromptIndex,
+    activeNotes.join(","),
+    heldNotes.join(","),
+    KEYBOARD_START_MIDI_NOTE,
+    KEYBOARD_END_MIDI_NOTE,
+  ].join("|");
 
-  return {
-    activeNotes:
-      state.isExerciseVisible && currentPrompt
-        ? getPromptMidiNotes(currentPrompt)
-        : [],
-    heldNotes: getDisplayedHeldNotes(state),
+  if (
+    cachedKeyboardDisplayOptions &&
+    cachedKeyboardDisplayOptionsSignature === signature
+  ) {
+    return cachedKeyboardDisplayOptions;
+  }
+
+  cachedKeyboardDisplayOptionsSignature = signature;
+  cachedKeyboardDisplayOptions = {
+    activeNotes,
+    heldNotes,
     startMidiNote: KEYBOARD_START_MIDI_NOTE,
     endMidiNote: KEYBOARD_END_MIDI_NOTE,
   };
+  return cachedKeyboardDisplayOptions;
 }
 
 function renderInputName(analysis = getCurrentInputAnalysis()) {
