@@ -1,3 +1,4 @@
+<a id="readme-start"></a>
 # Grand Staff Trainer
 [Grand Staff Trainer Webpage](https://chairnee.github.io/grand-staff-trainer/) **\*\*Mobile is fully supported\*\***
 
