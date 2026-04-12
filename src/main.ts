@@ -669,6 +669,9 @@ let cachedViewportSignature: string | null = null;
 let cachedIsPortraitViewport: boolean | null = null;
 let cachedLayoutMetricsSignature: string | null = null;
 let cachedLayoutMetrics: LayoutMetrics | null = null;
+let grandStaffStaticRenderCache: GrandStaffStaticRenderCache | null = null;
+let cachedGrandStaffStaticSignature: string | null = null;
+let cachedGrandStaffOverlaySignature: string | null = null;
 const pendingAttemptMidiNotes = new Set<number>();
 const RENDER_FULL = 1;
 const RENDER_MIDI_PANELS = 2;
@@ -870,7 +873,7 @@ function performMidiPanelsRender() {
 
   renderNotationMetadata(displayedHeldKeys);
   renderInputName(analysis);
-  renderNotation();
+  renderNotation("overlay");
   renderKeyboard(keyboardOptions, analysis);
   if (IS_DEV) {
     renderMidiDebug();
@@ -904,7 +907,7 @@ function performFullRender() {
   renderExerciseNotice();
   renderExerciseSummary();
   renderInputName(analysis);
-  renderNotation();
+  renderNotation("full");
   renderKeyboard(keyboardOptions, analysis);
 }
 
@@ -1772,16 +1775,22 @@ function capitalizeWord(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function renderNotation() {
+function renderNotation(mode: "full" | "overlay" = "full") {
   notationElement.hidden = !state.isExerciseVisible;
 
   if (!state.isExerciseVisible) {
     notationCanvasElement.replaceChildren();
+    grandStaffStaticRenderCache = null;
+    cachedGrandStaffStaticSignature = null;
+    cachedGrandStaffOverlaySignature = null;
     return;
   }
 
   if (!areNotationFontsReady) {
     notationCanvasElement.replaceChildren();
+    grandStaffStaticRenderCache = null;
+    cachedGrandStaffStaticSignature = null;
+    cachedGrandStaffOverlaySignature = null;
 
     const loadingMessage = document.createElement("p");
     loadingMessage.className = "notation-loading";
@@ -1790,7 +1799,44 @@ function renderNotation() {
     return;
   }
 
-  renderGrandStaff(notationCanvasElement, state);
+  const staticSignature = getGrandStaffStaticSignature(notationCanvasElement, state);
+  const canReuseStaticRender =
+    grandStaffStaticRenderCache &&
+    grandStaffStaticRenderCache.container === notationCanvasElement &&
+    grandStaffStaticRenderCache.svgElement.isConnected &&
+    cachedGrandStaffStaticSignature === staticSignature;
+
+  if (!canReuseStaticRender) {
+    grandStaffStaticRenderCache = renderGrandStaffStatic(notationCanvasElement, state);
+    cachedGrandStaffStaticSignature = grandStaffStaticRenderCache
+      ? staticSignature
+      : null;
+    cachedGrandStaffOverlaySignature = null;
+  }
+
+  if (!grandStaffStaticRenderCache) {
+    return;
+  }
+
+  const overlaySignature = getGrandStaffOverlaySignature(state);
+
+  if (
+    mode === "overlay" &&
+    cachedGrandStaffOverlaySignature === overlaySignature
+  ) {
+    return;
+  }
+
+  if (
+    mode === "full" &&
+    canReuseStaticRender &&
+    cachedGrandStaffOverlaySignature === overlaySignature
+  ) {
+    return;
+  }
+
+  renderGrandStaffOverlay(grandStaffStaticRenderCache, state);
+  cachedGrandStaffOverlaySignature = overlaySignature;
 }
 
 function renderKeyboard(
@@ -3225,7 +3271,86 @@ function getDisplayedScaleStaff(
   return getClefForKey(key);
 }
 
-function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
+type PromptAnnotationDrawInstruction = {
+  text: string;
+  placement: "above" | "below";
+  anchorStaff: "treble" | "bass";
+  index: number;
+};
+
+type SecondaryPromptDrawInstruction = {
+  note: StaveNote;
+  anchorStaff: "treble" | "bass";
+  index: number;
+};
+
+type GrandStaffStaticSnapshot = {
+  displayedPrompts: PromptSlot[];
+  trebleNotes: StaveNote[];
+  bassNotes: StaveNote[];
+  currentTrebleTickable: StaveNote | null;
+  currentBassTickable: StaveNote | null;
+  currentTreblePromptNote: StaveNote | null;
+  currentBassPromptNote: StaveNote | null;
+  currentSecondaryPromptNotes: StaveNote[];
+  promptAnnotationDrawInstructions: PromptAnnotationDrawInstruction[];
+  secondaryPromptDrawInstructions: SecondaryPromptDrawInstruction[];
+};
+
+type GrandStaffOverlaySnapshot = {
+  currentTrebleHeldOverlayNotes: StaveNote[];
+  currentBassHeldOverlayNotes: StaveNote[];
+};
+type GrandStaffStaticRenderCache = {
+  container: HTMLDivElement;
+  svgElement: SVGSVGElement;
+  context: ReturnType<Renderer["getContext"]>;
+  trebleStave: Stave;
+  bassStave: Stave;
+  staticSnapshot: GrandStaffStaticSnapshot;
+  displayedKeySignature: KeySignature | null;
+};
+
+function getGrandStaffStaticSignature(
+  container: HTMLDivElement,
+  appState: AppState,
+) {
+  return JSON.stringify({
+    generationSettings: appState.generationSettings,
+    promptQueue: appState.promptQueue,
+    currentPromptIndex: appState.currentPromptIndex,
+    currentMeasureOffsetBeats: appState.currentMeasureOffsetBeats,
+    isExerciseVisible: appState.isExerciseVisible,
+    areNotationFontsReady,
+    containerWidth: container.clientWidth,
+    containerHeight: container.clientHeight,
+    uiScale: getUiScale(),
+    portrait: isPortraitViewport(),
+  });
+}
+
+function getGrandStaffOverlaySignature(appState: AppState) {
+  const heldOverlayPresentations = [...appState.heldOverlayPresentations.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([noteNumber, presentation]) => [
+      noteNumber,
+      presentation.hand,
+      presentation.key,
+      presentation.clef,
+    ]);
+
+  return JSON.stringify({
+    heldNotes: getDisplayedHeldNotes(appState),
+    heldOverlayPresentations,
+    lastAttemptResult: appState.lastAttemptResult,
+    attemptFeedbackCount: appState.attemptFeedbackCount,
+  });
+}
+
+function renderGrandStaffStatic(
+  container: HTMLDivElement,
+  appState: AppState,
+): GrandStaffStaticRenderCache | null {
   container.replaceChildren();
 
   const uiScale = getUiScale();
@@ -3286,9 +3411,136 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     .draw();
 
   if (appState.promptQueue.length === 0) {
-    return;
+    return null;
   }
 
+  const staticSnapshot = createGrandStaffStaticSnapshot(
+    appState,
+    displayedKeySignature,
+  );
+
+  const trebleVoice = new Voice()
+    .setMode(Voice.Mode.SOFT)
+    .addTickables(staticSnapshot.trebleNotes);
+
+  const bassVoice = new Voice()
+    .setMode(Voice.Mode.SOFT)
+    .addTickables(staticSnapshot.bassNotes);
+
+  const formatter = new Formatter();
+
+  formatter
+    .joinVoices([trebleVoice])
+    .joinVoices([bassVoice])
+    .formatToStave([trebleVoice, bassVoice], trebleStave);
+
+  trebleVoice.draw(context, trebleStave);
+  bassVoice.draw(context, bassStave);
+
+  if (exerciseNotationProfile) {
+    drawMeasureBarlines(
+      appState.promptQueue,
+      staticSnapshot.trebleNotes,
+      trebleStave,
+      bassStave,
+      context,
+      appState.currentMeasureOffsetBeats,
+      exerciseNotationProfile.beatsPerMeasure,
+    );
+  }
+
+  const promptAnnotationYPositions = getPromptAnnotationYPositions(
+    staticSnapshot.promptAnnotationDrawInstructions,
+    staticSnapshot.trebleNotes,
+    staticSnapshot.bassNotes,
+    trebleStave,
+    bassStave,
+    height,
+  );
+
+  for (const instruction of staticSnapshot.promptAnnotationDrawInstructions) {
+    const anchorTickable =
+      instruction.anchorStaff === "treble"
+        ? staticSnapshot.trebleNotes[instruction.index]
+        : staticSnapshot.bassNotes[instruction.index];
+
+    if (!anchorTickable) {
+      continue;
+    }
+
+    drawPromptAnnotation(
+      instruction.text,
+      anchorTickable,
+      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
+      instruction.placement,
+      promptAnnotationYPositions.get(
+        `${instruction.anchorStaff}:${instruction.placement}`,
+      ),
+      context,
+    );
+  }
+
+  for (const instruction of staticSnapshot.secondaryPromptDrawInstructions) {
+    const anchorTickable =
+      instruction.anchorStaff === "treble"
+        ? staticSnapshot.trebleNotes[instruction.index]
+        : staticSnapshot.bassNotes[instruction.index];
+
+    if (!anchorTickable) {
+      continue;
+    }
+
+    drawHeldOverlayNote(
+      instruction.note,
+      anchorTickable,
+      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
+      context,
+    );
+  }
+
+  drawTrebleOttavaBracket(
+    appState.promptQueue,
+    staticSnapshot.trebleNotes,
+    trebleStave,
+    context,
+    height,
+  );
+  drawBassOttavaBracket(
+    appState.promptQueue,
+    staticSnapshot.bassNotes,
+    bassStave,
+    context,
+    height,
+  );
+
+  const svgElement = container.querySelector<SVGSVGElement>("svg");
+
+  if (!svgElement) {
+    return null;
+  }
+
+  svgElement.removeAttribute("width");
+  svgElement.removeAttribute("height");
+  svgElement.style.width = "";
+  svgElement.style.height = "";
+  svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  return {
+    container,
+    svgElement,
+    context,
+    trebleStave,
+    bassStave,
+    staticSnapshot,
+    displayedKeySignature,
+  };
+}
+
+function createGrandStaffStaticSnapshot(
+  appState: AppState,
+  displayedKeySignature: KeySignature | null,
+): GrandStaffStaticSnapshot {
   const displayedPrompts = appState.promptQueue.map((prompt) =>
     getDisplayedPromptSlot(prompt, appState),
   );
@@ -3299,19 +3551,8 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
   let currentTreblePromptNote: StaveNote | null = null;
   let currentBassPromptNote: StaveNote | null = null;
   const currentSecondaryPromptNotes: StaveNote[] = [];
-  const currentTrebleHeldOverlayNotes: StaveNote[] = [];
-  const currentBassHeldOverlayNotes: StaveNote[] = [];
-  const promptAnnotationDrawInstructions: Array<{
-    text: string;
-    placement: "above" | "below";
-    anchorStaff: "treble" | "bass";
-    index: number;
-  }> = [];
-  const secondaryPromptDrawInstructions: Array<{
-    note: StaveNote;
-    anchorStaff: "treble" | "bass";
-    index: number;
-  }> = [];
+  const promptAnnotationDrawInstructions: PromptAnnotationDrawInstruction[] = [];
+  const secondaryPromptDrawInstructions: SecondaryPromptDrawInstruction[] = [];
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
     const displayedPrompt = displayedPrompts[index];
@@ -3461,28 +3702,6 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
         });
         currentSecondaryPromptNotes.push(bassSecondaryNote);
       }
-
-      for (const heldNoteNumber of getDisplayedHeldNotes(appState)) {
-        const heldOverlayPresentation = getHeldOverlayPresentation(
-          appState,
-          prompt,
-          displayedPrompt,
-          heldNoteNumber,
-          displayedKeySignature,
-        );
-        const heldOverlayNote = createHeldInputOverlayNote(
-          heldOverlayPresentation.clef,
-          heldOverlayPresentation.key,
-          displayedPrompt.duration,
-          displayedKeySignature,
-        );
-
-        if (heldOverlayPresentation.hand === "treble") {
-          currentTrebleHeldOverlayNotes.push(heldOverlayNote);
-        } else {
-          currentBassHeldOverlayNotes.push(heldOverlayNote);
-        }
-      }
     }
 
     if (trebleSecondaryNote) {
@@ -3514,137 +3733,112 @@ function renderGrandStaff(container: HTMLDivElement, appState: AppState) {
     bassNotes.push(bassNote);
   }
 
-  const trebleVoice = new Voice()
-    .setMode(Voice.Mode.SOFT)
-    .addTickables(trebleNotes);
-
-  const bassVoice = new Voice()
-    .setMode(Voice.Mode.SOFT)
-    .addTickables(bassNotes);
-
-  const formatter = new Formatter();
-
-  formatter
-    .joinVoices([trebleVoice])
-    .joinVoices([bassVoice])
-    .formatToStave([trebleVoice, bassVoice], trebleStave);
-
-  trebleVoice.draw(context, trebleStave);
-  bassVoice.draw(context, bassStave);
-
-  if (exerciseNotationProfile) {
-    drawMeasureBarlines(
-      appState.promptQueue,
-      trebleNotes,
-      trebleStave,
-      bassStave,
-      context,
-      appState.currentMeasureOffsetBeats,
-      exerciseNotationProfile.beatsPerMeasure,
-    );
-  }
-
-  const promptAnnotationYPositions = getPromptAnnotationYPositions(
+  return {
+    displayedPrompts,
+    trebleNotes,
+    bassNotes,
+    currentTrebleTickable,
+    currentBassTickable,
+    currentTreblePromptNote,
+    currentBassPromptNote,
+    currentSecondaryPromptNotes,
     promptAnnotationDrawInstructions,
-    trebleNotes,
-    bassNotes,
-    trebleStave,
-    bassStave,
-    height,
-  );
+    secondaryPromptDrawInstructions,
+  };
+}
 
-  for (const instruction of promptAnnotationDrawInstructions) {
-    const anchorTickable =
-      instruction.anchorStaff === "treble"
-        ? trebleNotes[instruction.index]
-        : bassNotes[instruction.index];
+function createGrandStaffOverlaySnapshot(
+  appState: AppState,
+  staticSnapshot: GrandStaffStaticSnapshot,
+  displayedKeySignature: KeySignature | null,
+): GrandStaffOverlaySnapshot {
+  const currentPrompt = appState.promptQueue[appState.currentPromptIndex];
+  const currentDisplayedPrompt =
+    staticSnapshot.displayedPrompts[appState.currentPromptIndex];
+  const currentTrebleHeldOverlayNotes: StaveNote[] = [];
+  const currentBassHeldOverlayNotes: StaveNote[] = [];
 
-    if (!anchorTickable) {
-      continue;
-    }
-
-    drawPromptAnnotation(
-      instruction.text,
-      anchorTickable,
-      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
-      instruction.placement,
-      promptAnnotationYPositions.get(
-        `${instruction.anchorStaff}:${instruction.placement}`,
-      ),
-      context,
-    );
+  if (!currentPrompt || !currentDisplayedPrompt) {
+    return {
+      currentTrebleHeldOverlayNotes,
+      currentBassHeldOverlayNotes,
+    };
   }
 
-  for (const instruction of secondaryPromptDrawInstructions) {
-    const anchorTickable =
-      instruction.anchorStaff === "treble"
-        ? trebleNotes[instruction.index]
-        : bassNotes[instruction.index];
-
-    if (!anchorTickable) {
-      continue;
-    }
-
-    drawHeldOverlayNote(
-      instruction.note,
-      anchorTickable,
-      instruction.anchorStaff === "treble" ? trebleStave : bassStave,
-      context,
+  for (const heldNoteNumber of getDisplayedHeldNotes(appState)) {
+    const heldOverlayPresentation = getHeldOverlayPresentation(
+      appState,
+      currentPrompt,
+      currentDisplayedPrompt,
+      heldNoteNumber,
+      displayedKeySignature,
     );
+    const heldOverlayNote = createHeldInputOverlayNote(
+      heldOverlayPresentation.clef,
+      heldOverlayPresentation.key,
+      currentDisplayedPrompt.duration,
+      displayedKeySignature,
+    );
+
+    if (heldOverlayPresentation.hand === "treble") {
+      currentTrebleHeldOverlayNotes.push(heldOverlayNote);
+    } else {
+      currentBassHeldOverlayNotes.push(heldOverlayNote);
+    }
   }
 
-  drawTrebleOttavaBracket(
-    appState.promptQueue,
-    trebleNotes,
-    trebleStave,
-    context,
-    height,
-  );
-  drawBassOttavaBracket(
-    appState.promptQueue,
-    bassNotes,
-    bassStave,
-    context,
-    height,
+  return {
+    currentTrebleHeldOverlayNotes,
+    currentBassHeldOverlayNotes,
+  };
+}
+
+function renderGrandStaffOverlay(
+  staticRenderCache: GrandStaffStaticRenderCache,
+  appState: AppState,
+) {
+  clearHeldOverlayNotes(staticRenderCache.svgElement);
+
+  const overlaySnapshot = createGrandStaffOverlaySnapshot(
+    appState,
+    staticRenderCache.staticSnapshot,
+    staticRenderCache.displayedKeySignature,
   );
 
-  if (currentTrebleTickable) {
-    for (const currentTrebleHeldOverlayNote of currentTrebleHeldOverlayNotes) {
+  if (staticRenderCache.staticSnapshot.currentTrebleTickable) {
+    for (const currentTrebleHeldOverlayNote of overlaySnapshot.currentTrebleHeldOverlayNotes) {
       drawHeldOverlayNote(
         currentTrebleHeldOverlayNote,
-        currentTrebleTickable,
-        trebleStave,
-        context,
+        staticRenderCache.staticSnapshot.currentTrebleTickable,
+        staticRenderCache.trebleStave,
+        staticRenderCache.context,
+        "held-overlay-note",
       );
     }
   }
 
-  if (currentBassTickable) {
-    for (const currentBassHeldOverlayNote of currentBassHeldOverlayNotes) {
+  if (staticRenderCache.staticSnapshot.currentBassTickable) {
+    for (const currentBassHeldOverlayNote of overlaySnapshot.currentBassHeldOverlayNotes) {
       drawHeldOverlayNote(
         currentBassHeldOverlayNote,
-        currentBassTickable,
-        bassStave,
-        context,
+        staticRenderCache.staticSnapshot.currentBassTickable,
+        staticRenderCache.bassStave,
+        staticRenderCache.context,
+        "held-overlay-note",
       );
     }
   }
 
   applyWrongAttemptFeedback([
-    currentTreblePromptNote,
-    currentBassPromptNote,
-    ...currentSecondaryPromptNotes,
+    staticRenderCache.staticSnapshot.currentTreblePromptNote,
+    staticRenderCache.staticSnapshot.currentBassPromptNote,
+    ...staticRenderCache.staticSnapshot.currentSecondaryPromptNotes,
   ]);
+}
 
-  const svgElement = container.querySelector<SVGSVGElement>("svg");
-
-  if (svgElement) {
-    svgElement.removeAttribute("width");
-    svgElement.removeAttribute("height");
-    svgElement.style.width = "";
-    svgElement.style.height = "";
-    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet");
+function clearHeldOverlayNotes(svgElement: SVGSVGElement) {
+  for (const overlayElement of svgElement.querySelectorAll(".held-overlay-note")) {
+    overlayElement.remove();
   }
 }
 
@@ -4574,6 +4768,7 @@ function drawHeldOverlayNote(
   anchorTickable: StaveNote,
   stave: Stave,
   context: ReturnType<Renderer["getContext"]>,
+  className?: string,
 ) {
   const modifierContext = new ModifierContext();
 
@@ -4583,6 +4778,10 @@ function drawHeldOverlayNote(
   note.setStave(stave);
   note.preFormat();
   note.setContext(context).draw();
+
+  if (className) {
+    note.getSVGElement()?.classList.add(className);
+  }
 }
 
 function drawTrebleOttavaBracket(
