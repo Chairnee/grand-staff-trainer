@@ -421,10 +421,6 @@ body {
   justify-content: center;
 }
 
-.input-name-status-wrap .input-name-note-list:empty {
-  display: none;
-}
-
 .input-name-content-wrap {
   gap: calc(2px * var(--ui-scale));
 }
