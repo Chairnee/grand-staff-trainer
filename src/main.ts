@@ -88,8 +88,8 @@ const KEYBOARD_START_MIDI_NOTE = 21;
 const KEYBOARD_END_MIDI_NOTE = 108;
 const UI_BASE_WIDTH = 1280;
 const UI_BASE_HEIGHT = 720;
-const UI_SHELL_PADDING_INLINE = 7;
-const UI_SHELL_PADDING_BLOCK = 4;
+const UI_SHELL_PADDING_INLINE = 0;
+const UI_SHELL_PADDING_BLOCK = 0;
 const NOTATION_ZOOM_MIN = 1;
 const NOTATION_ZOOM_MAX = 3;
 const PORTRAIT_UI_BASE_HEIGHT = 568;
@@ -981,8 +981,14 @@ function getDisplayedSimulatedHeldNotes(appState: AppState) {
 
 function getDisplayedHeldNotes(appState: AppState) {
   const signature = createMergedDisplayedNotesSignature(
-    createDisplayedNotesSignature(appState.midi.heldNotes, appState.octaveOffset),
-    createDisplayedNotesSignature(appState.simulatedHeldNotes, appState.octaveOffset),
+    createDisplayedNotesSignature(
+      appState.midi.heldNotes,
+      appState.octaveOffset,
+    ),
+    createDisplayedNotesSignature(
+      appState.simulatedHeldNotes,
+      appState.octaveOffset,
+    ),
   );
 
   if (
@@ -1011,7 +1017,10 @@ function getDisplayedAnalysisHeldNotes(appState: AppState) {
       appState.midi.analysisHeldNotes,
       appState.octaveOffset,
     ),
-    createDisplayedNotesSignature(appState.simulatedHeldNotes, appState.octaveOffset),
+    createDisplayedNotesSignature(
+      appState.simulatedHeldNotes,
+      appState.octaveOffset,
+    ),
   );
 
   if (
@@ -1123,7 +1132,9 @@ function isPortraitViewport() {
   }
 
   cachedViewportSignature = signature;
-  cachedIsPortraitViewport = window.matchMedia("(orientation: portrait)").matches;
+  cachedIsPortraitViewport = window.matchMedia(
+    "(orientation: portrait)",
+  ).matches;
   return cachedIsPortraitViewport;
 }
 
@@ -1158,7 +1169,9 @@ function hasMidiChromeChanged(previous: MidiState, next: MidiState) {
 
   return previous.availableInputs.some((input, index) => {
     const nextInput = next.availableInputs[index];
-    return !nextInput || input.id !== nextInput.id || input.name !== nextInput.name;
+    return (
+      !nextInput || input.id !== nextInput.id || input.name !== nextInput.name
+    );
   });
 }
 
@@ -1799,7 +1812,10 @@ function renderNotation(mode: "full" | "overlay" = "full") {
     return;
   }
 
-  const staticSignature = getGrandStaffStaticSignature(notationCanvasElement, state);
+  const staticSignature = getGrandStaffStaticSignature(
+    notationCanvasElement,
+    state,
+  );
   const canReuseStaticRender =
     grandStaffStaticRenderCache &&
     grandStaffStaticRenderCache.container === notationCanvasElement &&
@@ -1807,7 +1823,10 @@ function renderNotation(mode: "full" | "overlay" = "full") {
     cachedGrandStaffStaticSignature === staticSignature;
 
   if (!canReuseStaticRender) {
-    grandStaffStaticRenderCache = renderGrandStaffStatic(notationCanvasElement, state);
+    grandStaffStaticRenderCache = renderGrandStaffStatic(
+      notationCanvasElement,
+      state,
+    );
     cachedGrandStaffStaticSignature = grandStaffStaticRenderCache
       ? staticSignature
       : null;
@@ -3330,7 +3349,9 @@ function getGrandStaffStaticSignature(
 }
 
 function getGrandStaffOverlaySignature(appState: AppState) {
-  const heldOverlayPresentations = [...appState.heldOverlayPresentations.entries()]
+  const heldOverlayPresentations = [
+    ...appState.heldOverlayPresentations.entries(),
+  ]
     .sort(([left], [right]) => left - right)
     .map(([noteNumber, presentation]) => [
       noteNumber,
@@ -3551,7 +3572,8 @@ function createGrandStaffStaticSnapshot(
   let currentTreblePromptNote: StaveNote | null = null;
   let currentBassPromptNote: StaveNote | null = null;
   const currentSecondaryPromptNotes: StaveNote[] = [];
-  const promptAnnotationDrawInstructions: PromptAnnotationDrawInstruction[] = [];
+  const promptAnnotationDrawInstructions: PromptAnnotationDrawInstruction[] =
+    [];
   const secondaryPromptDrawInstructions: SecondaryPromptDrawInstruction[] = [];
 
   for (const [index, prompt] of appState.promptQueue.entries()) {
@@ -3837,7 +3859,9 @@ function renderGrandStaffOverlay(
 }
 
 function clearHeldOverlayNotes(svgElement: SVGSVGElement) {
-  for (const overlayElement of svgElement.querySelectorAll(".held-overlay-note")) {
+  for (const overlayElement of svgElement.querySelectorAll(
+    ".held-overlay-note",
+  )) {
     overlayElement.remove();
   }
 }
