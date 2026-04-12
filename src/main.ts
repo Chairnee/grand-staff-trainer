@@ -1053,7 +1053,7 @@ function getSettingsCoachmarkMessage() {
     </p>
     <ol>
       <li>Input analysis: try play a chord! (AbaugM7/C perhaps?)</li>
-      <li>Exercise: configure exactly what you want from Settings and play along. The chord window setting in the toolbar determines how precisely you must push multiple keys down at once during exercises.</li>
+      <li>Exercise: configure exactly what you want from Settings and play along (2700 permutations). The chord window setting in the toolbar determines how precisely you must push multiple keys down at once during exercises.</li>
       <li>
         Keyboard: shows both your played notes and also the expected exercise
         notes when the exercise panel is open.
@@ -3580,7 +3580,10 @@ function getHeldOverlayPresentation(
     }
   }
 
-  if (!presentation && appState.generationSettings.practiceMode === "arpeggios") {
+  if (
+    !presentation &&
+    appState.generationSettings.practiceMode === "arpeggios"
+  ) {
     const arpeggioExactMatch = getExactArpeggioOverlayPresentation(
       appState,
       prompt,
