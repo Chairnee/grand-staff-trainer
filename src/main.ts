@@ -146,6 +146,11 @@ type PanelDisplayState = {
   visibleInApp: boolean;
   popoutMode: PanelPopoutMode;
 };
+type HeldOverlayPresentation = {
+  hand: "treble" | "bass";
+  key: string;
+  clef: "treble" | "bass";
+};
 
 type AppState = {
   promptQueue: PromptSlot[];
@@ -165,7 +170,7 @@ type AppState = {
   isSettingsCoachmarkOpen: boolean;
   midi: MidiState;
   simulatedHeldNotes: number[];
-  heldOverlayHands: Map<number, "treble" | "bass">;
+  heldOverlayPresentations: Map<number, HeldOverlayPresentation>;
 };
 
 type StoredSettingsSnapshot = {
@@ -683,7 +688,7 @@ const state: AppState = {
     errorMessage: null,
   },
   simulatedHeldNotes: [],
-  heldOverlayHands: new Map(),
+  heldOverlayPresentations: new Map(),
 };
 
 const midiConnection = connectMidi(handleMidiStateChange, {
@@ -939,16 +944,16 @@ function handleWindowResize() {
 
 function handleMidiStateChange(midiState: MidiState) {
   state.midi = midiState;
-  syncHeldOverlayHands();
+  syncHeldOverlayPresentations();
   renderApp();
 }
 
-function syncHeldOverlayHands() {
+function syncHeldOverlayPresentations() {
   const activeHeldNotes = new Set(getDisplayedHeldNotes(state));
 
-  for (const heldOverlayNoteNumber of state.heldOverlayHands.keys()) {
+  for (const heldOverlayNoteNumber of state.heldOverlayPresentations.keys()) {
     if (!activeHeldNotes.has(heldOverlayNoteNumber)) {
-      state.heldOverlayHands.delete(heldOverlayNoteNumber);
+      state.heldOverlayPresentations.delete(heldOverlayNoteNumber);
     }
   }
 }
@@ -977,7 +982,7 @@ function changeOctaveOffset(delta: number) {
     attemptTimer = null;
   }
 
-  syncHeldOverlayHands();
+  syncHeldOverlayPresentations();
   saveStoredSettings();
   renderApp();
 }
@@ -2418,7 +2423,7 @@ function handlePromptAttempt() {
   state.simulatedHeldNotes = getPromptMidiNotes(currentPrompt).map(
     (noteNumber) => removeMidiInputOffset(noteNumber),
   );
-  syncHeldOverlayHands();
+  syncHeldOverlayPresentations();
   const attempt = createFakeAttempt(currentPrompt);
 
   processPromptAttempt(currentPrompt, attempt);
@@ -2758,7 +2763,7 @@ function resetPromptQueue() {
   }
 
   pendingAttemptMidiNotes.clear();
-  state.heldOverlayHands.clear();
+  state.heldOverlayPresentations.clear();
   state.simulatedHeldNotes = [];
   state.promptQueue = createPromptQueue(
     PROMPT_QUEUE_LENGTH,
@@ -3552,6 +3557,15 @@ function getHeldOverlayPresentation(
   heldNoteNumber: number,
   displayedKeySignature: KeySignature | null,
 ) {
+  const cachedPresentation =
+    appState.heldOverlayPresentations.get(heldNoteNumber);
+
+  if (cachedPresentation) {
+    return cachedPresentation;
+  }
+
+  let presentation: HeldOverlayPresentation | null = null;
+
   if (appState.generationSettings.practiceMode === "scales") {
     const scaleExactMatch = getExactScaleOverlayPresentation(
       appState,
@@ -3560,11 +3574,11 @@ function getHeldOverlayPresentation(
     );
 
     if (scaleExactMatch) {
-      return scaleExactMatch;
+      presentation = scaleExactMatch;
     }
   }
 
-  if (appState.generationSettings.practiceMode === "arpeggios") {
+  if (!presentation && appState.generationSettings.practiceMode === "arpeggios") {
     const arpeggioExactMatch = getExactArpeggioOverlayPresentation(
       appState,
       prompt,
@@ -3572,8 +3586,13 @@ function getHeldOverlayPresentation(
     );
 
     if (arpeggioExactMatch) {
-      return arpeggioExactMatch;
+      presentation = arpeggioExactMatch;
     }
+  }
+
+  if (presentation) {
+    appState.heldOverlayPresentations.set(heldNoteNumber, presentation);
+    return presentation;
   }
 
   const exactTrebleDisplayKey = getMatchedDisplayedPromptKey(
@@ -3583,11 +3602,13 @@ function getHeldOverlayPresentation(
   );
 
   if (exactTrebleDisplayKey) {
-    return {
+    presentation = {
       hand: "treble" as const,
       key: exactTrebleDisplayKey,
       clef: displayedPrompt.trebleDisplayedClef ?? "treble",
     };
+    appState.heldOverlayPresentations.set(heldNoteNumber, presentation);
+    return presentation;
   }
 
   const exactBassDisplayKey = getMatchedDisplayedPromptKey(
@@ -3596,19 +3617,17 @@ function getHeldOverlayPresentation(
     heldNoteNumber,
   );
 
-  const assignedHand =
-    appState.heldOverlayHands.get(heldNoteNumber) ??
-    assignHeldOverlayHand(
-      appState,
-      prompt,
-      displayedPrompt,
-      heldNoteNumber,
-      displayedKeySignature,
-      exactTrebleDisplayKey,
-      exactBassDisplayKey,
-    );
+  const assignedHand = assignHeldOverlayHand(
+    appState,
+    prompt,
+    displayedPrompt,
+    heldNoteNumber,
+    displayedKeySignature,
+    exactTrebleDisplayKey,
+    exactBassDisplayKey,
+  );
 
-  return getPresentationForAssignedHand(
+  presentation = getPresentationForAssignedHand(
     appState,
     prompt,
     displayedPrompt,
@@ -3618,6 +3637,9 @@ function getHeldOverlayPresentation(
     exactTrebleDisplayKey,
     exactBassDisplayKey,
   );
+  appState.heldOverlayPresentations.set(heldNoteNumber, presentation);
+
+  return presentation;
 }
 
 function assignHeldOverlayHand(
@@ -3699,8 +3721,6 @@ function assignHeldOverlayHand(
       assignedHand = getClefForKey(literalKey);
     }
   }
-
-  appState.heldOverlayHands.set(heldNoteNumber, assignedHand);
 
   return assignedHand;
 }
