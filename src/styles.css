@@ -1049,7 +1049,7 @@ body {
 }
 
   .input-name-status-wrap {
-    font-size: 6em;
+    font-size: calc(var(--input-name-font-size) * 1.16);
   }
 
   .input-name-content-wrap {
