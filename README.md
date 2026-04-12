@@ -51,7 +51,7 @@ The input analysis panel is capable of analysing the following structures. Pleas
 - Triads and other three note structures
     - Triad qualities: CM, Cm, Cdim, Caug
     - Suspended: Csus2, Csus4
-    - Inversions: CM/E, Csus2/D
+    - All inversions: CM/E, Csus2/D
     - 5 chords: C5
 - 7th chords and other four note structures
     - 7th qualities: CM7, C7, Cm7, Cm7b5, Cdim7, CmM7, CaugM7, Caug7
