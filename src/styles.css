@@ -455,6 +455,7 @@ body {
   flex-wrap: wrap;
   gap: calc(6px * var(--ui-scale));
   align-items: center;
+  justify-content: center;
 }
 
 .input-name-pill {
@@ -1036,12 +1037,25 @@ body {
     font-size: 2.5em;
   }
 
+.practice-area {
+  --input-name-font-size: 3.4em;
+}
+
+.practice-area[data-exercise-visible="true"][data-keyboard-visible="false"],
+.practice-area[data-exercise-visible="false"][data-keyboard-visible="true"] {
+  --input-name-font-size: 4em;
+}
+
+.practice-area[data-exercise-visible="false"][data-keyboard-visible="false"] {
+  --input-name-font-size: 4.3em;
+}
+
   .input-name-status-wrap {
-    font-size: 4em
+    font-size: 6em;
   }
 
   .input-name-content-wrap {
-    font-size: 3.4em;
+    font-size: var(--input-name-font-size);
   }
 
   .notation {
