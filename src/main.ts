@@ -637,7 +637,11 @@ let inputNamePopoutHandle: InputNamePopoutHandle | null = null;
 let keyboardPopoutHandle: KeyboardPopoutHandle | null = null;
 let combinedPopoutHandle: CombinedPopoutHandle | null = null;
 let pendingRenderFrame: number | null = null;
+let pendingRenderMask = 0;
 const pendingAttemptMidiNotes = new Set<number>();
+const RENDER_FULL = 1;
+const RENDER_MIDI_PANELS = 2;
+const RENDER_MIDI_CHROME = 4;
 const initialGenerationSettings: GenerationSettings = {
   practiceMode: "triads",
   scaleHands: "together",
@@ -788,11 +792,7 @@ if ("fonts" in document) {
 
 renderApp();
 
-function performRenderApp() {
-  const displayedHeldNotes = getDisplayedHeldNotes(state);
-  const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
-  const layoutMetrics = getLayoutMetrics();
-
+function applyLayoutMetrics(layoutMetrics = getLayoutMetrics()) {
   document.documentElement.dataset.layoutMode = layoutMetrics.layoutMode;
   document.documentElement.style.setProperty(
     "--ui-scale",
@@ -818,7 +818,9 @@ function performRenderApp() {
     "--notation-zoom",
     layoutMetrics.notationZoom.toFixed(3),
   );
+}
 
+function renderNotationMetadata(displayedHeldKeys: string[]) {
   notationElement.dataset.lastAttemptResult = state.lastAttemptResult ?? "none";
   notationElement.dataset.midiStatus = state.midi.status;
   notationElement.dataset.midiHeldKeys = displayedHeldKeys.join(",");
@@ -827,6 +829,32 @@ function performRenderApp() {
     `Device: ${state.midi.deviceName ?? "none"}`,
     `Held: ${displayedHeldKeys.join(", ") || "none"}`,
   ].join("\n");
+}
+
+function performMidiPanelsRender() {
+  const displayedHeldNotes = getDisplayedHeldNotes(state);
+  const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
+  const analysis = getCurrentInputAnalysis();
+  const keyboardOptions = getCurrentKeyboardDisplayOptions();
+
+  renderNotationMetadata(displayedHeldKeys);
+  renderInputName(analysis);
+  renderNotation();
+  renderKeyboard(keyboardOptions, analysis);
+  if (IS_DEV) {
+    renderMidiDebug();
+  }
+}
+
+function performFullRender() {
+  const layoutMetrics = getLayoutMetrics();
+  const displayedHeldNotes = getDisplayedHeldNotes(state);
+  const displayedHeldKeys = getDisplayedHeldKeys(state, displayedHeldNotes);
+  const analysis = getCurrentInputAnalysis();
+  const keyboardOptions = getCurrentKeyboardDisplayOptions();
+
+  applyLayoutMetrics(layoutMetrics);
+  renderNotationMetadata(displayedHeldKeys);
   practiceAreaElement.dataset.exerciseVisible = String(state.isExerciseVisible);
   practiceAreaElement.dataset.keyboardVisible = String(
     state.keyboardDisplay.visibleInApp,
@@ -839,23 +867,50 @@ function performRenderApp() {
   renderToolbar();
   renderSettingsCoachmark();
   renderSettingsDrawer();
-  renderMidiDebug();
+  if (IS_DEV) {
+    renderMidiDebug();
+  }
   renderExerciseNotice();
   renderExerciseSummary();
-  renderInputName();
+  renderInputName(analysis);
   renderNotation();
-  renderKeyboard();
+  renderKeyboard(keyboardOptions, analysis);
 }
 
-function renderApp() {
+function performMidiChromeRender() {
+  renderMidiInputOptions();
+  renderToolbar();
+}
+
+function scheduleRender(mask: number) {
+  pendingRenderMask |= mask;
+
   if (pendingRenderFrame !== null) {
     return;
   }
 
   pendingRenderFrame = window.requestAnimationFrame(() => {
+    const renderMask = pendingRenderMask;
     pendingRenderFrame = null;
-    performRenderApp();
+    pendingRenderMask = 0;
+
+    if (renderMask & RENDER_FULL) {
+      performFullRender();
+      return;
+    }
+
+    if (renderMask & RENDER_MIDI_CHROME) {
+      performMidiChromeRender();
+    }
+
+    if (renderMask & RENDER_MIDI_PANELS) {
+      performMidiPanelsRender();
+    }
   });
+}
+
+function renderApp() {
+  scheduleRender(RENDER_FULL);
 }
 
 function getDisplayedSimulatedHeldNotes(appState: AppState) {
@@ -961,9 +1016,34 @@ function handleWindowResize() {
 }
 
 function handleMidiStateChange(midiState: MidiState) {
+  const previousMidiState = state.midi;
   state.midi = midiState;
   syncHeldOverlayPresentations();
-  renderApp();
+  scheduleRender(
+    RENDER_MIDI_PANELS |
+      (hasMidiChromeChanged(previousMidiState, midiState)
+        ? RENDER_MIDI_CHROME
+        : 0),
+  );
+}
+
+function hasMidiChromeChanged(previous: MidiState, next: MidiState) {
+  if (
+    previous.status !== next.status ||
+    previous.deviceId !== next.deviceId ||
+    previous.deviceName !== next.deviceName
+  ) {
+    return true;
+  }
+
+  if (previous.availableInputs.length !== next.availableInputs.length) {
+    return true;
+  }
+
+  return previous.availableInputs.some((input, index) => {
+    const nextInput = next.availableInputs[index];
+    return !nextInput || input.id !== nextInput.id || input.name !== nextInput.name;
+  });
 }
 
 function syncHeldOverlayPresentations() {
@@ -1600,9 +1680,10 @@ function renderNotation() {
   renderGrandStaff(notationCanvasElement, state);
 }
 
-function renderKeyboard() {
-  const keyboardOptions = getCurrentKeyboardDisplayOptions();
-
+function renderKeyboard(
+  keyboardOptions = getCurrentKeyboardDisplayOptions(),
+  analysis = getCurrentInputAnalysis(),
+) {
   keyboardDisplayElement.hidden = !state.keyboardDisplay.visibleInApp;
 
   if (!state.keyboardDisplay.visibleInApp) {
@@ -1624,7 +1705,7 @@ function renderKeyboard() {
   }
 
   renderKeyboardPopout(keyboardOptions);
-  renderCombinedPopout(getCurrentInputAnalysis(), keyboardOptions);
+  renderCombinedPopout(analysis, keyboardOptions);
 }
 
 function getCurrentKeyboardDisplayOptions() {
@@ -1641,8 +1722,7 @@ function getCurrentKeyboardDisplayOptions() {
   };
 }
 
-function renderInputName() {
-  const analysis = getCurrentInputAnalysis();
+function renderInputName(analysis = getCurrentInputAnalysis()) {
   const selectedVariantKey = syncSelectedInputNameVariant(analysis);
 
   inputNameDisplayElement.hidden = !state.inputNameDisplay.visibleInApp;
