@@ -47,6 +47,8 @@ export function renderKeyboardDisplay(
 
   if (
     !cache ||
+    !cache.keyboardFrameElement.isConnected ||
+    cache.keyboardFrameElement.parentElement !== container ||
     cache.startMidiNote !== startMidiNote ||
     cache.endMidiNote !== endMidiNote
   ) {

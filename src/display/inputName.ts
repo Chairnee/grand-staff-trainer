@@ -120,7 +120,11 @@ export function renderInputNameDisplay(
 function getOrCreateInputNameDisplayCache(container: HTMLDivElement) {
   const cachedDisplay = inputNameDisplayCache.get(container);
 
-  if (cachedDisplay) {
+  if (
+    cachedDisplay &&
+    cachedDisplay.contentHost.isConnected &&
+    cachedDisplay.contentHost.parentElement === container
+  ) {
     return cachedDisplay;
   }
 

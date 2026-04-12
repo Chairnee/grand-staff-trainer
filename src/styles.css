@@ -1054,12 +1054,5 @@ body {
     width: calc(100% * var(--notation-zoom));
     flex: 0 0 auto;
   }
-
-  .keyboard-display {
-    flex: 1 1 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
 }
 }
