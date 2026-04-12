@@ -76,6 +76,7 @@ export function renderInputNameDisplay(
       (variant) =>
         getInputNameVariantKey(variant) === options.selectedVariantKey,
     ) ?? analysis.primary;
+  const primaryNamingNote = analysis.primary.namingNote ?? analysis.namingNote;
 
   variants.forEach((variant, index) => {
     const pill = document.createElement("button");
@@ -96,6 +97,14 @@ export function renderInputNameDisplay(
 
     readingRow.append(pill);
 
+    if (index === 0 && primaryNamingNote) {
+      const namingNoteBadge = document.createElement("span");
+      namingNoteBadge.className = "input-name-naming-note-badge";
+      namingNoteBadge.textContent = "voicing";
+      namingNoteBadge.title = primaryNamingNote;
+      readingRow.append(namingNoteBadge);
+    }
+
     if (index === 0 && analysis.alternates.length > 0) {
       const separator = document.createElement("span");
       separator.className = "input-name-separator";
@@ -103,14 +112,6 @@ export function renderInputNameDisplay(
       readingRow.append(separator);
     }
   });
-
-  if (selectedVariant.namingNote ?? analysis.namingNote) {
-    const namingNoteBadge = document.createElement("span");
-    namingNoteBadge.className = "input-name-naming-note-badge";
-    namingNoteBadge.textContent = "voicing";
-    namingNoteBadge.title = selectedVariant.namingNote ?? analysis.namingNote ?? "";
-    readingRow.append(namingNoteBadge);
-  }
   cache.readingRow.replaceChildren(...readingRow.childNodes);
   cache.noteList.textContent = analysis.noteLabel ?? "";
   cache.longhand.textContent = selectedVariant.longhand;

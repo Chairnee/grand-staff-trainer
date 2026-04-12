@@ -481,6 +481,9 @@ body {
 }
 
 .input-name-naming-note-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: calc(2px * var(--ui-scale)) calc(6px * var(--ui-scale));
   border-radius: 999px;
   background: rgba(210, 196, 172, 0.32);
@@ -489,6 +492,8 @@ body {
   line-height: 1;
   letter-spacing: 0.04em;
   text-transform: lowercase;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .input-name-separator {
