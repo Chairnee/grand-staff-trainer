@@ -454,8 +454,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: calc(6px * var(--ui-scale));
-  align-items: center;
-  justify-content: center;
 }
 
 .input-name-pill {
