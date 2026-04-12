@@ -16,8 +16,9 @@ Primary feature explanations:
 
 Extra references:
 1. [Explanation of user interface and all settings](#settings-explanations)
-2. [Complete list of exercises](#exercise-list)
-3. [List of supported tonics](#full-tonic-list) (every practical tonic)
+2. [Input analysis capabilities](#input-analysis-capabilities)
+3. [Complete list of exercises](#exercise-list)
+4. [List of supported tonics](#full-tonic-list) (every practical tonic)
 
 Design philosophy:
 1. [Input analysis panel](#input-analysis)
@@ -37,6 +38,8 @@ Every analysis consists of three lines:
 This feature can be popped out and used in isolation or with the [keyboard display](#keyboard-display-panel).
 
 ![An example of the input analysis feature popped out with the keyboard display](referenceImg/input_naming_2.png)
+
+<a id="input-analysis-capabilities"></a>
 
 The input analysis panel is capable of analysing the following structures. Please note this list is to show some shorthand examples using C and is by no means exhaustive.
 
