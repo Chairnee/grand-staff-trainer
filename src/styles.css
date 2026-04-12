@@ -937,6 +937,11 @@ body {
     padding: calc(5px * var(--portrait-ui-scale));
     gap: calc(12px * var(--portrait-ui-scale));
     font-size: calc(1rem * var(--portrait-ui-scale));
+    z-index: 4;
+  }
+
+  .settings-backdrop.is-open {
+    z-index: 3;
   }
 
   .settings-drawer input[type="checkbox"] {
