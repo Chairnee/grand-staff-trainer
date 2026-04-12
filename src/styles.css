@@ -421,8 +421,17 @@ body {
   justify-content: center;
 }
 
+.input-name-content-wrap[hidden],
+.input-name-status-wrap[hidden] {
+  display: none;
+}
+
 .input-name-content-wrap {
   gap: calc(2px * var(--ui-scale));
+}
+
+.input-name-status-wrap .input-name-note-list:empty {
+  display: none;
 }
 
 .input-name-longhand,
