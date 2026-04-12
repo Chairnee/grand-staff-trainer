@@ -423,6 +423,9 @@ body {
 .input-name-separator,
 .input-name-status {
   margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .input-name-note-list {
